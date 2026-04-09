@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref, toRaw } from 'vue'
 import { useDietStore } from '@/stores/dietStore'
-import { getApiKey, setApiKey, getModel, setModel } from '@/services/openai'
+import { getModel, setModel } from '@/services/openai'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 
@@ -10,14 +10,11 @@ const clone = (obj) => JSON.parse(JSON.stringify(obj))
 const store = useDietStore()
 const saved = ref(false)
 
-// AI config
-const aiKey = ref(getApiKey())
+// AI model selection (the API key lives server-side as a Cloudflare secret)
 const aiModel = ref(getModel())
-const showKey = ref(false)
 const aiSaved = ref(false)
 
 function saveAiConfig() {
-  setApiKey(aiKey.value)
   setModel(aiModel.value)
   aiSaved.value = true
   setTimeout(() => (aiSaved.value = false), 2000)
@@ -102,36 +99,11 @@ function reset() {
       <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-700/50 dark:to-gray-800 border-b border-gray-100 dark:border-gray-700">
         <h2 class="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
           <span class="text-base">🤖</span>
-          AI Configuration
+          AI Model
         </h2>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Configure Groq for AI-powered meal plan generation (free)</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Choose which model generates your meal plans</p>
       </div>
       <div class="p-6 space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Groq API Key</label>
-          <div class="relative">
-            <input
-              v-model="aiKey"
-              :type="showKey ? 'text' : 'password'"
-              placeholder="gsk_..."
-              class="w-full px-3 py-2 pr-10 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50/50 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all font-mono"
-            />
-            <button
-              type="button"
-              @click="showKey = !showKey"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              <svg v-if="!showKey" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-              </svg>
-            </button>
-          </div>
-          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Your key is stored locally in your browser and never sent to our servers.</p>
-        </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Model</label>
           <select
