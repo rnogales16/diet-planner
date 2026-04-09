@@ -10,7 +10,7 @@ const clone = (obj) => JSON.parse(JSON.stringify(obj))
 const store = useDietStore()
 const saved = ref(false)
 
-// AI model selection (the API key lives server-side as a Cloudflare secret)
+// API key lives in a Cloudflare secret, so we only let the user pick the model here
 const aiModel = ref(getModel())
 const aiSaved = ref(false)
 

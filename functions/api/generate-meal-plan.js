@@ -1,6 +1,6 @@
-// Cloudflare Pages Function: proxy to Groq API.
-// Keeps GROQ_API_KEY server-side. Cloudflare Access protects this endpoint
-// at the edge, so any request that reaches here is already authenticated.
+// Proxy to Groq so we don't ship the API key to the browser.
+// Cloudflare Access sits in front of this, so requests that get here
+// are already authenticated.
 
 const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
 const ALLOWED_MODELS = new Set(['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'])

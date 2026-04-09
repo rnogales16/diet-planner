@@ -1,5 +1,5 @@
-// Calls the Cloudflare Pages Function at /api/generate-meal-plan, which
-// proxies to Groq with a server-side API key. The browser never sees the key.
+// Talks to our /api/generate-meal-plan function. The actual Groq call
+// happens server-side so we never expose the API key.
 
 const STORAGE_KEY_MODEL = 'nutriplan_groq_model'
 const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
@@ -114,7 +114,7 @@ export async function generateMealPlan(formData, signal) {
     return { success: false, error: `Network error: ${err.message}` }
   }
 
-  // Cloudflare Access returns a redirect/HTML page when the session expires.
+  // If the Access session expired we get a redirect to the login page.
   if (response.status === 401 || response.status === 302) {
     return { success: false, error: 'Your session has expired. Please refresh the page to log in again.' }
   }
