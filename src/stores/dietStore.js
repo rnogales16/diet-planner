@@ -313,6 +313,34 @@ export const useDietStore = defineStore('diet', {
       }
     },
 
+    exportData() {
+      return {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        weeks: this.weeks,
+        currentWeekKey: this.currentWeekKey,
+        mealTypes: this.mealTypes,
+      }
+    },
+
+    importData(payload) {
+      if (!payload || typeof payload !== 'object') {
+        return { success: false, error: 'Invalid file: not an object.' }
+      }
+      if (!payload.weeks || typeof payload.weeks !== 'object') {
+        return { success: false, error: 'Invalid file: missing weeks.' }
+      }
+      if (!Array.isArray(payload.mealTypes)) {
+        return { success: false, error: 'Invalid file: missing mealTypes.' }
+      }
+      this.weeks = payload.weeks
+      this.mealTypes = payload.mealTypes
+      if (typeof payload.currentWeekKey === 'string') {
+        this.currentWeekKey = payload.currentWeekKey
+      }
+      return { success: true }
+    },
+
     updateMealTypes(newMealTypes) {
       this.mealTypes = newMealTypes
       // Update existing weeks to reflect new meal type labels/times

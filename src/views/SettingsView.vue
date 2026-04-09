@@ -41,6 +41,55 @@ function save() {
 function reset() {
   form.mealTypes = clone(store.mealTypes)
 }
+
+const importInput = ref(null)
+const importMessage = ref('')
+const importError = ref('')
+
+function exportData() {
+  const data = store.exportData()
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `diet-planner-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function triggerImport() {
+  importMessage.value = ''
+  importError.value = ''
+  importInput.value?.click()
+}
+
+async function handleImportFile(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    const payload = JSON.parse(text)
+    const result = store.importData(payload)
+    if (result.success) {
+      importMessage.value = 'Data imported successfully.'
+      setTimeout(() => (importMessage.value = ''), 3000)
+    } else {
+      importError.value = result.error
+    }
+  } catch (err) {
+    importError.value = `Could not read file: ${err.message}`
+  } finally {
+    event.target.value = ''
+  }
+}
+
+function clearAllData() {
+  if (!confirm('Clear all diet data? This cannot be undone.')) return
+  localStorage.removeItem('diet')
+  location.reload()
+}
 </script>
 
 <template>
@@ -136,19 +185,43 @@ function reset() {
         </h2>
         <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">All your data is stored locally in your browser</p>
       </div>
-      <div class="p-6">
+      <div class="p-6 space-y-4">
+        <div class="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700">
+          <div>
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Export Data</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Download all your meal plans as a JSON backup file</p>
+          </div>
+          <BaseButton size="sm" @click="exportData">Export</BaseButton>
+        </div>
+
+        <div class="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700">
+          <div>
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Import Data</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Restore from a previously exported backup file (overwrites current data)</p>
+          </div>
+          <BaseButton variant="secondary" size="sm" @click="triggerImport">Import</BaseButton>
+          <input
+            ref="importInput"
+            type="file"
+            accept="application/json,.json"
+            class="hidden"
+            @change="handleImportFile"
+          />
+        </div>
+
+        <Transition name="fade">
+          <p v-if="importMessage" class="text-sm font-medium text-emerald-600">{{ importMessage }}</p>
+        </Transition>
+        <Transition name="fade">
+          <p v-if="importError" class="text-sm font-medium text-red-600">{{ importError }}</p>
+        </Transition>
+
         <div class="flex items-center justify-between p-4 rounded-xl bg-red-50/50 dark:bg-red-900/20 border border-red-100 dark:border-red-800">
           <div>
             <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Clear All Data</p>
             <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Permanently delete all meal plans and settings</p>
           </div>
-          <BaseButton
-            variant="danger"
-            size="sm"
-            @click="() => { if (confirm('Clear all diet data? This cannot be undone.')) { localStorage.removeItem('diet'); location.reload(); } }"
-          >
-            Clear Data
-          </BaseButton>
+          <BaseButton variant="danger" size="sm" @click="clearAllData">Clear Data</BaseButton>
         </div>
       </div>
     </section>
