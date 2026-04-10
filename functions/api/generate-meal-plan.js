@@ -3,13 +3,14 @@
 // authenticated by the time it gets here. API keys live as Pages secrets
 // and never reach the browser.
 //
-// Pro only — meal generation deserves the best reasoning. The cascade just
-// retries with the backup key (different Google Cloud project, independent
-// quota / billing) when the primary is rate-limited.
+// Pro is the default — meal generation deserves the best reasoning.
+// Flash sits at the end of the cascade as a safety net for when Pro is
+// overloaded or both keys are rate-limited. In normal conditions Flash
+// is never reached.
 
 import { callGeminiWithFallback } from './_gemini.js'
 
-const MODEL_CASCADE = ['gemini-2.5-pro']
+const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash']
 
 const GOAL_LABELS = {
   lose_weight: 'lose weight',

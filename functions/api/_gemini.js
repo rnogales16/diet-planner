@@ -50,7 +50,12 @@ async function callOnce(model, key, payload) {
   return { ok: true, content, model }
 }
 
-// Try every (model, key) combo until one succeeds. Only retries on 429.
+// Try every (model, key) combo until one succeeds.
+// Special case: if a (model, key) call times out, skip the remaining keys for
+// the SAME model and go straight to the next model. A timeout almost always
+// means Google's serving capacity for that model is overloaded — burning
+// another 45s on the same model is wasted budget.
+//
 // Returns { ok, content, model, attempts, lastError }.
 export async function callGeminiWithFallback({ env, payload, models }) {
   const keys = getKeys(env)
@@ -63,6 +68,7 @@ export async function callGeminiWithFallback({ env, payload, models }) {
   const attempts = []
 
   for (const model of models) {
+    let modelOverloaded = false
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i]
       const result = await callOnce(model, key, payload)
@@ -75,16 +81,20 @@ export async function callGeminiWithFallback({ env, payload, models }) {
       lastError = result.error
       lastStatus = result.status
 
-      // Auth errors are permanent: don't bother trying the next key with the same model
-      if (result.status === 401 || result.status === 403) {
-        // ...but we *do* want to try the next key, in case one of them is bad
-        continue
+      // Timeout (504 from our AbortController) or upstream 5xx: model is
+      // overloaded right now. Don't waste budget on the next key with the
+      // same model — fall through to the next model in the cascade.
+      if (result.status === 504 || result.status === 503 || result.status === 502) {
+        modelOverloaded = true
+        break
       }
 
-      // Rate limit: keep going through the cascade
-      if (result.status === 429) continue
-
-      // Any other error (5xx, 0 for network, etc.): same — keep trying, in case the next key works
+      // Auth, quota, or other errors: try the next key with the same model.
+      continue
+    }
+    // If we're here, every key for this model failed. Move to the next model.
+    if (modelOverloaded) {
+      // Already broke early; loop continues to next model.
       continue
     }
   }

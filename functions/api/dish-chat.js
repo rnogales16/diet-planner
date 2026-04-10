@@ -7,10 +7,9 @@
 
 import { callGeminiWithFallback } from './_gemini.js'
 
-// Pro only — quality matters when the user is iterating on a recipe and we
-// want the model to actually understand allergies, macros and constraints.
-// The cascade falls back to the backup key on rate limit.
-const MODEL_CASCADE = ['gemini-2.5-pro']
+// Pro by default for quality, Flash as safety net when Pro is overloaded
+// or quota-exhausted on both keys. In normal conditions Flash is never used.
+const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash']
 
 const LANGUAGE_NAMES = {
   en: 'English',
