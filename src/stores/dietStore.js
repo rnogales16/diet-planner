@@ -215,6 +215,9 @@ export const useDietStore = defineStore('diet', {
     weeks: {},
     currentWeekKey: getWeekKey(new Date()),
     mealTypes: JSON.parse(JSON.stringify(DEFAULT_MEAL_TYPES)),
+    // True once the initial server load (or migration) has finished, so we
+    // don't push back to the server while we're still hydrating local state.
+    hydrated: false,
   }),
 
   getters: {
@@ -341,6 +344,30 @@ export const useDietStore = defineStore('diet', {
       return { success: true }
     },
 
+    hydrate(payload) {
+      if (payload && typeof payload === 'object') {
+        if (payload.weeks && typeof payload.weeks === 'object') {
+          this.weeks = payload.weeks
+        }
+        if (Array.isArray(payload.mealTypes) && payload.mealTypes.length) {
+          this.mealTypes = payload.mealTypes
+        }
+        if (typeof payload.currentWeekKey === 'string') {
+          this.currentWeekKey = payload.currentWeekKey
+        }
+      }
+      this.hydrated = true
+    },
+
+    serialize() {
+      return {
+        version: 1,
+        weeks: this.weeks,
+        currentWeekKey: this.currentWeekKey,
+        mealTypes: this.mealTypes,
+      }
+    },
+
     updateMealTypes(newMealTypes) {
       this.mealTypes = newMealTypes
       // Update existing weeks to reflect new meal type labels/times
@@ -358,6 +385,4 @@ export const useDietStore = defineStore('diet', {
       }
     },
   },
-
-  persist: true,
 })
