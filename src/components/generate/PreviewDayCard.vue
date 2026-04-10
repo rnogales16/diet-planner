@@ -3,8 +3,9 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { sumMeals } from '@/utils/nutritionHelpers'
 import { useDietStore } from '@/stores/dietStore'
+import { localizedDish } from '@/utils/dishLocale'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const store = useDietStore()
 
 const props = defineProps({
@@ -12,8 +13,15 @@ const props = defineProps({
   dayName: { type: String, required: true },
 })
 
+const localizedMeals = computed(() =>
+  props.day.meals.map((m) => ({
+    ...m,
+    dish: localizedDish(m.dish, locale.value),
+  })),
+)
+
 const dayTotals = computed(() => sumMeals(
-  props.day.meals.map((m) => ({ dishes: [m.dish] }))
+  localizedMeals.value.map((m) => ({ dishes: [m.dish] })),
 ))
 
 // Use the user's customized labels from the store, with sensible defaults.
@@ -34,7 +42,7 @@ const mealLabels = computed(() => {
     </header>
 
     <div class="preview-day__meals">
-      <div v-for="meal in day.meals" :key="meal.type" class="preview-meal">
+      <div v-for="meal in localizedMeals" :key="meal.type" class="preview-meal">
         <span class="preview-meal__label">{{ mealLabels[meal.type] || meal.type }}</span>
         <span class="preview-meal__name">{{ meal.dish.name }}</span>
         <span class="preview-meal__cals tabular">{{ meal.dish.calories }} {{ t('common.kcal') }}</span>

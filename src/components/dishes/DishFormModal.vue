@@ -3,8 +3,9 @@ import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { X, Plus } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
+import { localizedDish } from '@/utils/dishLocale'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -36,19 +37,23 @@ watch(
   () => props.show,
   (val) => {
     if (val && props.dish) {
+      // Edit the dish in the language the user is currently looking at,
+      // not necessarily the original. The save handler will route the
+      // change to the right slot.
+      const view = localizedDish(props.dish, locale.value)
       Object.assign(form, {
-        name: props.dish.name || '',
-        time: props.dish.time || '12:00',
-        calories: props.dish.calories || 0,
-        protein: props.dish.protein || 0,
-        carbs: props.dish.carbs || 0,
-        fat: props.dish.fat || 0,
-        notes: props.dish.notes || '',
-        prepTime: props.dish.prepTime || 0,
-        cookTime: props.dish.cookTime || 0,
-        servings: props.dish.servings || 1,
-        ingredients: props.dish.ingredients ? props.dish.ingredients.map((i) => ({ ...i })) : [],
-        instructions: props.dish.instructions ? [...props.dish.instructions] : [],
+        name: view.name || '',
+        time: view.time || '12:00',
+        calories: view.calories || 0,
+        protein: view.protein || 0,
+        carbs: view.carbs || 0,
+        fat: view.fat || 0,
+        notes: view.notes || '',
+        prepTime: view.prepTime || 0,
+        cookTime: view.cookTime || 0,
+        servings: view.servings || 1,
+        ingredients: view.ingredients ? view.ingredients.map((i) => ({ ...i })) : [],
+        instructions: view.instructions ? [...view.instructions] : [],
       })
       activeTab.value = 'details'
     }
@@ -72,20 +77,49 @@ function updateInstruction(index, value) {
 }
 
 function handleSave() {
-  emit('save', {
-    name: form.name.trim(),
+  const cleanedIngredients = form.ingredients.filter((i) => i.name.trim())
+  const cleanedInstructions = form.instructions.filter((s) => s.trim())
+  const numericFields = {
     time: form.time,
     calories: Math.max(0, Number(form.calories) || 0),
     protein: Math.max(0, Number(form.protein) || 0),
     carbs: Math.max(0, Number(form.carbs) || 0),
     fat: Math.max(0, Number(form.fat) || 0),
-    notes: form.notes,
     prepTime: Math.max(0, Number(form.prepTime) || 0),
     cookTime: Math.max(0, Number(form.cookTime) || 0),
     servings: Math.max(1, Number(form.servings) || 1),
-    ingredients: form.ingredients.filter((i) => i.name.trim()),
-    instructions: form.instructions.filter((s) => s.trim()),
-  })
+  }
+  const textFields = {
+    name: form.name.trim(),
+    notes: form.notes,
+    ingredients: cleanedIngredients,
+    instructions: cleanedInstructions,
+  }
+
+  // For brand new dishes (or originals being edited in their own language)
+  // we save the text fields directly on the dish. Otherwise we slot the text
+  // into translations[locale] and leave the original alone.
+  const dish = props.dish || {}
+  const originalLang = dish.originalLang || (props.isEditing ? 'en' : locale.value)
+  const editingOriginal = !props.isEditing || originalLang === locale.value
+
+  if (editingOriginal) {
+    emit('save', {
+      ...numericFields,
+      ...textFields,
+      originalLang,
+    })
+  } else {
+    const existingTranslations = dish.translations || {}
+    emit('save', {
+      ...numericFields,
+      originalLang,
+      translations: {
+        ...existingTranslations,
+        [locale.value]: textFields,
+      },
+    })
+  }
 }
 </script>
 

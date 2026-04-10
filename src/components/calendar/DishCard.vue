@@ -1,20 +1,24 @@
 <script setup>
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Pencil, Trash2 } from 'lucide-vue-next'
+import { localizedDish } from '@/utils/dishLocale'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
-defineProps({
+const props = defineProps({
   dish: { type: Object, required: true },
 })
 
 defineEmits(['edit', 'delete', 'view'])
+
+const view = computed(() => localizedDish(props.dish, locale.value))
 </script>
 
 <template>
   <article class="dish-card" @click="$emit('view', dish)">
     <header class="dish-card__head">
-      <h4 class="dish-card__name font-display">{{ dish.name || t('common.untitled') }}</h4>
+      <h4 class="dish-card__name font-display">{{ view.name || t('common.untitled') }}</h4>
       <div class="dish-card__actions">
         <button type="button" :title="t('dishCard.edit')" @click.stop="$emit('edit', dish)">
           <Pencil :size="12" />

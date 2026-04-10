@@ -3,8 +3,9 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Clock, Flame, Users, Pencil, Trash2 } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
+import { localizedDish } from '@/utils/dishLocale'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -13,48 +14,50 @@ const props = defineProps({
 
 defineEmits(['close', 'edit', 'delete'])
 
+const view = computed(() => (props.dish ? localizedDish(props.dish, locale.value) : null))
+
 const hasRecipe = computed(() => {
-  if (!props.dish) return false
-  return (props.dish.ingredients?.length > 0) || (props.dish.instructions?.length > 0)
+  if (!view.value) return false
+  return (view.value.ingredients?.length > 0) || (view.value.instructions?.length > 0)
 })
 
 const totalTime = computed(() => {
-  if (!props.dish) return 0
-  return (props.dish.prepTime || 0) + (props.dish.cookTime || 0)
+  if (!view.value) return 0
+  return (view.value.prepTime || 0) + (view.value.cookTime || 0)
 })
 </script>
 
 <template>
-  <BaseModal :show="show" size="lg" :title="dish?.name || t('dishDetail.title')" @close="$emit('close')">
-    <div v-if="dish" class="detail">
+  <BaseModal :show="show" size="lg" :title="view?.name || t('dishDetail.title')" @close="$emit('close')">
+    <div v-if="view" class="detail">
       <div class="detail__pills">
         <span class="pill pill--accent tabular">
           <Flame :size="12" />
-          {{ dish.calories }} {{ t('common.kcal') }}
+          {{ view.calories }} {{ t('common.kcal') }}
         </span>
         <span class="pill tabular">
           <Clock :size="12" />
-          {{ dish.time }}
+          {{ view.time }}
         </span>
         <span v-if="totalTime" class="pill tabular">{{ totalTime }} {{ t('common.min') }}</span>
-        <span v-if="dish.servings > 1" class="pill tabular">
+        <span v-if="view.servings > 1" class="pill tabular">
           <Users :size="12" />
-          {{ dish.servings }} {{ t('common.servings') }}
+          {{ view.servings }} {{ t('common.servings') }}
         </span>
       </div>
 
       <div class="detail__macros">
-        <div class="macro"><span class="macro__label">{{ t('summary.protein') }}</span><span class="macro__value tabular">{{ dish.protein }} {{ t('common.g') }}</span></div>
-        <div class="macro"><span class="macro__label">{{ t('summary.carbs') }}</span><span class="macro__value tabular">{{ dish.carbs }} {{ t('common.g') }}</span></div>
-        <div class="macro"><span class="macro__label">{{ t('summary.fat') }}</span><span class="macro__value tabular">{{ dish.fat }} {{ t('common.g') }}</span></div>
+        <div class="macro"><span class="macro__label">{{ t('summary.protein') }}</span><span class="macro__value tabular">{{ view.protein }} {{ t('common.g') }}</span></div>
+        <div class="macro"><span class="macro__label">{{ t('summary.carbs') }}</span><span class="macro__value tabular">{{ view.carbs }} {{ t('common.g') }}</span></div>
+        <div class="macro"><span class="macro__label">{{ t('summary.fat') }}</span><span class="macro__value tabular">{{ view.fat }} {{ t('common.g') }}</span></div>
       </div>
 
-      <p v-if="dish.notes" class="detail__notes">{{ dish.notes }}</p>
+      <p v-if="view.notes" class="detail__notes">{{ view.notes }}</p>
 
-      <div v-if="dish.ingredients?.length > 0" class="detail__section">
+      <div v-if="view.ingredients?.length > 0" class="detail__section">
         <h3 class="detail__heading">{{ t('dishDetail.ingredients') }}</h3>
         <ul class="ingredients">
-          <li v-for="(ing, i) in dish.ingredients" :key="i">
+          <li v-for="(ing, i) in view.ingredients" :key="i">
             <span class="ingredients__bullet" />
             <span class="ingredients__name">{{ ing.name }}</span>
             <span v-if="ing.amount" class="ingredients__amount">{{ ing.amount }}</span>
@@ -62,17 +65,17 @@ const totalTime = computed(() => {
         </ul>
       </div>
 
-      <div v-if="dish.instructions?.length > 0" class="detail__section">
+      <div v-if="view.instructions?.length > 0" class="detail__section">
         <h3 class="detail__heading">{{ t('dishDetail.instructions') }}</h3>
         <ol class="instructions">
-          <li v-for="(step, i) in dish.instructions" :key="i">
+          <li v-for="(step, i) in view.instructions" :key="i">
             <span class="instructions__num tabular">{{ i + 1 }}</span>
             <span>{{ step }}</span>
           </li>
         </ol>
       </div>
 
-      <p v-if="!hasRecipe && !dish.notes" class="detail__empty">{{ t('dishDetail.noRecipe') }}</p>
+      <p v-if="!hasRecipe && !view.notes" class="detail__empty">{{ t('dishDetail.noRecipe') }}</p>
 
       <footer class="detail__footer">
         <button type="button" class="app-btn app-btn--ghost" @click="$emit('delete', dish)">
