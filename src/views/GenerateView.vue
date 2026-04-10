@@ -1,7 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Sparkles, AlertCircle } from 'lucide-vue-next'
+
+const { t } = useI18n()
 import { useDietStore } from '@/stores/dietStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
 import { generateMealPlan } from '@/services/openai'
@@ -64,16 +67,14 @@ function handleBack() {
       <div class="generate-hero__icon">
         <Sparkles :size="20" />
       </div>
-      <h1 class="generate-hero__title font-display">Plan your week with AI</h1>
-      <p class="generate-hero__sub">
-        Tell us what you eat and we will generate a balanced 7-day meal plan in seconds.
-      </p>
+      <h1 class="generate-hero__title font-display">{{ t('generate.heroTitle') }}</h1>
+      <p class="generate-hero__sub">{{ t('generate.heroSub') }}</p>
     </header>
 
     <div v-if="error" class="generate-error">
       <AlertCircle :size="16" />
       <div>
-        <p class="generate-error__title">Generation failed</p>
+        <p class="generate-error__title">{{ t('generate.errorTitle') }}</p>
         <p class="generate-error__msg">{{ error }}</p>
       </div>
     </div>

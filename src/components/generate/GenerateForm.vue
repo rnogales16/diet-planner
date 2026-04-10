@@ -1,9 +1,11 @@
 <script setup>
 import { reactive, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Sparkles, User, Settings as SettingsIcon } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import { useDietStore } from '@/stores/dietStore'
 
+const { t } = useI18n()
 const emit = defineEmits(['generate'])
 const store = useDietStore()
 
@@ -18,34 +20,16 @@ function submit() {
 
 const profile = computed(() => store.profile)
 
-const goalLabels = {
-  lose_weight: 'Lose weight',
-  gain_muscle: 'Gain muscle',
-  maintain: 'Maintain',
-  health: 'General health',
-}
-
-const styleLabels = {
-  omnivore: 'Omnivore',
-  vegetarian: 'Vegetarian',
-  vegan: 'Vegan',
-  pescatarian: 'Pescatarian',
-  mediterranean: 'Mediterranean',
-  keto: 'Keto',
-  paleo: 'Paleo',
-  other: 'Other',
-}
-
 const profileChips = computed(() => {
   const chips = []
   const p = profile.value
-  if (p.goal) chips.push(goalLabels[p.goal] || p.goal)
-  if (p.dietaryStyle) chips.push(styleLabels[p.dietaryStyle] || p.dietaryStyle)
-  if (p.calorieTarget) chips.push(`${p.calorieTarget} kcal/day`)
-  if (p.proteinTarget) chips.push(`${p.proteinTarget}g protein`)
-  if (p.servings && p.servings > 1) chips.push(`${p.servings} servings`)
-  if (p.maxCookTime) chips.push(`≤${p.maxCookTime} min/meal`)
-  if (p.allergies) chips.push(`no ${p.allergies.split(',').slice(0, 2).join(', ').trim()}`)
+  if (p.goal) chips.push(t(`settings.profile.goalOptions.${p.goal}`))
+  if (p.dietaryStyle) chips.push(t(`settings.profile.styleOptions.${p.dietaryStyle}`))
+  if (p.calorieTarget) chips.push(`${p.calorieTarget} ${t('common.kcal')}`)
+  if (p.proteinTarget) chips.push(`${p.proteinTarget}${t('common.g')} ${t('summary.protein').toLowerCase()}`)
+  if (p.servings && p.servings > 1) chips.push(`${p.servings} ${t('common.servings')}`)
+  if (p.maxCookTime) chips.push(`≤${p.maxCookTime} ${t('common.min')}`)
+  if (p.allergies) chips.push(p.allergies.split(',').slice(0, 2).join(', ').trim())
   return chips
 })
 
@@ -60,12 +44,12 @@ const profileEmpty = computed(() => profileChips.value.length === 0 && !profile.
         <User :size="14" />
       </div>
       <div class="profile-banner__body">
-        <p class="profile-banner__title">Using your diet profile</p>
+        <p class="profile-banner__title">{{ t('generate.form.usingProfile') }}</p>
         <div class="profile-banner__chips">
           <span v-for="chip in profileChips" :key="chip" class="profile-banner__chip">{{ chip }}</span>
         </div>
       </div>
-      <RouterLink to="/settings" class="profile-banner__edit" title="Edit profile in Settings">
+      <RouterLink to="/settings" class="profile-banner__edit" :title="t('generate.form.editProfile')">
         <SettingsIcon :size="14" />
       </RouterLink>
     </div>
@@ -75,39 +59,41 @@ const profileEmpty = computed(() => profileChips.value.length === 0 && !profile.
         <User :size="14" />
       </div>
       <div class="profile-banner__body">
-        <p class="profile-banner__title">No diet profile yet</p>
-        <p class="profile-banner__sub">
-          Tip: <RouterLink to="/settings" class="profile-banner__link">fill in your diet profile</RouterLink> once and the AI will use it for every plan from now on.
-        </p>
+        <p class="profile-banner__title">{{ t('generate.form.noProfile') }}</p>
+        <i18n-t keypath="generate.form.noProfileSub" tag="p" class="profile-banner__sub">
+          <template #link>
+            <RouterLink to="/settings" class="profile-banner__link">{{ t('generate.form.fillProfile') }}</RouterLink>
+          </template>
+        </i18n-t>
       </div>
     </div>
 
     <label class="field">
-      <span class="field__label">What is in your fridge this week</span>
+      <span class="field__label">{{ t('generate.form.fridgeLabel') }}</span>
       <textarea
         v-model="form.fridgeContents"
         class="app-input"
         rows="3"
-        placeholder="chicken breast, broccoli, eggs, brown rice, greek yogurt..."
+        :placeholder="t('generate.form.fridgePlaceholder')"
       />
-      <span class="field__hint">Optional. Helps the AI build a plan around what you already have.</span>
+      <span class="field__hint">{{ t('generate.form.fridgeHint') }}</span>
     </label>
 
     <label class="field">
-      <span class="field__label">Anything specific for this week</span>
+      <span class="field__label">{{ t('generate.form.extrasLabel') }}</span>
       <textarea
         v-model="form.weeklyExtras"
         class="app-input"
         rows="2"
-        placeholder="having dinner out on Friday, want to try Thai food, low budget..."
+        :placeholder="t('generate.form.extrasPlaceholder')"
       />
-      <span class="field__hint">Optional. Anything that only applies to this particular week.</span>
+      <span class="field__hint">{{ t('generate.form.extrasHint') }}</span>
     </label>
 
     <footer class="generate-form__footer">
       <button type="submit" class="app-btn app-btn--primary app-btn--lg">
         <Sparkles :size="14" />
-        Generate plan
+        {{ t('generate.form.submit') }}
       </button>
     </footer>
   </form>

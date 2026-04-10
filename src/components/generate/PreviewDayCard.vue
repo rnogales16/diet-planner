@@ -1,6 +1,11 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { sumMeals } from '@/utils/nutritionHelpers'
+import { useDietStore } from '@/stores/dietStore'
+
+const { t } = useI18n()
+const store = useDietStore()
 
 const props = defineProps({
   day: { type: Object, required: true },
@@ -11,27 +16,28 @@ const dayTotals = computed(() => sumMeals(
   props.day.meals.map((m) => ({ dishes: [m.dish] }))
 ))
 
-const mealLabels = {
-  breakfast: 'Breakfast',
-  morning_snack: 'Snack',
-  lunch: 'Lunch',
-  afternoon_snack: 'Snack',
-  dinner: 'Dinner',
-}
+// Use the user's customized labels from the store, with sensible defaults.
+const mealLabels = computed(() => {
+  const map = {}
+  for (const mt of store.mealTypes) {
+    map[mt.type] = mt.label
+  }
+  return map
+})
 </script>
 
 <template>
   <div class="preview-day">
     <header class="preview-day__head">
       <h3 class="preview-day__name font-display">{{ dayName }}</h3>
-      <span class="preview-day__kcal tabular">{{ dayTotals.calories }} kcal</span>
+      <span class="preview-day__kcal tabular">{{ dayTotals.calories }} {{ t('common.kcal') }}</span>
     </header>
 
     <div class="preview-day__meals">
       <div v-for="meal in day.meals" :key="meal.type" class="preview-meal">
-        <span class="preview-meal__label">{{ mealLabels[meal.type] }}</span>
+        <span class="preview-meal__label">{{ mealLabels[meal.type] || meal.type }}</span>
         <span class="preview-meal__name">{{ meal.dish.name }}</span>
-        <span class="preview-meal__cals tabular">{{ meal.dish.calories }} kcal</span>
+        <span class="preview-meal__cals tabular">{{ meal.dish.calories }} {{ t('common.kcal') }}</span>
       </div>
     </div>
   </div>

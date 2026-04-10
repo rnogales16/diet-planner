@@ -1,8 +1,11 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, Check } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 import PreviewDayCard from './PreviewDayCard.vue'
+
+const { t, locale } = useI18n()
 
 const props = defineProps({
   plan: { type: Object, required: true },
@@ -11,7 +14,15 @@ const props = defineProps({
 
 const emit = defineEmits(['apply', 'back'])
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+// Use Intl for localized weekday names
+const dayNames = computed(() => {
+  const fmt = new Intl.DateTimeFormat(locale.value, { weekday: 'long' })
+  // Use Monday-Sunday based on a known reference week
+  return [0, 1, 2, 3, 4, 5, 6].map((i) => {
+    const d = new Date(2024, 0, 1 + i) // 2024-01-01 is a Monday
+    return fmt.format(d).charAt(0).toUpperCase() + fmt.format(d).slice(1)
+  })
+})
 
 const daysForSum = computed(() =>
   props.plan.days.map((d) => ({
@@ -32,25 +43,25 @@ const dailyAvg = computed(() => ({
   <div class="preview">
     <header class="preview__head">
       <div>
-        <h2 class="preview__title font-display">Your generated week</h2>
-        <p class="preview__sub">{{ weekRange }} &middot; 35 dishes</p>
+        <h2 class="preview__title font-display">{{ t('generate.preview.title') }}</h2>
+        <p class="preview__sub">{{ t('generate.preview.subtitle', { range: weekRange }) }}</p>
       </div>
       <div class="preview__stats">
         <div class="stat">
-          <span class="stat__label">avg/day</span>
-          <span class="stat__value tabular">{{ dailyAvg.calories }} kcal</span>
+          <span class="stat__label">{{ t('generate.preview.avgPerDay') }}</span>
+          <span class="stat__value tabular">{{ dailyAvg.calories }} {{ t('common.kcal') }}</span>
         </div>
         <div class="stat">
           <span class="stat__label">P</span>
-          <span class="stat__value tabular">{{ dailyAvg.protein }}g</span>
+          <span class="stat__value tabular">{{ dailyAvg.protein }}{{ t('common.g') }}</span>
         </div>
         <div class="stat">
           <span class="stat__label">C</span>
-          <span class="stat__value tabular">{{ dailyAvg.carbs }}g</span>
+          <span class="stat__value tabular">{{ dailyAvg.carbs }}{{ t('common.g') }}</span>
         </div>
         <div class="stat">
           <span class="stat__label">F</span>
-          <span class="stat__value tabular">{{ dailyAvg.fat }}g</span>
+          <span class="stat__value tabular">{{ dailyAvg.fat }}{{ t('common.g') }}</span>
         </div>
       </div>
     </header>
@@ -60,22 +71,22 @@ const dailyAvg = computed(() => ({
         v-for="day in plan.days"
         :key="day.dayIndex"
         :day="day"
-        :day-name="DAY_NAMES[day.dayIndex]"
+        :day-name="dayNames[day.dayIndex]"
       />
     </div>
 
     <footer class="preview__footer">
       <button type="button" class="app-btn app-btn--secondary" @click="emit('back')">
         <ChevronLeft :size="14" />
-        Back to form
+        {{ t('generate.preview.back') }}
       </button>
       <button type="button" class="app-btn app-btn--primary app-btn--lg" @click="emit('apply')">
         <Check :size="14" />
-        Apply to this week
+        {{ t('generate.preview.apply') }}
       </button>
     </footer>
 
-    <p class="preview__note">Applying replaces all existing dishes for this week.</p>
+    <p class="preview__note">{{ t('generate.preview.warning') }}</p>
   </div>
 </template>
 

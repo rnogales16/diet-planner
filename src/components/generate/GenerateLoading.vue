@@ -1,5 +1,8 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { Loader2 } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 defineEmits(['cancel'])
 </script>
@@ -9,9 +12,9 @@ defineEmits(['cancel'])
     <div class="loading__spinner">
       <Loader2 :size="32" class="spin" />
     </div>
-    <p class="loading__title font-display">Cooking up your week</p>
-    <p class="loading__sub">This usually takes 15 to 30 seconds</p>
-    <button type="button" class="app-btn app-btn--ghost" @click="$emit('cancel')">Cancel</button>
+    <p class="loading__title font-display">{{ t('generate.loadingTitle') }}</p>
+    <p class="loading__sub">{{ t('generate.loadingSub') }}</p>
+    <button type="button" class="app-btn app-btn--ghost" @click="$emit('cancel')">{{ t('common.cancel') }}</button>
   </div>
 </template>
 
