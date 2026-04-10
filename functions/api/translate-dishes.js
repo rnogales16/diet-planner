@@ -2,7 +2,11 @@
 // Each dish keeps its id so the client can re-attach the translation
 // to the right place in the store.
 
-const GEMINI_MODEL = 'gemini-2.5-pro'
+// Translation is a simple, well-defined task — Flash is more than enough,
+// and its free tier (15 RPM / 1500 RPD) gives us 60x the room of 2.5 Pro.
+// We keep 2.5 Pro for the actual recipe generation in /api/generate-meal-plan
+// where the extra reasoning is worth it.
+const GEMINI_MODEL = 'gemini-2.5-flash'
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 const LANGUAGE_NAMES = {
