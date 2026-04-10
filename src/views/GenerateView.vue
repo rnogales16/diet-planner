@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Sparkles, AlertCircle } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
 import { generateMealPlan } from '@/services/openai'
@@ -14,7 +15,7 @@ const { weekKey, weekRange, init } = useWeekNavigation()
 
 init()
 
-const phase = ref('form') // 'form' | 'loading' | 'preview'
+const phase = ref('form') // form | loading | preview
 const error = ref('')
 const generatedPlan = ref(null)
 
@@ -58,43 +59,31 @@ function handleBack() {
 </script>
 
 <template>
-  <div class="max-w-6xl">
-    <!-- Header -->
-    <div class="flex items-center gap-3 mb-8">
-      <div class="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-sm shadow-violet-500/25">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
+  <div class="generate-view">
+    <header class="generate-hero" v-if="phase === 'form'">
+      <div class="generate-hero__icon">
+        <Sparkles :size="20" />
       </div>
+      <h1 class="generate-hero__title font-display">Plan your week with AI</h1>
+      <p class="generate-hero__sub">
+        Tell us what you eat and we will generate a balanced 7-day meal plan in seconds.
+      </p>
+    </header>
+
+    <div v-if="error" class="generate-error">
+      <AlertCircle :size="16" />
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">AI Meal Plan Generator</h1>
-        <p class="text-sm text-gray-400 dark:text-gray-500">Describe your preferences and get a full 7-day plan</p>
+        <p class="generate-error__title">Generation failed</p>
+        <p class="generate-error__msg">{{ error }}</p>
       </div>
     </div>
 
-    <!-- Error banner -->
-    <div
-      v-if="error"
-      class="mb-6 p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-start gap-3"
-    >
-      <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <div>
-        <p class="text-sm font-semibold text-red-800 dark:text-red-200">Generation failed</p>
-        <p class="text-xs text-red-600 dark:text-red-400 mt-0.5">{{ error }}</p>
-      </div>
-    </div>
-
-    <!-- Phase: Form -->
-    <div v-if="phase === 'form'" class="max-w-2xl">
+    <div v-if="phase === 'form'" class="generate-card app-card">
       <GenerateForm @generate="handleGenerate" />
     </div>
 
-    <!-- Phase: Loading -->
     <GenerateLoading v-else-if="phase === 'loading'" @cancel="handleCancel" />
 
-    <!-- Phase: Preview -->
     <GeneratePlanPreview
       v-else-if="phase === 'preview' && generatedPlan"
       :plan="generatedPlan"
@@ -104,3 +93,81 @@ function handleBack() {
     />
   </div>
 </template>
+
+<style scoped>
+.generate-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.generate-hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 8px;
+}
+
+.generate-hero__icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background-color: var(--accent-tint);
+  color: var(--accent);
+}
+
+.generate-hero__title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.generate-hero__sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 480px;
+}
+
+.generate-card {
+  padding: 28px 32px;
+}
+
+.generate-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  background-color: var(--danger-tint);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+}
+
+.generate-error__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.generate-error__msg {
+  font-size: 12px;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+@media (max-width: 720px) {
+  .generate-card {
+    padding: 20px;
+  }
+  .generate-hero__title {
+    font-size: 26px;
+  }
+}
+</style>
