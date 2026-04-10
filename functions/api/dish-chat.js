@@ -7,9 +7,10 @@
 
 import { callGeminiWithFallback } from './_gemini.js'
 
-// Flash-Lite is plenty for short, focused conversation about one dish.
-// We still cascade to Flash and Pro on rate-limit just in case.
-const MODEL_CASCADE = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro']
+// Pro only — quality matters when the user is iterating on a recipe and we
+// want the model to actually understand allergies, macros and constraints.
+// The cascade falls back to the backup key on rate limit.
+const MODEL_CASCADE = ['gemini-2.5-pro']
 
 const LANGUAGE_NAMES = {
   en: 'English',

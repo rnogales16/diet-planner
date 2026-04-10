@@ -3,13 +3,13 @@
 // authenticated by the time it gets here. API keys live as Pages secrets
 // and never reach the browser.
 //
-// Cascade: try Pro first (best recipes), fall back to Flash on quota issues.
-// Each model is retried with the backup key (different Google Cloud project,
-// independent quota) before falling through to the next model.
+// Pro only — meal generation deserves the best reasoning. The cascade just
+// retries with the backup key (different Google Cloud project, independent
+// quota / billing) when the primary is rate-limited.
 
 import { callGeminiWithFallback } from './_gemini.js'
 
-const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash']
+const MODEL_CASCADE = ['gemini-2.5-pro']
 
 const GOAL_LABELS = {
   lose_weight: 'lose weight',

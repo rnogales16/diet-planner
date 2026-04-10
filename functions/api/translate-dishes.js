@@ -2,13 +2,13 @@
 // Each dish keeps its id so the client can re-attach the translation
 // to the right place in the store.
 //
-// Translation is a simple task — Flash is plenty, and its free tier
-// (15 RPM / 1500 RPD per project) gives us 60x the room of 2.5 Pro.
-// We still keep a Pro fallback in case Flash hits its quota.
+// Translation is mechanical — Flash is plenty, and its free tier
+// (15 RPM / 1500 RPD per project) gives 60x the room of 2.5 Pro.
+// Keep this on Flash so we don't burn Pro quota on translations.
 
 import { callGeminiWithFallback } from './_gemini.js'
 
-const MODEL_CASCADE = ['gemini-2.5-flash', 'gemini-2.5-pro']
+const MODEL_CASCADE = ['gemini-2.5-flash']
 
 const LANGUAGE_NAMES = {
   en: 'English',
