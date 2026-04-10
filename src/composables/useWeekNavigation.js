@@ -1,14 +1,16 @@
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getWeekKey, getWeekDates, getMonday, shiftWeek, formatWeekRange } from '@/utils/dateHelpers'
 import { useDietStore } from '@/stores/dietStore'
 
 export function useWeekNavigation() {
   const store = useDietStore()
+  const { locale } = useI18n()
   const referenceDate = ref(getMonday(new Date()))
 
   const weekDates = computed(() => getWeekDates(referenceDate.value))
   const weekKey = computed(() => getWeekKey(referenceDate.value))
-  const weekRange = computed(() => formatWeekRange(weekDates.value))
+  const weekRange = computed(() => formatWeekRange(weekDates.value, locale.value))
 
   function init() {
     store.setCurrentWeek(weekKey.value, referenceDate.value)

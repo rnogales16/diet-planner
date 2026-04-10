@@ -69,25 +69,35 @@ export function formatDate(date) {
 }
 
 /**
- * Format a date as "Mon 24" (short day + day number).
+ * Format a date as a short "weekday day" string in the given locale.
  */
-export function formatShortDate(date) {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  return `${days[date.getDay()]} ${date.getDate()}`
+export function formatShortDate(date, locale = 'en') {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric' })
+  return fmt.format(date)
 }
 
 /**
- * Format a date range like "Feb 23 – Mar 1, 2026".
+ * Format a date range like "Feb 23 – Mar 1, 2026" in the given locale.
+ * Falls back to English if Intl is not available.
  */
-export function formatWeekRange(dates) {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+export function formatWeekRange(dates, locale = 'en') {
   const start = dates[0]
   const end = dates[6]
-  const sameMonth = start.getMonth() === end.getMonth()
-  if (sameMonth) {
-    return `${months[start.getMonth()]} ${start.getDate()} – ${end.getDate()}, ${end.getFullYear()}`
+
+  // Try the modern Intl.DateTimeFormat.formatRange (supported everywhere we care about)
+  try {
+    const fmt = new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    if (typeof fmt.formatRange === 'function') {
+      return fmt.formatRange(start, end)
+    }
+    return `${fmt.format(start)} – ${fmt.format(end)}`
+  } catch {
+    return `${start.toDateString()} – ${end.toDateString()}`
   }
-  return `${months[start.getMonth()]} ${start.getDate()} – ${months[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`
 }
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
