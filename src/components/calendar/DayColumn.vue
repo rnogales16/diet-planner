@@ -1,8 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import MealSlot from './MealSlot.vue'
-import DailySummary from '@/components/summary/DailySummary.vue'
-import { isToday, formatShortDate } from '@/utils/dateHelpers'
+import { isToday } from '@/utils/dateHelpers'
 
 const props = defineProps({
   day: { type: Object, required: true },
@@ -13,43 +12,18 @@ defineEmits(['addDish', 'editDish', 'deleteDish', 'viewDish'])
 
 const dateObj = computed(() => new Date(props.day.date))
 const isTodayFlag = computed(() => isToday(dateObj.value))
-const shortDate = computed(() => formatShortDate(dateObj.value))
-const totalCals = computed(() =>
-  props.day.meals.reduce((sum, m) => sum + m.dishes.reduce((s, d) => s + (Number(d.calories) || 0), 0), 0)
-)
+const dayNumber = computed(() => dateObj.value.getDate())
+const weekdayShort = computed(() => props.day.dayName.slice(0, 3).toUpperCase())
 </script>
 
 <template>
-  <div
-    class="flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
-    :class="isTodayFlag
-      ? 'ring-2 ring-emerald-400/60 shadow-lg shadow-emerald-500/8 bg-white dark:bg-gray-800'
-      : 'bg-white dark:bg-gray-800 border border-gray-200/70 dark:border-gray-700 shadow-sm'"
-  >
-    <!-- Day header -->
-    <div class="relative px-4 py-3.5" :class="isTodayFlag ? 'bg-gradient-to-br from-emerald-500 to-teal-500' : 'bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700'">
-      <div class="flex items-baseline justify-between">
-        <div>
-          <p class="text-[13px] font-extrabold tracking-tight" :class="isTodayFlag ? 'text-white' : 'text-gray-900 dark:text-gray-100'">
-            {{ day.dayName.slice(0, 3) }}
-          </p>
-          <p class="text-[11px] font-medium mt-0.5" :class="isTodayFlag ? 'text-emerald-100' : 'text-gray-400 dark:text-gray-500'">
-            {{ shortDate }}
-          </p>
-        </div>
-        <span
-          v-if="totalCals > 0"
-          class="text-[11px] font-bold px-2 py-0.5 rounded-full"
-          :class="isTodayFlag ? 'bg-white/20 text-white' : 'bg-gray-200/60 dark:bg-gray-600/60 text-gray-500 dark:text-gray-400'"
-        >
-          {{ totalCals }} kcal
-        </span>
-      </div>
-      <div v-if="isTodayFlag" class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-emerald-400 rounded-full ring-2 ring-white dark:ring-gray-800" />
-    </div>
+  <div class="day-col" :class="{ 'is-today': isTodayFlag }">
+    <header class="day-col__head">
+      <span class="day-col__weekday">{{ weekdayShort }}</span>
+      <span class="day-col__date font-display tabular">{{ dayNumber }}</span>
+    </header>
 
-    <!-- Meal slots -->
-    <div class="flex-1 p-2 space-y-0.5">
+    <div class="day-col__meals">
       <MealSlot
         v-for="meal in day.meals"
         :key="meal.type"
@@ -60,8 +34,55 @@ const totalCals = computed(() =>
         @viewDish="$emit('viewDish', { dayIndex, ...$event })"
       />
     </div>
-
-    <!-- Daily totals -->
-    <DailySummary :meals="day.meals" :isToday="isTodayFlag" />
   </div>
 </template>
+
+<style scoped>
+.day-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 10px;
+  min-width: 0;
+}
+
+.day-col.is-today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.day-col__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.day-col__weekday {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.day-col.is-today .day-col__weekday {
+  color: var(--accent);
+}
+
+.day-col__date {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.day-col__meals {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+</style>

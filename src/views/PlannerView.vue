@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDietStore } from '@/stores/dietStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
 import { createEmptyDish } from '@/utils/defaults'
@@ -10,12 +11,12 @@ import DishFormModal from '@/components/dishes/DishFormModal.vue'
 import DishDetailModal from '@/components/dishes/DishDetailModal.vue'
 import DeleteConfirmModal from '@/components/dishes/DeleteConfirmModal.vue'
 
+const router = useRouter()
 const store = useDietStore()
 const { weekKey, weekRange, init, goToPrevWeek, goToNextWeek, goToToday } = useWeekNavigation()
 
 onMounted(init)
 
-// Dish form modal state
 const showDishForm = ref(false)
 const isEditing = ref(false)
 const currentDayIndex = ref(0)
@@ -23,13 +24,11 @@ const currentMealType = ref('')
 const currentMealLabel = ref('')
 const currentDish = ref(null)
 
-// Dish detail modal state
 const showDishDetail = ref(false)
 const detailDish = ref(null)
 const detailDayIndex = ref(0)
 const detailMealType = ref('')
 
-// Delete confirm modal state
 const showDeleteConfirm = ref(false)
 const deleteDayIndex = ref(0)
 const deleteMealType = ref('')
@@ -107,11 +106,15 @@ function confirmDelete() {
   store.deleteDish(weekKey.value, deleteDayIndex.value, deleteMealType.value, deleteDish.value.id)
   showDeleteConfirm.value = false
 }
+
+function goToGenerate() {
+  router.push('/generate')
+}
 </script>
 
 <template>
-  <div>
-    <div class="mb-4">
+  <div class="planner">
+    <div class="planner__top">
       <WeekNavigator
         :weekRange="weekRange"
         @prev="goToPrevWeek"
@@ -120,16 +123,19 @@ function confirmDelete() {
       />
     </div>
 
-    <WeeklyCalendar
-      v-if="store.currentWeek"
-      :week="store.currentWeek"
-      @addDish="handleAddDish"
-      @editDish="handleEditDish"
-      @deleteDish="handleDeleteDish"
-      @viewDish="handleViewDish"
-    />
+    <div class="planner__layout">
+      <WeeklyCalendar
+        v-if="store.currentWeek"
+        class="planner__calendar"
+        :week="store.currentWeek"
+        @addDish="handleAddDish"
+        @editDish="handleEditDish"
+        @deleteDish="handleDeleteDish"
+        @viewDish="handleViewDish"
+      />
 
-    <WeeklySummary :week="store.currentWeek" />
+      <WeeklySummary :week="store.currentWeek" @generate="goToGenerate" />
+    </div>
 
     <DishFormModal
       :show="showDishForm"
@@ -156,3 +162,33 @@ function confirmDelete() {
     />
   </div>
 </template>
+
+<style scoped>
+.planner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.planner__top {
+  display: flex;
+  justify-content: center;
+}
+
+.planner__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+.planner__calendar {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .planner__layout {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

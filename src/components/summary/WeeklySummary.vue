@@ -1,112 +1,182 @@
 <script setup>
 import { computed } from 'vue'
+import { Sparkles } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 
 const props = defineProps({
   week: { type: Object, default: null },
 })
 
+defineEmits(['generate'])
+
 const totals = computed(() => (props.week ? sumDays(props.week.days) : { calories: 0, protein: 0, carbs: 0, fat: 0 }))
-const hasDishes = computed(() =>
-  props.week ? props.week.days.some((d) => d.meals.some((m) => m.dishes.length > 0)) : false,
-)
 
 const daysWithFood = computed(() =>
   props.week ? props.week.days.filter((d) => d.meals.some((m) => m.dishes.length > 0)).length : 0,
 )
 
 const dailyAvg = computed(() => {
-  if (daysWithFood.value === 0) return { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  const n = daysWithFood.value || 1
   return {
-    calories: Math.round(totals.value.calories / daysWithFood.value),
-    protein: Math.round(totals.value.protein / daysWithFood.value),
-    carbs: Math.round(totals.value.carbs / daysWithFood.value),
-    fat: Math.round(totals.value.fat / daysWithFood.value),
+    calories: Math.round(totals.value.calories / n),
+    protein: Math.round(totals.value.protein / n),
+    carbs: Math.round(totals.value.carbs / n),
+    fat: Math.round(totals.value.fat / n),
   }
 })
 
-const cards = computed(() => [
-  {
-    label: 'Calories',
-    total: totals.value.calories,
-    avg: dailyAvg.value.calories,
-    unit: 'kcal',
-    gradient: 'from-orange-500 to-amber-500',
-    bgLight: 'bg-orange-50',
-    icon: '🔥',
-  },
-  {
-    label: 'Protein',
-    total: totals.value.protein,
-    avg: dailyAvg.value.protein,
-    unit: 'g',
-    gradient: 'from-blue-500 to-cyan-500',
-    bgLight: 'bg-blue-50',
-    icon: '💪',
-  },
-  {
-    label: 'Carbs',
-    total: totals.value.carbs,
-    avg: dailyAvg.value.carbs,
-    unit: 'g',
-    gradient: 'from-amber-500 to-yellow-500',
-    bgLight: 'bg-amber-50',
-    icon: '⚡',
-  },
-  {
-    label: 'Fat',
-    total: totals.value.fat,
-    avg: dailyAvg.value.fat,
-    unit: 'g',
-    gradient: 'from-rose-500 to-pink-500',
-    bgLight: 'bg-rose-50',
-    icon: '🫒',
-  },
+// Rough targets used to fill the bars; the user can override these later.
+const TARGETS = { protein: 150, carbs: 220, fat: 70 }
+
+const macros = computed(() => [
+  { key: 'protein', label: 'Protein', value: dailyAvg.value.protein, target: TARGETS.protein },
+  { key: 'carbs', label: 'Carbs', value: dailyAvg.value.carbs, target: TARGETS.carbs },
+  { key: 'fat', label: 'Fat', value: dailyAvg.value.fat, target: TARGETS.fat },
 ])
 </script>
 
 <template>
-  <div v-if="week" class="mt-6">
-    <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-      <span class="w-7 h-7 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center text-white text-xs">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      </span>
-      Weekly Summary
-      <span v-if="daysWithFood > 0" class="text-xs font-medium text-gray-400 dark:text-gray-500 ml-1">
-        {{ daysWithFood }} day{{ daysWithFood > 1 ? 's' : '' }} tracked
-      </span>
-    </h3>
+  <aside class="summary">
+    <header class="summary__head">
+      <h3 class="summary__title font-display">This week</h3>
+      <p class="summary__sub" v-if="daysWithFood">{{ daysWithFood }} day{{ daysWithFood > 1 ? 's' : '' }} planned</p>
+      <p class="summary__sub" v-else>No dishes yet</p>
+    </header>
 
-    <div v-if="hasDishes" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      <div
-        v-for="card in cards"
-        :key="card.label"
-        class="relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm p-4 hover:shadow-md transition-shadow"
-      >
-        <div class="absolute top-0 right-0 w-20 h-20 rounded-full opacity-5 dark:opacity-10 -translate-y-6 translate-x-6 bg-gradient-to-br" :class="card.gradient" />
-        <div class="flex items-start justify-between mb-2">
-          <span class="text-2xl">{{ card.icon }}</span>
-          <span class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{{ card.label }}</span>
+    <div class="summary__kcal">
+      <span class="summary__kcal-label">Daily average</span>
+      <span class="summary__kcal-value font-display tabular">{{ dailyAvg.calories.toLocaleString() }}</span>
+      <span class="summary__kcal-unit">kcal</span>
+    </div>
+
+    <div class="summary__macros">
+      <div v-for="m in macros" :key="m.key" class="macro">
+        <div class="macro__row">
+          <span class="macro__label">{{ m.label }}</span>
+          <span class="macro__value tabular">{{ m.value }}<span class="macro__unit"> / {{ m.target }} g</span></span>
         </div>
-        <p class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
-          {{ card.total }}<span class="text-sm font-semibold text-gray-400 dark:text-gray-500 ml-0.5">{{ card.unit }}</span>
-        </p>
-        <div class="mt-2 flex items-center gap-1.5">
-          <div class="h-1 flex-1 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-            <div class="h-full rounded-full bg-gradient-to-r transition-all duration-500" :class="card.gradient" :style="{ width: Math.min(100, card.avg / (card.label === 'Calories' ? 25 : 2)) + '%' }" />
-          </div>
-          <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">
-            avg {{ card.avg }}{{ card.unit }}/day
-          </span>
+        <div class="macro__bar">
+          <div class="macro__fill" :style="{ width: Math.min(100, (m.value / m.target) * 100) + '%' }" />
         </div>
       </div>
     </div>
 
-    <div v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-      <p class="text-4xl mb-2">🥗</p>
-      <p class="text-sm text-gray-400 dark:text-gray-500">Add some dishes to see your weekly nutrition summary</p>
-    </div>
-  </div>
+    <button type="button" class="app-btn app-btn--primary summary__cta" @click="$emit('generate')">
+      <Sparkles :size="14" />
+      Generate week
+    </button>
+  </aside>
 </template>
+
+<style scoped>
+.summary {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 80px;
+}
+
+.summary__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.summary__sub {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.summary__kcal {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.summary__kcal-label {
+  display: block;
+  width: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+
+.summary__kcal-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.summary__kcal-unit {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.summary__macros {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.macro__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.macro__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.macro__value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.macro__unit {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.macro__bar {
+  height: 5px;
+  background-color: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.macro__fill {
+  height: 100%;
+  background-color: var(--accent);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.summary__cta {
+  width: 100%;
+  margin-top: 4px;
+}
+</style>

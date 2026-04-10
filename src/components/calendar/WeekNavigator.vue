@@ -1,4 +1,6 @@
 <script setup>
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+
 defineProps({
   weekRange: { type: String, required: true },
 })
@@ -7,36 +9,70 @@ defineEmits(['prev', 'next', 'today'])
 </script>
 
 <template>
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div class="flex items-center gap-2">
-      <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">My Week</h2>
-      <span class="px-3 py-1 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full border border-emerald-200 dark:border-emerald-800">
-        {{ weekRange }}
-      </span>
-    </div>
-    <div class="flex items-center gap-1.5">
-      <button
-        class="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 shadow-sm transition-all cursor-pointer"
-        @click="$emit('prev')"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-      <button
-        class="h-9 px-4 flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-sm shadow-emerald-500/25 hover:shadow-md hover:shadow-emerald-500/30 transition-all cursor-pointer"
-        @click="$emit('today')"
-      >
-        Today
-      </button>
-      <button
-        class="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 shadow-sm transition-all cursor-pointer"
-        @click="$emit('next')"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-    </div>
+  <div class="week-nav">
+    <button class="week-nav__chev" type="button" @click="$emit('prev')" aria-label="Previous week">
+      <ChevronLeft :size="16" />
+    </button>
+    <div class="week-nav__label font-display tabular">{{ weekRange }}</div>
+    <button class="week-nav__chev" type="button" @click="$emit('next')" aria-label="Next week">
+      <ChevronRight :size="16" />
+    </button>
+    <button class="week-nav__today" type="button" @click="$emit('today')">Today</button>
   </div>
 </template>
+
+<style scoped>
+.week-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+}
+
+.week-nav__chev {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.week-nav__chev:hover {
+  background-color: var(--surface-2);
+  color: var(--text);
+}
+
+.week-nav__label {
+  min-width: 200px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.week-nav__today {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.week-nav__today:hover {
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+</style>

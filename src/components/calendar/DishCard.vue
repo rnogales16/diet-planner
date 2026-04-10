@@ -1,87 +1,121 @@
 <script setup>
-import { computed } from 'vue'
+import { Pencil, Trash2 } from 'lucide-vue-next'
 
-const props = defineProps({
+defineProps({
   dish: { type: Object, required: true },
-  mealType: { type: String, default: '' },
 })
 
 defineEmits(['edit', 'delete', 'view'])
-
-const accentMap = {
-  breakfast:       'from-amber-400 to-orange-400',
-  morning_snack:   'from-rose-400 to-pink-400',
-  lunch:           'from-blue-400 to-cyan-400',
-  afternoon_snack: 'from-violet-400 to-purple-400',
-  dinner:          'from-indigo-400 to-blue-400',
-}
-const accent = computed(() => accentMap[props.mealType] || 'from-gray-400 to-gray-400')
-
-const hasRecipe = computed(() =>
-  (props.dish.ingredients?.length > 0) || (props.dish.instructions?.length > 0)
-)
 </script>
 
 <template>
-  <div
-    class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md dark:shadow-gray-900/30 transition-all duration-200 overflow-hidden cursor-pointer"
-    @click="$emit('view', dish)"
-  >
-    <!-- Top accent bar -->
-    <div class="h-0.5 bg-gradient-to-r" :class="accent" />
-
-    <div class="px-3 py-2">
-      <!-- Name + actions -->
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-1.5 min-w-0">
-          <p class="text-[12px] font-bold text-gray-800 dark:text-gray-100 truncate leading-snug">{{ dish.name || 'Untitled' }}</p>
-          <svg
-            v-if="hasRecipe"
-            class="w-3 h-3 text-emerald-500 dark:text-emerald-400 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            title="Has recipe"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-          </svg>
-        </div>
-        <div class="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            class="p-1 text-gray-300 dark:text-gray-500 hover:text-emerald-500 dark:hover:text-emerald-400 rounded-md transition-colors cursor-pointer"
-            title="Edit"
-            @click.stop="$emit('edit', dish)"
-          >
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" />
-            </svg>
-          </button>
-          <button
-            class="p-1 text-gray-300 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-md transition-colors cursor-pointer"
-            title="Delete"
-            @click.stop="$emit('delete', dish)"
-          >
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+  <article class="dish-card" @click="$emit('view', dish)">
+    <header class="dish-card__head">
+      <h4 class="dish-card__name font-display">{{ dish.name || 'Untitled' }}</h4>
+      <div class="dish-card__actions">
+        <button type="button" title="Edit" @click.stop="$emit('edit', dish)">
+          <Pencil :size="12" />
+        </button>
+        <button type="button" title="Delete" class="danger" @click.stop="$emit('delete', dish)">
+          <Trash2 :size="12" />
+        </button>
       </div>
-
-      <!-- Time + macros in a single clean row -->
-      <div class="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-        <span class="font-medium">{{ dish.time }}</span>
-        <span class="text-gray-200 dark:text-gray-600">|</span>
-        <span class="font-semibold text-orange-500/80 dark:text-orange-400/80">{{ dish.calories }}</span>
-        <span class="text-gray-200 dark:text-gray-600">&middot;</span>
-        <span>P{{ dish.protein }}</span>
-        <span class="text-gray-200 dark:text-gray-600">&middot;</span>
-        <span>C{{ dish.carbs }}</span>
-        <span class="text-gray-200 dark:text-gray-600">&middot;</span>
-        <span>F{{ dish.fat }}</span>
-      </div>
+    </header>
+    <div class="dish-card__meta">
+      <span class="tabular">{{ dish.time }}</span>
+      <span class="dot" aria-hidden="true">·</span>
+      <span class="dish-card__kcal tabular">{{ dish.calories }} kcal</span>
     </div>
-  </div>
+  </article>
 </template>
+
+<style scoped>
+.dish-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  position: relative;
+}
+
+.dish-card:hover {
+  border-color: var(--border-strong);
+  background-color: var(--surface-2);
+}
+
+.dish-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.dish-card__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.dish-card__actions {
+  display: inline-flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.dish-card:hover .dish-card__actions {
+  opacity: 1;
+}
+
+.dish-card__actions button {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dish-card__actions button:hover {
+  background-color: var(--surface-2);
+  color: var(--text);
+}
+
+.dish-card__actions button.danger:hover {
+  color: var(--danger);
+}
+
+.dish-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.dish-card__kcal {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.dot {
+  color: var(--border-strong);
+}
+</style>
