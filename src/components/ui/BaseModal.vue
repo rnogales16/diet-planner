@@ -1,7 +1,10 @@
 <script setup>
+import { X } from 'lucide-vue-next'
+
 defineProps({
   title: { type: String, default: '' },
   show: { type: Boolean, default: false },
+  size: { type: String, default: 'md' }, // sm | md | lg
 })
 
 const emit = defineEmits(['close'])
@@ -18,24 +21,18 @@ function onBackdropClick(e) {
     <Transition name="modal">
       <div
         v-if="show"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+        class="modal-backdrop"
         @click="onBackdropClick"
       >
         <Transition name="modal-content" appear>
-          <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
-            <div class="relative px-6 py-5 border-b border-gray-100 dark:border-gray-700">
-              <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-t-2xl" />
-              <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ title }}</h2>
-              <button
-                class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                @click="$emit('close')"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+          <div class="modal-card" :class="`modal-card--${size}`">
+            <header class="modal-head">
+              <h2 class="modal-title font-display">{{ title }}</h2>
+              <button class="modal-close" type="button" @click="$emit('close')">
+                <X :size="16" />
               </button>
-            </div>
-            <div class="p-6">
+            </header>
+            <div class="modal-body">
               <slot />
             </div>
           </div>
@@ -46,26 +43,109 @@ function onBackdropClick(e) {
 </template>
 
 <style scoped>
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(4px);
+  padding: 16px;
+}
+
+.modal-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-card--lg {
+  max-width: 720px;
+}
+
+.modal-card--sm {
+  max-width: 360px;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.modal-close {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.modal-close:hover {
+  background-color: var(--surface-2);
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
 .modal-enter-active,
 .modal-leave-active {
-  transition: opacity 0.25s ease;
+  transition: opacity 0.2s ease;
 }
 .modal-enter-from,
 .modal-leave-to {
   opacity: 0;
 }
 .modal-content-enter-active {
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 .modal-content-leave-active {
-  transition: transform 0.2s ease, opacity 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.1s ease;
 }
 .modal-content-enter-from {
-  transform: translateY(30px);
+  transform: translateY(20px);
   opacity: 0;
 }
 .modal-content-leave-to {
-  transform: translateY(10px);
+  transform: translateY(8px);
   opacity: 0;
+}
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal-card {
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+  }
 }
 </style>
