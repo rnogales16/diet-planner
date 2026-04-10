@@ -1,16 +1,7 @@
-// Talks to our /api/generate-meal-plan function. The actual Groq call
-// happens server-side so we never expose the API key.
+// Talks to /api/generate-meal-plan, which calls Gemini server-side.
+// The browser never sees the API key.
 
-const STORAGE_KEY_MODEL = 'nutriplan_groq_model'
-const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
-
-export function getModel() {
-  return localStorage.getItem(STORAGE_KEY_MODEL) || DEFAULT_MODEL
-}
-
-export function setModel(model) {
-  localStorage.setItem(STORAGE_KEY_MODEL, model || DEFAULT_MODEL)
-}
+import { useDietStore } from '@/stores/dietStore'
 
 const MEAL_TYPES = ['breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner']
 
@@ -99,12 +90,19 @@ function extractJson(text) {
 }
 
 export async function generateMealPlan(formData, signal) {
+  const store = useDietStore()
+  const body = {
+    fridgeContents: formData.fridgeContents || '',
+    weeklyExtras: formData.weeklyExtras || '',
+    profile: store.profile,
+  }
+
   let response
   try {
     response = await fetch('/api/generate-meal-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...formData, model: getModel() }),
+      body: JSON.stringify(body),
       signal,
     })
   } catch (err) {

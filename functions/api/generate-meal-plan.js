@@ -1,75 +1,27 @@
-// Proxy to Groq so we don't ship the API key to the browser.
-// Cloudflare Access sits in front of this, so requests that get here
-// are already authenticated.
+// Generates a 7-day meal plan with Gemini 2.5 Pro.
+// Cloudflare Access protects this endpoint, so the request is already
+// authenticated by the time it gets here. The API key lives as a Pages
+// secret (GEMINI_API_KEY) and never reaches the browser.
 
-const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
-const ALLOWED_MODELS = new Set(['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'])
+const GEMINI_MODEL = 'gemini-2.5-pro'
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
-const SYSTEM_PROMPT = `You are a professional nutritionist and meal planner. Generate a complete 7-day meal plan.
-
-You MUST respond with ONLY a valid JSON object — no markdown, no code fences, no explanation, no text before or after. Just the raw JSON.
-
-The JSON must follow this exact structure:
-{
-  "days": [
-    {
-      "dayIndex": 0,
-      "meals": [
-        {
-          "type": "breakfast",
-          "dish": {
-            "name": "Dish Name",
-            "time": "08:00",
-            "calories": 350,
-            "protein": 20,
-            "carbs": 40,
-            "fat": 12,
-            "notes": "",
-            "prepTime": 10,
-            "cookTime": 15,
-            "servings": 1,
-            "ingredients": [
-              { "name": "Ingredient", "amount": "100g" }
-            ],
-            "instructions": [
-              "Step 1 instruction.",
-              "Step 2 instruction."
-            ]
-          }
-        }
-      ]
-    }
-  ]
+const GOAL_LABELS = {
+  lose_weight: 'lose weight',
+  gain_muscle: 'gain muscle',
+  maintain: 'maintain weight',
+  health: 'general health',
 }
 
-RULES:
-- Exactly 7 days (dayIndex 0-6, Monday-Sunday)
-- Exactly 5 meals per day with types: breakfast, morning_snack, lunch, afternoon_snack, dinner
-- Each meal has exactly 1 dish with a full recipe
-- All numeric values (calories, protein, carbs, fat, prepTime, cookTime, servings) must be positive numbers
-- time must be in "HH:MM" 24-hour format
-- ingredients must have both name and amount as strings
-- instructions must be an array of step strings
-- Make recipes realistic, varied, and nutritionally balanced
-- Ensure daily totals are reasonable (1500-2500 kcal unless specified otherwise)
-- ONLY output the JSON object, nothing else`
-
-function buildUserPrompt(form) {
-  const parts = ['Generate a 7-day meal plan with the following requirements:']
-  if (form.preferences) parts.push(`\nDietary preferences: ${form.preferences}`)
-  if (form.fridgeContents) parts.push(`\nAvailable ingredients / fridge contents: ${form.fridgeContents}`)
-  if (form.favourites) parts.push(`\nFavourite ingredients / foods: ${form.favourites}`)
-  if (form.restrictions) parts.push(`\nRestrictions / allergies: ${form.restrictions}`)
-
-  const targets = []
-  if (form.calorieTarget) targets.push(`~${form.calorieTarget} kcal/day`)
-  if (form.proteinTarget) targets.push(`~${form.proteinTarget}g protein/day`)
-  if (form.carbsTarget) targets.push(`~${form.carbsTarget}g carbs/day`)
-  if (form.fatTarget) targets.push(`~${form.fatTarget}g fat/day`)
-  if (targets.length) parts.push(`\nDaily nutrition targets: ${targets.join(', ')}`)
-
-  parts.push('\n\nRespond with ONLY the JSON object.')
-  return parts.join('')
+const STYLE_LABELS = {
+  omnivore: 'omnivore',
+  vegetarian: 'vegetarian',
+  vegan: 'vegan',
+  pescatarian: 'pescatarian',
+  mediterranean: 'mediterranean',
+  keto: 'keto',
+  paleo: 'paleo',
+  other: 'unspecified',
 }
 
 function json(body, status = 200) {
@@ -79,20 +31,130 @@ function json(body, status = 200) {
   })
 }
 
-function sanitizeString(value, maxLen = 500) {
+function trim(value, max = 1500) {
   if (typeof value !== 'string') return ''
-  return value.slice(0, maxLen)
+  return value.slice(0, max).trim()
 }
 
-function sanitizeNumber(value) {
+function num(value) {
   const n = Number(value)
-  if (!Number.isFinite(n) || n < 0) return 0
+  if (!Number.isFinite(n) || n < 0) return null
   return Math.min(n, 10000)
 }
 
+function buildSystemPrompt() {
+  return `You are a meticulous nutritionist and home cook. You design realistic, varied, healthy weekly meal plans for one person at a time.
+
+Hard rules:
+- Output ONLY a single valid JSON object — no markdown, no code fences, no commentary.
+- Exactly 7 days, dayIndex 0..6 (Monday..Sunday).
+- Exactly 5 meals per day with these exact types: breakfast, morning_snack, lunch, afternoon_snack, dinner.
+- Each meal has exactly 1 dish.
+- Dish times must be "HH:MM" (24h). Use sensible times unless specified.
+- Numeric fields (calories, protein, carbs, fat, prepTime, cookTime, servings) must be positive numbers.
+- Ingredients are objects { "name": "...", "amount": "..." } with realistic, weighable quantities (grams, ml, units).
+- Instructions are an array of step strings, written like a real recipe (clear, in order, beginner-friendly but precise).
+- No duplicate dish names across the week. Vary cuisines, cooking methods and main proteins.
+- Respect every dietary restriction, allergy and target you receive. They are non-negotiable.
+- If a target is not provided, use sensible defaults (≈2000 kcal/day, balanced macros).
+- Snacks should be appropriately small (~150-300 kcal). Lunch and dinner should be the substantial meals.
+- All ingredient quantities must add up reasonably to the stated calorie and macro values.
+
+Output JSON shape (exact field names, order does not matter):
+{
+  "days": [
+    {
+      "dayIndex": 0,
+      "meals": [
+        {
+          "type": "breakfast",
+          "dish": {
+            "name": "string",
+            "time": "HH:MM",
+            "calories": number,
+            "protein": number,
+            "carbs": number,
+            "fat": number,
+            "notes": "string (may be empty)",
+            "prepTime": number,
+            "cookTime": number,
+            "servings": number,
+            "ingredients": [{ "name": "string", "amount": "string" }],
+            "instructions": ["string", "..."]
+          }
+        }
+      ]
+    }
+  ]
+}`
+}
+
+function buildUserPrompt({ profile, fridgeContents, weeklyExtras }) {
+  const lines = ['Generate a 7-day meal plan tailored to this person.']
+
+  // Profile section
+  const p = profile || {}
+  lines.push('\n## Diet profile')
+
+  if (p.goal) lines.push(`- Goal: ${GOAL_LABELS[p.goal] || p.goal}`)
+  if (p.dietaryStyle) lines.push(`- Dietary style: ${STYLE_LABELS[p.dietaryStyle] || p.dietaryStyle}`)
+  if (p.allergies) lines.push(`- Allergies (NEVER use): ${p.allergies}`)
+  if (p.restrictions) lines.push(`- Restrictions and dislikes: ${p.restrictions}`)
+  if (p.favourites) lines.push(`- Favourite foods (use often): ${p.favourites}`)
+  if (p.cuisines) lines.push(`- Preferred cuisines: ${p.cuisines}`)
+
+  const targets = []
+  if (p.calorieTarget) targets.push(`${p.calorieTarget} kcal/day`)
+  if (p.proteinTarget) targets.push(`${p.proteinTarget}g protein/day`)
+  if (p.carbsTarget) targets.push(`${p.carbsTarget}g carbs/day`)
+  if (p.fatTarget) targets.push(`${p.fatTarget}g fat/day`)
+  if (targets.length) lines.push(`- Daily nutrition targets: ${targets.join(', ')}`)
+
+  if (p.servings && p.servings > 1) {
+    lines.push(`- Cooking for ${p.servings} people (servings should reflect this)`)
+  }
+  if (p.maxCookTime) {
+    lines.push(`- Max time per meal (prep + cook combined): ${p.maxCookTime} minutes`)
+  }
+  if (p.notes) lines.push(`- Additional notes: ${p.notes}`)
+
+  if (lines.length === 2) {
+    lines.push('- (no profile set, use balanced defaults)')
+  }
+
+  // Weekly context
+  if (fridgeContents || weeklyExtras) {
+    lines.push('\n## This week')
+    if (fridgeContents) lines.push(`- Already in the fridge / pantry (build around this when reasonable): ${fridgeContents}`)
+    if (weeklyExtras) lines.push(`- Special context for this week: ${weeklyExtras}`)
+  }
+
+  lines.push('\nRespond with ONLY the JSON object described in the system prompt.')
+  return lines.join('\n')
+}
+
+function sanitizeProfile(raw) {
+  if (!raw || typeof raw !== 'object') return {}
+  return {
+    goal: trim(raw.goal, 40),
+    dietaryStyle: trim(raw.dietaryStyle, 40),
+    allergies: trim(raw.allergies, 500),
+    restrictions: trim(raw.restrictions, 500),
+    favourites: trim(raw.favourites, 500),
+    cuisines: trim(raw.cuisines, 500),
+    calorieTarget: num(raw.calorieTarget),
+    proteinTarget: num(raw.proteinTarget),
+    carbsTarget: num(raw.carbsTarget),
+    fatTarget: num(raw.fatTarget),
+    servings: num(raw.servings) || 1,
+    maxCookTime: num(raw.maxCookTime),
+    notes: trim(raw.notes, 1000),
+  }
+}
+
 export async function onRequestPost({ request, env }) {
-  if (!env.GROQ_API_KEY) {
-    return json({ success: false, error: 'Server is not configured (missing GROQ_API_KEY).' }, 500)
+  if (!env.GEMINI_API_KEY) {
+    return json({ success: false, error: 'Server is not configured (missing GEMINI_API_KEY).' }, 500)
   }
 
   let body
@@ -102,36 +164,29 @@ export async function onRequestPost({ request, env }) {
     return json({ success: false, error: 'Invalid JSON body.' }, 400)
   }
 
-  const form = {
-    preferences: sanitizeString(body.preferences),
-    fridgeContents: sanitizeString(body.fridgeContents, 2000),
-    favourites: sanitizeString(body.favourites, 2000),
-    restrictions: sanitizeString(body.restrictions),
-    calorieTarget: sanitizeNumber(body.calorieTarget),
-    proteinTarget: sanitizeNumber(body.proteinTarget),
-    carbsTarget: sanitizeNumber(body.carbsTarget),
-    fatTarget: sanitizeNumber(body.fatTarget),
-  }
+  const profile = sanitizeProfile(body.profile)
+  const fridgeContents = trim(body.fridgeContents, 2000)
+  const weeklyExtras = trim(body.weeklyExtras, 2000)
 
-  const requestedModel = typeof body.model === 'string' ? body.model : DEFAULT_MODEL
-  const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL
+  const systemPrompt = buildSystemPrompt()
+  const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras })
 
   let upstream
   try {
-    upstream = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    upstream = await fetch(`${GEMINI_ENDPOINT}?key=${env.GEMINI_API_KEY}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.GROQ_API_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(form) },
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [
+          { role: 'user', parts: [{ text: userPrompt }] },
         ],
-        response_format: { type: 'json_object' },
-        temperature: 0.8,
+        generationConfig: {
+          temperature: 0.85,
+          topP: 0.95,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 16384,
+        },
       }),
     })
   } catch (err) {
@@ -140,19 +195,21 @@ export async function onRequestPost({ request, env }) {
 
   if (!upstream.ok) {
     const errorBody = await upstream.text().catch(() => '')
-    if (upstream.status === 401) {
+    if (upstream.status === 401 || upstream.status === 403) {
       return json({ success: false, error: 'Server API key is invalid.' }, 500)
     }
     if (upstream.status === 429) {
-      return json({ success: false, error: 'Rate limit exceeded. Please try again in a moment.' }, 429)
+      return json({ success: false, error: 'Free tier rate limit reached. Try again in a minute.' }, 429)
     }
-    return json({ success: false, error: `Upstream error (${upstream.status}): ${errorBody || upstream.statusText}` }, 502)
+    return json({ success: false, error: `Upstream error (${upstream.status}): ${errorBody.slice(0, 300) || upstream.statusText}` }, 502)
   }
 
   const result = await upstream.json()
-  const content = result.choices?.[0]?.message?.content
+  const content = result?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
+
   if (!content) {
-    return json({ success: false, error: 'Empty response from upstream.' }, 502)
+    const reason = result?.candidates?.[0]?.finishReason || 'unknown'
+    return json({ success: false, error: `Empty response from model (finish reason: ${reason}).` }, 502)
   }
 
   return json({ success: true, content })
