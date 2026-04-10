@@ -1,35 +1,40 @@
 // Shared Gemini caller with key + model cascade fallback.
 // Both API keys live in different Google Cloud projects so they have
-// independent quotas. We keep trying every (model, key) combination on
-// rate limits and transient server errors until one succeeds.
+// independent quotas. We try every (model, key) combination once,
+// with a hard per-call timeout so Cloudflare's 100s wall clock is safe.
 
 const ENDPOINT = (model) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
-// Google's recommendation for transient 5xx errors: retry the same call
-// a few times with exponential backoff before giving up on it.
-const RETRY_DELAYS_MS = [600, 1500, 3500]
-const TRANSIENT_STATUSES = new Set([500, 502, 503, 504])
+// Hard per-call timeout. Gemini Pro can take 30-60s on a complex meal plan,
+// so we give it 45s and then move on. With 2 keys that's a worst case of 90s,
+// safely under Cloudflare's 100s limit.
+const CALL_TIMEOUT_MS = 45000
 
 function getKeys(env) {
   return [env.GEMINI_API_KEY, env.GEMINI_API_KEY_BACKUP].filter(Boolean)
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+async function callOnce(model, key, payload) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS)
 
-async function rawCall(model, key, payload) {
   let upstream
   try {
     upstream = await fetch(`${ENDPOINT(model)}?key=${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     })
   } catch (err) {
+    clearTimeout(timeout)
+    if (err.name === 'AbortError') {
+      return { ok: false, status: 504, error: `Timed out after ${CALL_TIMEOUT_MS / 1000}s` }
+    }
     return { ok: false, status: 0, error: `Network error: ${err.message}` }
   }
+  clearTimeout(timeout)
 
   if (!upstream.ok) {
     const errorBody = await upstream.text().catch(() => '')
@@ -43,22 +48,6 @@ async function rawCall(model, key, payload) {
     return { ok: false, status: 502, error: `Empty response (finish reason: ${reason})` }
   }
   return { ok: true, content, model }
-}
-
-// Calls Gemini once for a (model, key), retrying transient 5xx errors
-// with backoff before giving up on this combination.
-async function callOnce(model, key, payload) {
-  let last = await rawCall(model, key, payload)
-  if (last.ok) return last
-
-  for (const delay of RETRY_DELAYS_MS) {
-    if (!TRANSIENT_STATUSES.has(last.status)) break
-    await sleep(delay)
-    last = await rawCall(model, key, payload)
-    if (last.ok) return last
-  }
-
-  return last
 }
 
 // Try every (model, key) combo until one succeeds. Only retries on 429.
