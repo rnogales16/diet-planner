@@ -200,13 +200,14 @@ export async function onRequestPost({ request, env }) {
   })
 
   if (!result.ok) {
+    const summary = (result.attempts || []).map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
     if (result.status === 429) {
-      return json({ success: false, error: 'All Gemini quotas exhausted. Try again in a minute.' }, 429)
+      return json({ success: false, error: `All Gemini quotas exhausted. Try again in a minute. [${summary}]`, attempts: result.attempts }, 429)
     }
     if (result.status === 503 || result.status === 500 || result.status === 502 || result.status === 504) {
-      return json({ success: false, error: 'Google AI is temporarily overloaded. Please try again in a moment.' }, 503)
+      return json({ success: false, error: `Google AI is temporarily overloaded. [${summary}] Last error: ${result.error}`, attempts: result.attempts }, 503)
     }
-    return json({ success: false, error: `Upstream error: ${result.error}` }, 502)
+    return json({ success: false, error: `Upstream error: ${result.error} [${summary}]`, attempts: result.attempts }, 502)
   }
 
   return json({ success: true, content: result.content, model: result.model })

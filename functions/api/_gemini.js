@@ -45,7 +45,9 @@ async function callOnce(model, key, payload) {
   const content = result?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
   if (!content) {
     const reason = result?.candidates?.[0]?.finishReason || 'unknown'
-    return { ok: false, status: 502, error: `Empty response (finish reason: ${reason})` }
+    // Use a non-5xx custom status so the cascade does NOT misclassify this
+    // as an upstream overload. Empty content is a model-side decision.
+    return { ok: false, status: 461, error: `Empty response (finish reason: ${reason})` }
   }
   return { ok: true, content, model }
 }
