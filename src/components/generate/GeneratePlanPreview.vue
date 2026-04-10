@@ -45,6 +45,7 @@ const dailyAvg = computed(() => ({
       <div>
         <h2 class="preview__title font-display">{{ t('generate.preview.title') }}</h2>
         <p class="preview__sub">{{ t('generate.preview.subtitle', { range: weekRange }) }}</p>
+        <p v-if="plan.model" class="preview__model">{{ plan.model }}</p>
       </div>
       <div class="preview__stats">
         <div class="stat">
@@ -118,6 +119,21 @@ const dailyAvg = computed(() => ({
   font-size: 12px;
   color: var(--text-faint);
   margin-top: 2px;
+}
+
+.preview__model {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: ui-monospace, monospace;
 }
 
 .preview__stats {

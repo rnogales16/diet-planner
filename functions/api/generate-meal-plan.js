@@ -63,20 +63,29 @@ function buildSystemPrompt(language) {
 
 LANGUAGE: All human-readable strings in your response (dish names, notes, ingredient names and amounts, instructions) MUST be written in ${langName}. Do not translate the JSON keys themselves — those must stay in English exactly as specified below. The "type" field of each meal must also stay in English (breakfast, morning_snack, lunch, afternoon_snack, dinner).
 
-Hard rules:
+## Hard rules
+
+Format:
 - Output ONLY a single valid JSON object — no markdown, no code fences, no commentary.
 - Exactly 7 days, dayIndex 0..6 (Monday..Sunday).
 - Exactly 5 meals per day with these exact types: breakfast, morning_snack, lunch, afternoon_snack, dinner.
-- Each meal has exactly 1 dish.
-- Dish times must be "HH:MM" (24h). Use sensible times unless specified.
-- Numeric fields (calories, protein, carbs, fat, prepTime, cookTime, servings) must be positive numbers.
-- Ingredients are objects { "name": "...", "amount": "..." } with realistic, weighable quantities (grams, ml, units).
-- Instructions are an array of step strings, written like a real recipe (clear, in order, beginner-friendly but precise).
+- Each meal has exactly 1 dish. Times in "HH:MM" 24h. All numeric fields are positive numbers.
+- Ingredients are { "name": "...", "amount": "..." } with realistic weighable quantities (grams, ml, units).
+- Instructions are step strings written like a real recipe.
 - No duplicate dish names across the week. Vary cuisines, cooking methods and main proteins.
-- Respect every dietary restriction, allergy and target you receive. They are non-negotiable.
-- If a target is not provided, use sensible defaults (≈2000 kcal/day, balanced macros).
-- Snacks should be appropriately small (~150-300 kcal). Lunch and dinner should be the substantial meals.
-- All ingredient quantities must add up reasonably to the stated calorie and macro values.
+- Allergies and dietary restrictions are absolute. Never include a forbidden ingredient.
+
+## Macro targets (CRITICAL)
+
+The user provides daily targets for calories, protein, carbs and fat. These are HARD CONSTRAINTS.
+
+- The total of the 5 meals each day MUST land within ±10% of every provided target — calories AND protein AND carbs AND fat. All four, every day.
+- Do NOT normalize the user's macro split toward a "typical" distribution. If the user asks for a high-carb low-fat plan, deliver exactly that. If they ask for keto, deliver that. The targets always win over your defaults.
+- Distribute the daily target across meals roughly as: breakfast 22%, morning_snack 10%, lunch 33%, afternoon_snack 10%, dinner 25% — of every macro, not just calories. Adjust ±5% per meal as needed for realism.
+- Ingredient quantities MUST genuinely add up to the dish's stated macros. A dish that says 600 kcal / 40g protein must have ingredients whose real-world values total ~600 kcal / ~40g protein. Use accurate per-ingredient values from common nutrition tables.
+- Before finalizing each day, mentally sum the 5 dishes' calories, protein, carbs and fat. If any total drifts more than 10% from the daily target, adjust ingredient quantities (typically the staple carb or protein source) to bring it in line. Iterate until all four totals fit.
+
+If no targets are provided, default to ≈2000 kcal/day with a balanced 30P / 45C / 25F split.
 
 Output JSON shape (exact field names, order does not matter):
 {
@@ -122,11 +131,21 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras }) {
   if (p.cuisines) lines.push(`- Preferred cuisines: ${p.cuisines}`)
 
   const targets = []
-  if (p.calorieTarget) targets.push(`${p.calorieTarget} kcal/day`)
-  if (p.proteinTarget) targets.push(`${p.proteinTarget}g protein/day`)
-  if (p.carbsTarget) targets.push(`${p.carbsTarget}g carbs/day`)
-  if (p.fatTarget) targets.push(`${p.fatTarget}g fat/day`)
-  if (targets.length) lines.push(`- Daily nutrition targets: ${targets.join(', ')}`)
+  if (p.calorieTarget) targets.push(`${p.calorieTarget} kcal`)
+  if (p.proteinTarget) targets.push(`${p.proteinTarget}g protein`)
+  if (p.carbsTarget) targets.push(`${p.carbsTarget}g carbs`)
+  if (p.fatTarget) targets.push(`${p.fatTarget}g fat`)
+  if (targets.length) {
+    lines.push('')
+    lines.push(`### MANDATORY DAILY TARGETS — must be met within ±10% every day`)
+    lines.push(`${targets.join(' · ')}`)
+    if (p.calorieTarget && p.proteinTarget && p.carbsTarget && p.fatTarget) {
+      // Sanity check the math: 1g protein = 4 kcal, 1g carb = 4 kcal, 1g fat = 9 kcal
+      const macroKcal = p.proteinTarget * 4 + p.carbsTarget * 4 + p.fatTarget * 9
+      lines.push(`(For reference, ${p.proteinTarget}P + ${p.carbsTarget}C + ${p.fatTarget}F adds up to about ${macroKcal} kcal — make sure your dish quantities respect this.)`)
+    }
+    lines.push('Do NOT normalize these toward typical ratios. The user picked these targets on purpose.')
+  }
 
   if (p.servings && p.servings > 1) {
     lines.push(`- Cooking for ${p.servings} people (servings should reflect this)`)
@@ -193,8 +212,10 @@ export async function onRequestPost({ request, env }) {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       generationConfig: {
-        temperature: 0.85,
-        topP: 0.95,
+        // Lower temperature so the model follows the macro targets more
+        // strictly. Slight loss of variety vs 0.85 is worth the precision.
+        temperature: 0.7,
+        topP: 0.9,
         responseMimeType: 'application/json',
         maxOutputTokens: 16384,
       },

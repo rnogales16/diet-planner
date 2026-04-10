@@ -137,5 +137,9 @@ export async function generateMealPlan(formData, signal) {
     return { success: false, error: 'Failed to parse meal plan as JSON.' }
   }
 
-  return validateAndNormalize(parsed, language)
+  const result = validateAndNormalize(parsed, language)
+  if (result.success) {
+    result.data.model = payload.model || null
+  }
+  return result
 }
