@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check, Languages } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { translateDishes } from '@/services/translate'
+import { localizedMealLabel } from '@/utils/mealLocale'
 
 const { t, locale } = useI18n()
 
@@ -41,14 +42,24 @@ const styleOptions = computed(() =>
   STYLE_VALUES.map((v) => ({ value: v, label: t(`settings.profile.styleOptions.${v || 'none'}`) }))
 )
 
+// Map the stored meal types to their localized label whenever the user
+// has not customized them. This way the editor reflects the current
+// language; if the user types something else it becomes their override.
+function localizeMealTypes(types) {
+  return clone(types).map((mt) => ({
+    ...mt,
+    label: localizedMealLabel(mt, t),
+  }))
+}
+
 const form = reactive({
-  mealTypes: clone(store.mealTypes),
+  mealTypes: localizeMealTypes(store.mealTypes),
 })
 
 watch(
-  () => store.mealTypes,
-  (next) => {
-    form.mealTypes = clone(next)
+  () => [store.mealTypes, locale.value],
+  () => {
+    form.mealTypes = localizeMealTypes(store.mealTypes)
   },
   { deep: true },
 )

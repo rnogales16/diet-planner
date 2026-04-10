@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { sumMeals } from '@/utils/nutritionHelpers'
 import { useDietStore } from '@/stores/dietStore'
 import { localizedDish } from '@/utils/dishLocale'
+import { localizedMealLabel } from '@/utils/mealLocale'
 
 const { t, locale } = useI18n()
 const store = useDietStore()
@@ -24,11 +25,12 @@ const dayTotals = computed(() => sumMeals(
   localizedMeals.value.map((m) => ({ dishes: [m.dish] })),
 ))
 
-// Use the user's customized labels from the store, with sensible defaults.
+// Use the user's customized labels from the store, falling back to the
+// localized default when they have not customized anything.
 const mealLabels = computed(() => {
   const map = {}
   for (const mt of store.mealTypes) {
-    map[mt.type] = mt.label
+    map[mt.type] = localizedMealLabel(mt, t)
   }
   return map
 })

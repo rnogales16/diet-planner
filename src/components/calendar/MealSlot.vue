@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus } from 'lucide-vue-next'
 import DishCard from './DishCard.vue'
+import { localizedMealLabel } from '@/utils/mealLocale'
 
 const { t } = useI18n()
 
@@ -13,12 +14,13 @@ const props = defineProps({
 defineEmits(['addDish', 'editDish', 'deleteDish', 'viewDish'])
 
 const hasDishes = computed(() => props.meal.dishes.length > 0)
+const label = computed(() => localizedMealLabel(props.meal, t))
 </script>
 
 <template>
   <div class="meal-slot">
     <div class="meal-slot__head">
-      <span class="meal-slot__label">{{ meal.label }}</span>
+      <span class="meal-slot__label">{{ label }}</span>
       <span class="meal-slot__time tabular">{{ meal.defaultTime }}</span>
     </div>
 

@@ -60,6 +60,13 @@
   "mealSlot": {
     "addDish": "Add dish"
   },
+  "mealTypes": {
+    "breakfast": "Breakfast",
+    "morning_snack": "Morning snack",
+    "lunch": "Lunch",
+    "afternoon_snack": "Afternoon snack",
+    "dinner": "Dinner"
+  },
   "planner": {
     "weekday": {
       "mon": "MON",
