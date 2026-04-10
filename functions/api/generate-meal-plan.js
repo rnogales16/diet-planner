@@ -202,6 +202,9 @@ export async function onRequestPost({ request, env }) {
     if (result.status === 429) {
       return json({ success: false, error: 'All Gemini quotas exhausted. Try again in a minute.' }, 429)
     }
+    if (result.status === 503 || result.status === 500 || result.status === 502 || result.status === 504) {
+      return json({ success: false, error: 'Google AI is temporarily overloaded. Please try again in a moment.' }, 503)
+    }
     return json({ success: false, error: `Upstream error: ${result.error}` }, 502)
   }
 

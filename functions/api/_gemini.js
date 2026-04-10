@@ -1,16 +1,25 @@
 // Shared Gemini caller with key + model cascade fallback.
 // Both API keys live in different Google Cloud projects so they have
-// independent free-tier quotas. We keep trying every (model, key)
-// combination on 429 until one succeeds, only failing fast on other errors.
+// independent quotas. We keep trying every (model, key) combination on
+// rate limits and transient server errors until one succeeds.
 
 const ENDPOINT = (model) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+
+// Google's recommendation for transient 5xx errors: retry the same call
+// a few times with exponential backoff before giving up on it.
+const RETRY_DELAYS_MS = [600, 1500, 3500]
+const TRANSIENT_STATUSES = new Set([500, 502, 503, 504])
 
 function getKeys(env) {
   return [env.GEMINI_API_KEY, env.GEMINI_API_KEY_BACKUP].filter(Boolean)
 }
 
-async function callOnce(model, key, payload) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function rawCall(model, key, payload) {
   let upstream
   try {
     upstream = await fetch(`${ENDPOINT(model)}?key=${key}`, {
@@ -34,6 +43,22 @@ async function callOnce(model, key, payload) {
     return { ok: false, status: 502, error: `Empty response (finish reason: ${reason})` }
   }
   return { ok: true, content, model }
+}
+
+// Calls Gemini once for a (model, key), retrying transient 5xx errors
+// with backoff before giving up on this combination.
+async function callOnce(model, key, payload) {
+  let last = await rawCall(model, key, payload)
+  if (last.ok) return last
+
+  for (const delay of RETRY_DELAYS_MS) {
+    if (!TRANSIENT_STATUSES.has(last.status)) break
+    await sleep(delay)
+    last = await rawCall(model, key, payload)
+    if (last.ok) return last
+  }
+
+  return last
 }
 
 // Try every (model, key) combo until one succeeds. Only retries on 429.
