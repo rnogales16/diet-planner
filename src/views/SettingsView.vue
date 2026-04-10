@@ -1,26 +1,63 @@
 <script setup>
-import { reactive, ref, toRaw } from 'vue'
-import { Sun, Coffee, Utensils, Apple, Moon, Cpu, Download, Upload, Trash2, Check } from 'lucide-vue-next'
+import { reactive, ref, toRaw, watch } from 'vue'
+import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
-import { getModel, setModel } from '@/services/openai'
 
 const clone = (obj) => JSON.parse(JSON.stringify(obj))
 
 const store = useDietStore()
 const saved = ref(false)
-const aiSaved = ref(false)
+const profileSaved = ref(false)
 
-const aiModel = ref(getModel())
+// Diet profile (synced to D1 via the store)
+const profile = reactive(clone(store.profile))
 
-function saveAiConfig() {
-  setModel(aiModel.value)
-  aiSaved.value = true
-  setTimeout(() => (aiSaved.value = false), 2000)
+// If the store gets re-hydrated after a server fetch, refresh the local copy.
+watch(
+  () => store.profile,
+  (next) => {
+    Object.assign(profile, clone(next))
+  },
+  { deep: true },
+)
+
+function saveProfile() {
+  store.updateProfile(clone(toRaw(profile)))
+  profileSaved.value = true
+  setTimeout(() => (profileSaved.value = false), 2000)
 }
+
+const GOAL_OPTIONS = [
+  { value: '', label: 'No specific goal' },
+  { value: 'lose_weight', label: 'Lose weight' },
+  { value: 'gain_muscle', label: 'Gain muscle' },
+  { value: 'maintain', label: 'Maintain weight' },
+  { value: 'health', label: 'General health' },
+]
+
+const STYLE_OPTIONS = [
+  { value: '', label: 'No preference' },
+  { value: 'omnivore', label: 'Omnivore' },
+  { value: 'vegetarian', label: 'Vegetarian' },
+  { value: 'vegan', label: 'Vegan' },
+  { value: 'pescatarian', label: 'Pescatarian' },
+  { value: 'mediterranean', label: 'Mediterranean' },
+  { value: 'keto', label: 'Keto' },
+  { value: 'paleo', label: 'Paleo' },
+  { value: 'other', label: 'Other' },
+]
 
 const form = reactive({
   mealTypes: clone(store.mealTypes),
 })
+
+watch(
+  () => store.mealTypes,
+  (next) => {
+    form.mealTypes = clone(next)
+  },
+  { deep: true },
+)
 
 const mealIcons = {
   breakfast: Sun,
@@ -97,6 +134,112 @@ function clearAllData() {
       <p class="settings__sub">Customize your meal plan</p>
     </header>
 
+    <!-- Diet profile -->
+    <section class="app-card settings__card">
+      <header class="settings__card-head">
+        <h2 class="settings__card-title font-display">
+          <User :size="14" /> Diet profile
+        </h2>
+        <p class="settings__card-sub">
+          Saved once and used every time the AI generates a plan, so you don't have to repeat yourself.
+        </p>
+      </header>
+
+      <div class="profile-grid">
+        <label class="field">
+          <span class="field__label">Goal</span>
+          <select v-model="profile.goal" class="app-input">
+            <option v-for="o in GOAL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field__label">Dietary style</span>
+          <select v-model="profile.dietaryStyle" class="app-input">
+            <option v-for="o in STYLE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span class="field__label">Allergies</span>
+        <input v-model="profile.allergies" class="app-input" placeholder="e.g. peanuts, shellfish" />
+      </label>
+      <label class="field">
+        <span class="field__label">Restrictions and dislikes</span>
+        <input v-model="profile.restrictions" class="app-input" placeholder="e.g. lactose intolerant, no liver" />
+      </label>
+      <label class="field">
+        <span class="field__label">Favourite foods</span>
+        <input v-model="profile.favourites" class="app-input" placeholder="e.g. salmon, avocado, sweet potato" />
+      </label>
+      <label class="field">
+        <span class="field__label">Preferred cuisines</span>
+        <input v-model="profile.cuisines" class="app-input" placeholder="e.g. Mediterranean, Japanese, Mexican" />
+      </label>
+
+      <div class="profile-grid profile-grid--4">
+        <label class="field">
+          <span class="field__label">Calories</span>
+          <span class="field__control">
+            <input v-model.number="profile.calorieTarget" type="number" min="0" placeholder="2000" class="app-input app-input--with-suffix" />
+            <span class="field__suffix">kcal</span>
+          </span>
+        </label>
+        <label class="field">
+          <span class="field__label">Protein</span>
+          <span class="field__control">
+            <input v-model.number="profile.proteinTarget" type="number" min="0" placeholder="150" class="app-input app-input--with-suffix" />
+            <span class="field__suffix">g</span>
+          </span>
+        </label>
+        <label class="field">
+          <span class="field__label">Carbs</span>
+          <span class="field__control">
+            <input v-model.number="profile.carbsTarget" type="number" min="0" placeholder="220" class="app-input app-input--with-suffix" />
+            <span class="field__suffix">g</span>
+          </span>
+        </label>
+        <label class="field">
+          <span class="field__label">Fat</span>
+          <span class="field__control">
+            <input v-model.number="profile.fatTarget" type="number" min="0" placeholder="70" class="app-input app-input--with-suffix" />
+            <span class="field__suffix">g</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="profile-grid">
+        <label class="field">
+          <span class="field__label">Cooking for</span>
+          <span class="field__control">
+            <input v-model.number="profile.servings" type="number" min="1" class="app-input app-input--with-suffix" />
+            <span class="field__suffix">people</span>
+          </span>
+        </label>
+        <label class="field">
+          <span class="field__label">Max time per meal</span>
+          <span class="field__control">
+            <input v-model.number="profile.maxCookTime" type="number" min="0" placeholder="any" class="app-input app-input--with-suffix" />
+            <span class="field__suffix">min</span>
+          </span>
+        </label>
+      </div>
+
+      <label class="field">
+        <span class="field__label">Notes for the AI</span>
+        <textarea v-model="profile.notes" class="app-input" rows="2" placeholder="anything else worth knowing — e.g. I work out 4 times a week, I hate sandwiches for dinner..." />
+      </label>
+
+      <footer class="settings__card-footer">
+        <button type="button" class="app-btn app-btn--primary" @click="saveProfile">Save profile</button>
+        <Transition name="fade">
+          <span v-if="profileSaved" class="settings__saved">
+            <Check :size="14" /> Saved
+          </span>
+        </Transition>
+      </footer>
+    </section>
+
     <!-- Meal types -->
     <section class="app-card settings__card">
       <header class="settings__card-head">
@@ -117,30 +260,6 @@ function clearAllData() {
         <button type="button" class="app-btn app-btn--ghost" @click="reset">Reset</button>
         <Transition name="fade">
           <span v-if="saved" class="settings__saved">
-            <Check :size="14" /> Saved
-          </span>
-        </Transition>
-      </footer>
-    </section>
-
-    <!-- AI model -->
-    <section class="app-card settings__card">
-      <header class="settings__card-head">
-        <h2 class="settings__card-title font-display">
-          <Cpu :size="14" /> AI model
-        </h2>
-        <p class="settings__card-sub">Choose which model generates your meal plans</p>
-      </header>
-      <div class="settings__field">
-        <select v-model="aiModel" class="app-input">
-          <option value="llama-3.3-70b-versatile">Llama 3.3 70B (recommended)</option>
-          <option value="llama-3.1-8b-instant">Llama 3.1 8B (fastest)</option>
-        </select>
-      </div>
-      <footer class="settings__card-footer">
-        <button type="button" class="app-btn app-btn--primary" @click="saveAiConfig">Save</button>
-        <Transition name="fade">
-          <span v-if="aiSaved" class="settings__saved">
             <Check :size="14" /> Saved
           </span>
         </Transition>
@@ -262,6 +381,51 @@ function clearAllData() {
   grid-template-columns: 32px 1fr 110px;
   gap: 12px;
   align-items: center;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.profile-grid--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .profile-grid,
+  .profile-grid--4 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.field__control {
+  position: relative;
+  display: block;
+}
+
+.field__suffix {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: var(--text-faint);
+  pointer-events: none;
 }
 
 .meal-row__icon {
