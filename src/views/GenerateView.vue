@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Sparkles, AlertCircle } from 'lucide-vue-next'
+import { translateDishes } from '@/services/translate'
+import { SUPPORTED_LOCALES } from '@/i18n'
 
 const { t } = useI18n()
 import { useDietStore } from '@/stores/dietStore'
@@ -52,7 +54,28 @@ function handleApply() {
   if (!generatedPlan.value) return
   store.ensureWeek(weekKey.value, new Date())
   store.applyGeneratedPlan(weekKey.value, generatedPlan.value.days)
+  // Fire-and-forget: translate the brand new dishes to every other supported
+  // language in the background so switching languages later is instant.
+  void backfillOtherLanguages()
   router.push('/')
+}
+
+async function backfillOtherLanguages() {
+  const sourceLang = store.language || 'en'
+  const others = SUPPORTED_LOCALES.filter((l) => l !== sourceLang)
+  for (const target of others) {
+    try {
+      const dishes = store.collectDishesNeedingTranslation(target)
+      if (dishes.length === 0) continue
+      const result = await translateDishes(dishes, target)
+      if (result.success) {
+        store.applyDishTranslations(target, result.translations)
+      }
+    } catch {
+      // Silent: this is best-effort. The user can always run the manual
+      // translate button later if anything got missed.
+    }
+  }
 }
 
 function handleBack() {
