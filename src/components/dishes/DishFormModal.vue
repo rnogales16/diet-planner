@@ -25,6 +25,7 @@ const form = reactive({
   protein: 0,
   carbs: 0,
   fat: 0,
+  vegetables: 0,
   notes: '',
   prepTime: 0,
   cookTime: 0,
@@ -48,6 +49,7 @@ watch(
         protein: view.protein || 0,
         carbs: view.carbs || 0,
         fat: view.fat || 0,
+        vegetables: view.vegetables || 0,
         notes: view.notes || '',
         prepTime: view.prepTime || 0,
         cookTime: view.cookTime || 0,
@@ -85,6 +87,7 @@ function handleSave() {
     protein: Math.max(0, Number(form.protein) || 0),
     carbs: Math.max(0, Number(form.carbs) || 0),
     fat: Math.max(0, Number(form.fat) || 0),
+    vegetables: Math.max(0, Number(form.vegetables) || 0),
     prepTime: Math.max(0, Number(form.prepTime) || 0),
     cookTime: Math.max(0, Number(form.cookTime) || 0),
     servings: Math.max(1, Number(form.servings) || 1),
@@ -154,7 +157,7 @@ function handleSave() {
 
         <div class="dish-form__macros">
           <span class="dish-form__macros-label">{{ t('dishForm.nutrition') }}</span>
-          <div class="dish-form__grid-4">
+          <div class="dish-form__grid-5">
             <label class="field">
               <span class="field__label">{{ t('settings.profile.calories') }}</span>
               <span class="field__control">
@@ -180,6 +183,13 @@ function handleSave() {
               <span class="field__label">{{ t('settings.profile.fat') }}</span>
               <span class="field__control">
                 <input v-model.number="form.fat" type="number" min="0" class="app-input app-input--with-suffix" />
+                <span class="field__suffix">{{ t('common.g') }}</span>
+              </span>
+            </label>
+            <label class="field">
+              <span class="field__label">{{ t('settings.profile.vegetables') }}</span>
+              <span class="field__control">
+                <input v-model.number="form.vegetables" type="number" min="0" class="app-input app-input--with-suffix" />
                 <span class="field__suffix">{{ t('common.g') }}</span>
               </span>
             </label>
@@ -330,6 +340,12 @@ function handleSave() {
   gap: 10px;
 }
 
+.dish-form__grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .dish-form__macros {
   display: flex;
   flex-direction: column;
@@ -456,9 +472,16 @@ function handleSave() {
   pointer-events: none;
 }
 
+@media (max-width: 720px) {
+  .dish-form__grid-5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .dish-form__grid-3,
-  .dish-form__grid-4 {
+  .dish-form__grid-4,
+  .dish-form__grid-5 {
     grid-template-columns: 1fr 1fr;
   }
 }

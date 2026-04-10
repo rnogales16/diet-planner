@@ -27,6 +27,7 @@ const dailyAvg = computed(() => {
     protein: Math.round(totals.value.protein / n),
     carbs: Math.round(totals.value.carbs / n),
     fat: Math.round(totals.value.fat / n),
+    vegetables: Math.round((totals.value.vegetables || 0) / n),
   }
 })
 
@@ -35,12 +36,14 @@ const targets = computed(() => ({
   protein: store.profile.proteinTarget || 150,
   carbs: store.profile.carbsTarget || 220,
   fat: store.profile.fatTarget || 70,
+  vegetables: store.profile.vegetableTarget || 400,
 }))
 
 const macros = computed(() => [
   { key: 'protein', label: t('summary.protein'), value: dailyAvg.value.protein, target: targets.value.protein },
   { key: 'carbs', label: t('summary.carbs'), value: dailyAvg.value.carbs, target: targets.value.carbs },
   { key: 'fat', label: t('summary.fat'), value: dailyAvg.value.fat, target: targets.value.fat },
+  { key: 'vegetables', label: t('summary.vegetables'), value: dailyAvg.value.vegetables, target: targets.value.vegetables },
 ])
 </script>
 

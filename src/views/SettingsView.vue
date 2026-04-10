@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref, toRaw, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check, Languages } from 'lucide-vue-next'
+import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check, Languages, X } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { translateDishes } from '@/services/translate'
 import { localizedMealLabel } from '@/utils/mealLocale'
@@ -30,6 +30,20 @@ function saveProfile() {
   store.updateProfile(clone(toRaw(profile)))
   profileSaved.value = true
   setTimeout(() => (profileSaved.value = false), 2000)
+}
+
+const newDislike = ref('')
+const dislikedIngredients = computed(() => store.profile.dislikedIngredients || [])
+
+function addDislike() {
+  const value = newDislike.value.trim()
+  if (!value) return
+  store.addDislikedIngredient(value)
+  newDislike.value = ''
+}
+
+function removeDislike(name) {
+  store.removeDislikedIngredient(name)
 }
 
 const GOAL_VALUES = ['', 'lose_weight', 'gain_muscle', 'maintain', 'health']
@@ -215,7 +229,7 @@ async function handleTranslateAll() {
         <input v-model="profile.cuisines" class="app-input" :placeholder="t('settings.profile.cuisinesPlaceholder')" />
       </label>
 
-      <div class="profile-grid profile-grid--4">
+      <div class="profile-grid profile-grid--5">
         <label class="field">
           <span class="field__label">{{ t('settings.profile.calories') }}</span>
           <span class="field__control">
@@ -244,6 +258,13 @@ async function handleTranslateAll() {
             <span class="field__suffix">{{ t('common.g') }}</span>
           </span>
         </label>
+        <label class="field">
+          <span class="field__label">{{ t('settings.profile.vegetables') }}</span>
+          <span class="field__control">
+            <input v-model.number="profile.vegetableTarget" type="number" min="0" placeholder="400" class="app-input app-input--with-suffix" />
+            <span class="field__suffix">{{ t('common.g') }}</span>
+          </span>
+        </label>
       </div>
 
       <div class="profile-grid">
@@ -267,6 +288,30 @@ async function handleTranslateAll() {
         <span class="field__label">{{ t('settings.profile.notes') }}</span>
         <textarea v-model="profile.notes" class="app-input" rows="2" :placeholder="t('settings.profile.notesPlaceholder')" />
       </label>
+
+      <div class="dislike-block">
+        <div class="dislike-block__head">
+          <p class="dislike-block__title">{{ t('settings.profile.dislikedTitle') }}</p>
+          <p class="dislike-block__sub">{{ t('settings.profile.dislikedSub') }}</p>
+        </div>
+
+        <div v-if="dislikedIngredients.length" class="dislike-chips">
+          <span v-for="ing in dislikedIngredients" :key="ing" class="dislike-chip">
+            {{ ing }}
+            <button type="button" class="dislike-chip__remove" :title="t('settings.profile.dislikedRemove')" @click="removeDislike(ing)">
+              <X :size="11" />
+            </button>
+          </span>
+        </div>
+        <p v-else class="dislike-empty">{{ t('settings.profile.dislikedEmpty') }}</p>
+
+        <input
+          v-model="newDislike"
+          class="app-input"
+          :placeholder="t('settings.profile.dislikedAddPlaceholder')"
+          @keydown.enter.prevent="addDislike"
+        />
+      </div>
 
       <footer class="settings__card-footer">
         <button type="button" class="app-btn app-btn--primary" @click="saveProfile">{{ t('settings.profile.saveProfile') }}</button>
@@ -450,11 +495,88 @@ async function handleTranslateAll() {
   gap: 10px;
 }
 
+.profile-grid--5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .profile-grid--5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .profile-grid,
-  .profile-grid--4 {
+  .profile-grid--4,
+  .profile-grid--5 {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.dislike-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.dislike-block__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dislike-block__sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.dislike-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dislike-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 10px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.dislike-chip__remove {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dislike-chip__remove:hover {
+  background-color: var(--danger-tint);
+  color: var(--danger);
+}
+
+.dislike-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-style: italic;
 }
 
 .field {

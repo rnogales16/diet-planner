@@ -55,6 +55,7 @@
     "protein": "Protein",
     "carbs": "Carbs",
     "fat": "Fat",
+    "vegetables": "Vegetables",
     "generateWeek": "Generate week"
   },
   "mealSlot": {
@@ -128,12 +129,18 @@
       "protein": "Protein",
       "carbs": "Carbs",
       "fat": "Fat",
+      "vegetables": "Vegetables",
       "cookingFor": "Cooking for",
       "maxTime": "Max time per meal",
       "anyTime": "any",
       "notes": "Notes for the AI",
       "notesPlaceholder": "anything else worth knowing — e.g. I work out 4 times a week, I hate sandwiches for dinner…",
       "saveProfile": "Save profile",
+      "dislikedTitle": "Ingredients you don't like",
+      "dislikedSub": "The AI will never use these in new plans. Add ingredients here or with the trash icon next to any ingredient inside a dish.",
+      "dislikedAddPlaceholder": "Add an ingredient and press Enter",
+      "dislikedEmpty": "No ingredients excluded yet.",
+      "dislikedRemove": "Remove from list",
       "goalOptions": {
         "none": "No specific goal",
         "lose_weight": "Lose weight",
@@ -191,7 +198,9 @@
     "instructions": "Instructions",
     "noRecipe": "No recipe details yet. Click Edit to add ingredients and instructions.",
     "tabDetails": "Recipe",
-    "tabChat": "Ask AI"
+    "tabChat": "Ask AI",
+    "dislikeIngredient": "Don't use this ingredient again",
+    "ingredientDisliked": "Added to your dislikes"
   },
   "dishChat": {
     "intro": "Ask anything about this dish or request a change. The AI knows the recipe and your diet profile.",

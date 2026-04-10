@@ -24,6 +24,7 @@ export function createEmptyDish(mealType) {
     protein: 0,
     carbs: 0,
     fat: 0,
+    vegetables: 0,
     notes: '',
     prepTime: 0,
     cookTime: 0,

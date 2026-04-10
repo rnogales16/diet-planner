@@ -55,6 +55,7 @@
     "protein": "Proteína",
     "carbs": "Carbohidratos",
     "fat": "Grasa",
+    "vegetables": "Verduras",
     "generateWeek": "Generar semana"
   },
   "mealSlot": {
@@ -128,12 +129,18 @@
       "protein": "Proteína",
       "carbs": "Carbohidratos",
       "fat": "Grasa",
+      "vegetables": "Verduras",
       "cookingFor": "Cocinas para",
       "maxTime": "Tiempo máximo por comida",
       "anyTime": "sin límite",
       "notes": "Notas para la IA",
       "notesPlaceholder": "cualquier otra cosa relevante — ej. entreno 4 veces por semana, no quiero sándwich para cenar…",
       "saveProfile": "Guardar perfil",
+      "dislikedTitle": "Ingredientes que no te gustan",
+      "dislikedSub": "La IA nunca usará estos ingredientes en planes nuevos. Añádelos aquí o con la papelera al lado de cualquier ingrediente de un plato.",
+      "dislikedAddPlaceholder": "Añade un ingrediente y pulsa Enter",
+      "dislikedEmpty": "Aún no hay ingredientes excluidos.",
+      "dislikedRemove": "Quitar de la lista",
       "goalOptions": {
         "none": "Sin objetivo concreto",
         "lose_weight": "Perder peso",
@@ -191,7 +198,9 @@
     "instructions": "Instrucciones",
     "noRecipe": "Aún no hay receta. Pulsa Editar para añadir ingredientes y pasos.",
     "tabDetails": "Receta",
-    "tabChat": "Preguntar a la IA"
+    "tabChat": "Preguntar a la IA",
+    "dislikeIngredient": "No usar este ingrediente nunca más",
+    "ingredientDisliked": "Añadido a tus exclusiones"
   },
   "dishChat": {
     "intro": "Pregunta lo que quieras sobre este plato o pide un cambio. La IA conoce la receta y tu perfil de dieta.",

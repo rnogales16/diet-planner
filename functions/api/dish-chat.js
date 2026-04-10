@@ -37,11 +37,11 @@ function buildSystemPrompt(language) {
   const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en
   return `You are a helpful nutritionist and home cook. The user is looking at a single dish in their weekly meal plan and may want to ask questions about it, request substitutions, swap ingredients, change cooking method, or adjust serving size.
 
-LANGUAGE: Always reply in ${langName}. If you return an updated dish, write its text fields in ${langName} as well. Keep ingredient measurements in metric units (grams, ml) unless the user explicitly asks otherwise.
+LANGUAGE: Always reply in ${langName}. If you return an updated dish, write its text fields in ${langName} as well.
 
 You will receive:
-1. The current dish (name, ingredients, instructions, macros, times).
-2. The user's diet profile (allergies, restrictions, targets, etc.).
+1. The current dish (name, ingredients, instructions, macros, times, vegetables grams).
+2. The user's diet profile (allergies, restrictions, disliked ingredients, targets, etc.).
 3. The conversation so far.
 
 Your output is ALWAYS a single JSON object with this exact shape:
@@ -54,6 +54,7 @@ Your output is ALWAYS a single JSON object with this exact shape:
     "protein": number,
     "carbs": number,
     "fat": number,
+    "vegetables": number,
     "prepTime": number,
     "cookTime": number,
     "servings": number,
@@ -65,9 +66,12 @@ Your output is ALWAYS a single JSON object with this exact shape:
 Rules:
 - Set "updatedDish" to null when the user is just asking a question and you don't need to change the dish.
 - Set "updatedDish" to a full updated copy whenever you change ANYTHING in the dish (ingredients, steps, name, macros, times, servings). Always return the COMPLETE dish, not a partial diff.
-- When you change an ingredient, recalculate calories and macros so they stay realistic. Don't lie.
+- When you change an ingredient, recalculate calories, protein, carbs, fat AND vegetables grams so they stay realistic. Don't lie.
 - NEVER add an ingredient that conflicts with the user's allergies. Hard rule.
+- NEVER add an ingredient from the user's "disliked ingredients" list. Hard rule, even in trace amounts.
 - Respect dietary style and restrictions in the profile.
+- RAW WEIGHTS: all ingredient quantities MUST refer to the raw, uncooked form. 100g of pasta = 100g dry. 200g of chicken = 200g raw. Calculate macros against raw values too.
+- The "vegetables" field is the total grams of raw vegetables in the dish (leafy greens, brassicas, peppers, onion, tomato, courgette, mushrooms, etc., excluding fruits, nuts, seeds, grains, legumes, herbs and starchy fries).
 - Keep "reply" short and natural — like a friendly cook, not a wall of text. Acknowledge the change you made if you made one.
 - If the user asks something you can't or shouldn't do, say so politely in "reply" and leave "updatedDish" null.
 - Output ONLY the JSON object. No markdown, no code fences, no commentary outside the JSON.`
@@ -83,6 +87,7 @@ function buildContextMessage(dish, profile) {
     protein: dish.protein,
     carbs: dish.carbs,
     fat: dish.fat,
+    vegetables: dish.vegetables || 0,
     prepTime: dish.prepTime,
     cookTime: dish.cookTime,
     servings: dish.servings,
@@ -97,12 +102,16 @@ function buildContextMessage(dish, profile) {
     if (profile.dietaryStyle) p.dietaryStyle = profile.dietaryStyle
     if (profile.allergies) p.allergies = profile.allergies
     if (profile.restrictions) p.restrictions = profile.restrictions
+    if (Array.isArray(profile.dislikedIngredients) && profile.dislikedIngredients.length) {
+      p.dislikedIngredients = profile.dislikedIngredients
+    }
     if (profile.favourites) p.favourites = profile.favourites
     if (profile.cuisines) p.cuisines = profile.cuisines
     if (profile.calorieTarget) p.calorieTarget = profile.calorieTarget
     if (profile.proteinTarget) p.proteinTarget = profile.proteinTarget
     if (profile.carbsTarget) p.carbsTarget = profile.carbsTarget
     if (profile.fatTarget) p.fatTarget = profile.fatTarget
+    if (profile.vegetableTarget) p.vegetableTarget = profile.vegetableTarget
     if (profile.servings) p.servings = profile.servings
     if (profile.maxCookTime) p.maxCookTime = profile.maxCookTime
     if (profile.notes) p.notes = profile.notes
@@ -143,6 +152,7 @@ function sanitizeUpdatedDish(raw) {
     protein: Math.max(0, Math.round(Number(raw.protein) || 0)),
     carbs: Math.max(0, Math.round(Number(raw.carbs) || 0)),
     fat: Math.max(0, Math.round(Number(raw.fat) || 0)),
+    vegetables: Math.max(0, Math.round(Number(raw.vegetables) || 0)),
     prepTime: Math.max(0, Math.round(Number(raw.prepTime) || 0)),
     cookTime: Math.max(0, Math.round(Number(raw.cookTime) || 0)),
     servings: Math.max(1, Math.round(Number(raw.servings) || 1)),

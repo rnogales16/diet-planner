@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Clock, Flame, Users, Pencil, Trash2, Send, Sparkles, Loader2, MessageCircle, Check } from 'lucide-vue-next'
+import { Clock, Flame, Users, Pencil, Trash2, Send, Sparkles, Loader2, MessageCircle, Check, Ban } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { localizedDish } from '@/utils/dishLocale'
 import { useDietStore } from '@/stores/dietStore'
@@ -110,6 +110,14 @@ function onInputKeydown(e) {
     send()
   }
 }
+
+const justDisliked = ref(new Set())
+
+function dislikeIngredient(name) {
+  if (!name) return
+  store.addDislikedIngredient(name)
+  justDisliked.value = new Set([...justDisliked.value, name.toLowerCase()])
+}
 </script>
 
 <template>
@@ -153,10 +161,24 @@ function onInputKeydown(e) {
         <div v-if="view.ingredients?.length > 0" class="detail__section">
           <h3 class="detail__heading">{{ t('dishDetail.ingredients') }}</h3>
           <ul class="ingredients">
-            <li v-for="(ing, i) in view.ingredients" :key="i">
+            <li
+              v-for="(ing, i) in view.ingredients"
+              :key="i"
+              :class="{ 'is-disliked': justDisliked.has((ing.name || '').toLowerCase()) }"
+            >
               <span class="ingredients__bullet" />
               <span class="ingredients__name">{{ ing.name }}</span>
               <span v-if="ing.amount" class="ingredients__amount">{{ ing.amount }}</span>
+              <button
+                v-if="ing.name"
+                type="button"
+                class="ingredients__dislike"
+                :title="justDisliked.has(ing.name.toLowerCase()) ? t('dishDetail.ingredientDisliked') : t('dishDetail.dislikeIngredient')"
+                :disabled="justDisliked.has(ing.name.toLowerCase())"
+                @click="dislikeIngredient(ing.name)"
+              >
+                <Ban :size="13" />
+              </button>
             </li>
           </ul>
         </div>
@@ -414,6 +436,42 @@ function onInputKeydown(e) {
 .ingredients__amount {
   color: var(--text-faint);
   font-size: 12px;
+}
+
+.ingredients__dislike {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.ingredients li:hover .ingredients__dislike {
+  opacity: 1;
+}
+
+.ingredients__dislike:hover:not(:disabled) {
+  color: var(--danger);
+  background-color: var(--danger-tint);
+}
+
+.ingredients__dislike:disabled {
+  opacity: 1;
+  color: var(--danger);
+  cursor: default;
+}
+
+.ingredients li.is-disliked .ingredients__name,
+.ingredients li.is-disliked .ingredients__amount {
+  text-decoration: line-through;
+  color: var(--text-faint);
 }
 
 .instructions {

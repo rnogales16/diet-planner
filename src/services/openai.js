@@ -37,6 +37,7 @@ function validateAndNormalize(raw, language = 'en') {
           protein: Math.round(Math.abs(Number(dish.protein)) || 0),
           carbs: Math.round(Math.abs(Number(dish.carbs)) || 0),
           fat: Math.round(Math.abs(Number(dish.fat)) || 0),
+          vegetables: Math.round(Math.abs(Number(dish.vegetables)) || 0),
           notes: dish.notes || '',
           prepTime: Math.round(Math.abs(Number(dish.prepTime)) || 0),
           cookTime: Math.round(Math.abs(Number(dish.cookTime)) || 0),

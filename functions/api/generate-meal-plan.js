@@ -74,18 +74,30 @@ Format:
 - Instructions are step strings written like a real recipe.
 - No duplicate dish names across the week. Vary cuisines, cooking methods and main proteins.
 - Allergies and dietary restrictions are absolute. Never include a forbidden ingredient.
+- Disliked ingredients listed by the user are also absolute. Never include them, not even in trace amounts.
+
+RAW WEIGHTS (NON-NEGOTIABLE):
+- All ingredient weights and volumes MUST refer to the RAW, UNCOOKED form. 100g of pasta means 100g of dry uncooked pasta. 150g of rice means 150g of dry rice. 200g of chicken means 200g of raw chicken.
+- Do NOT use cooked or "as served" weights. The user needs to know how much to weigh BEFORE cooking.
+- This applies to every ingredient: pasta, rice, beans, lentils, meats, fish, vegetables, etc.
+- Calculate calories and macros based on the RAW values too (uncooked pasta has different kcal per gram than cooked pasta).
 
 ## Macro targets (CRITICAL)
 
-The user provides daily targets for calories, protein, carbs and fat. These are HARD CONSTRAINTS.
+The user provides daily targets for calories, protein, carbs, fat AND vegetables. These are HARD CONSTRAINTS.
 
-- The total of the 5 meals each day MUST land within ±10% of every provided target — calories AND protein AND carbs AND fat. All four, every day.
+- The total of the 5 meals each day MUST land within ±10% of every provided target — calories, protein, carbs, fat AND vegetables. All five, every day.
 - Do NOT normalize the user's macro split toward a "typical" distribution. If the user asks for a high-carb low-fat plan, deliver exactly that. If they ask for keto, deliver that. The targets always win over your defaults.
-- Distribute the daily target across meals roughly as: breakfast 22%, morning_snack 10%, lunch 33%, afternoon_snack 10%, dinner 25% — of every macro, not just calories. Adjust ±5% per meal as needed for realism.
-- Ingredient quantities MUST genuinely add up to the dish's stated macros. A dish that says 600 kcal / 40g protein must have ingredients whose real-world values total ~600 kcal / ~40g protein. Use accurate per-ingredient values from common nutrition tables.
-- Before finalizing each day, mentally sum the 5 dishes' calories, protein, carbs and fat. If any total drifts more than 10% from the daily target, adjust ingredient quantities (typically the staple carb or protein source) to bring it in line. Iterate until all four totals fit.
+- Distribute the daily target across meals roughly as: breakfast 22%, morning_snack 10%, lunch 33%, afternoon_snack 10%, dinner 25% — of every macro, not just calories. Adjust ±5% per meal as needed for realism. Snacks can carry less of the vegetable target if it makes more sense to put vegetables in lunch and dinner.
+- Ingredient quantities MUST genuinely add up to the dish's stated macros. A dish that says 600 kcal / 40g protein / 80g vegetables must have ingredients whose real-world values total ~600 kcal / ~40g protein and contain ~80g of vegetables. Use accurate per-ingredient values from common nutrition tables.
+- Before finalizing each day, mentally sum the 5 dishes' calories, protein, carbs, fat and vegetables. If any total drifts more than 10% from the daily target, adjust ingredient quantities (typically the staple carb, protein source, or veg portion) to bring it in line. Iterate until all five totals fit.
 
-If no targets are provided, default to ≈2000 kcal/day with a balanced 30P / 45C / 25F split.
+VEGETABLES FIELD:
+- Each dish has a numeric "vegetables" field representing the total grams of vegetables (raw weight) inside that dish.
+- A "vegetable" for this purpose is any plant-based ingredient that isn't a fruit, nut, seed, grain, legume, herb-as-spice or starch tuber prepared as a starch (e.g. french fries don't count). Leafy greens, brassicas, peppers, onions, tomato, cucumber, courgette, carrots, mushrooms, etc. all count.
+- Sum the raw grams of those ingredients and report it accurately in the vegetables field for each dish.
+
+If no targets are provided, default to ≈2000 kcal/day with a balanced 30P / 45C / 25F split and ~400g of vegetables per day.
 
 Output JSON shape (exact field names, order does not matter):
 {
@@ -102,6 +114,7 @@ Output JSON shape (exact field names, order does not matter):
             "protein": number,
             "carbs": number,
             "fat": number,
+            "vegetables": number,
             "notes": "string (may be empty)",
             "prepTime": number,
             "cookTime": number,
@@ -127,6 +140,9 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras }) {
   if (p.dietaryStyle) lines.push(`- Dietary style: ${STYLE_LABELS[p.dietaryStyle] || p.dietaryStyle}`)
   if (p.allergies) lines.push(`- Allergies (NEVER use): ${p.allergies}`)
   if (p.restrictions) lines.push(`- Restrictions and dislikes: ${p.restrictions}`)
+  if (Array.isArray(p.dislikedIngredients) && p.dislikedIngredients.length) {
+    lines.push(`- Disliked ingredients (NEVER use, hard rule): ${p.dislikedIngredients.join(', ')}`)
+  }
   if (p.favourites) lines.push(`- Favourite foods (use often): ${p.favourites}`)
   if (p.cuisines) lines.push(`- Preferred cuisines: ${p.cuisines}`)
 
@@ -135,6 +151,7 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras }) {
   if (p.proteinTarget) targets.push(`${p.proteinTarget}g protein`)
   if (p.carbsTarget) targets.push(`${p.carbsTarget}g carbs`)
   if (p.fatTarget) targets.push(`${p.fatTarget}g fat`)
+  if (p.vegetableTarget) targets.push(`${p.vegetableTarget}g vegetables`)
   if (targets.length) {
     lines.push('')
     lines.push(`### MANDATORY DAILY TARGETS — must be met within ±10% every day`)
@@ -183,9 +200,16 @@ function sanitizeProfile(raw) {
     proteinTarget: num(raw.proteinTarget),
     carbsTarget: num(raw.carbsTarget),
     fatTarget: num(raw.fatTarget),
+    vegetableTarget: num(raw.vegetableTarget),
     servings: num(raw.servings) || 1,
     maxCookTime: num(raw.maxCookTime),
     notes: trim(raw.notes, 1000),
+    dislikedIngredients: Array.isArray(raw.dislikedIngredients)
+      ? raw.dislikedIngredients
+          .map((s) => trim(s, 100))
+          .filter(Boolean)
+          .slice(0, 100)
+      : [],
   }
 }
 

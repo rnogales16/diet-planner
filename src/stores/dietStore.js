@@ -221,9 +221,11 @@ const DEFAULT_PROFILE = {
   proteinTarget: null,
   carbsTarget: null,
   fatTarget: null,
+  vegetableTarget: null,   // grams of vegetables per day
   servings: 1,             // people to cook for
   maxCookTime: null,       // minutes per meal, null means no limit
   notes: '',               // free text catch-all
+  dislikedIngredients: [], // ingredients the user wants the AI to never use
 }
 
 export const useDietStore = defineStore('diet', {
@@ -402,6 +404,25 @@ export const useDietStore = defineStore('diet', {
       this.profile = { ...this.profile, ...patch }
     },
 
+    addDislikedIngredient(name) {
+      const clean = String(name || '').trim()
+      if (!clean) return false
+      const lower = clean.toLowerCase()
+      const list = Array.isArray(this.profile.dislikedIngredients) ? this.profile.dislikedIngredients : []
+      if (list.some((i) => i.toLowerCase() === lower)) return false
+      this.profile = { ...this.profile, dislikedIngredients: [...list, clean] }
+      return true
+    },
+
+    removeDislikedIngredient(name) {
+      const list = Array.isArray(this.profile.dislikedIngredients) ? this.profile.dislikedIngredients : []
+      const lower = String(name || '').trim().toLowerCase()
+      this.profile = {
+        ...this.profile,
+        dislikedIngredients: list.filter((i) => i.toLowerCase() !== lower),
+      }
+    },
+
     setLanguage(language) {
       this.language = language
     },
@@ -424,7 +445,7 @@ export const useDietStore = defineStore('diet', {
             const originalLang = current.originalLang || 'en'
             const editingOriginal = !locale || locale === originalLang
 
-            const numericKeys = ['time', 'calories', 'protein', 'carbs', 'fat', 'prepTime', 'cookTime', 'servings']
+            const numericKeys = ['time', 'calories', 'protein', 'carbs', 'fat', 'vegetables', 'prepTime', 'cookTime', 'servings']
             const numericPatch = {}
             for (const k of numericKeys) {
               if (patch[k] !== undefined) numericPatch[k] = patch[k]
