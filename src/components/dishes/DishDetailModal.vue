@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Clock, Flame, Users, Pencil, Trash2 } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -22,34 +25,34 @@ const totalTime = computed(() => {
 </script>
 
 <template>
-  <BaseModal :show="show" size="lg" :title="dish?.name || 'Dish details'" @close="$emit('close')">
+  <BaseModal :show="show" size="lg" :title="dish?.name || t('dishDetail.title')" @close="$emit('close')">
     <div v-if="dish" class="detail">
       <div class="detail__pills">
         <span class="pill pill--accent tabular">
           <Flame :size="12" />
-          {{ dish.calories }} kcal
+          {{ dish.calories }} {{ t('common.kcal') }}
         </span>
         <span class="pill tabular">
           <Clock :size="12" />
           {{ dish.time }}
         </span>
-        <span v-if="totalTime" class="pill tabular">{{ totalTime }} min</span>
+        <span v-if="totalTime" class="pill tabular">{{ totalTime }} {{ t('common.min') }}</span>
         <span v-if="dish.servings > 1" class="pill tabular">
           <Users :size="12" />
-          {{ dish.servings }} servings
+          {{ dish.servings }} {{ t('common.servings') }}
         </span>
       </div>
 
       <div class="detail__macros">
-        <div class="macro"><span class="macro__label">Protein</span><span class="macro__value tabular">{{ dish.protein }} g</span></div>
-        <div class="macro"><span class="macro__label">Carbs</span><span class="macro__value tabular">{{ dish.carbs }} g</span></div>
-        <div class="macro"><span class="macro__label">Fat</span><span class="macro__value tabular">{{ dish.fat }} g</span></div>
+        <div class="macro"><span class="macro__label">{{ t('summary.protein') }}</span><span class="macro__value tabular">{{ dish.protein }} {{ t('common.g') }}</span></div>
+        <div class="macro"><span class="macro__label">{{ t('summary.carbs') }}</span><span class="macro__value tabular">{{ dish.carbs }} {{ t('common.g') }}</span></div>
+        <div class="macro"><span class="macro__label">{{ t('summary.fat') }}</span><span class="macro__value tabular">{{ dish.fat }} {{ t('common.g') }}</span></div>
       </div>
 
       <p v-if="dish.notes" class="detail__notes">{{ dish.notes }}</p>
 
       <div v-if="dish.ingredients?.length > 0" class="detail__section">
-        <h3 class="detail__heading">Ingredients</h3>
+        <h3 class="detail__heading">{{ t('dishDetail.ingredients') }}</h3>
         <ul class="ingredients">
           <li v-for="(ing, i) in dish.ingredients" :key="i">
             <span class="ingredients__bullet" />
@@ -60,7 +63,7 @@ const totalTime = computed(() => {
       </div>
 
       <div v-if="dish.instructions?.length > 0" class="detail__section">
-        <h3 class="detail__heading">Instructions</h3>
+        <h3 class="detail__heading">{{ t('dishDetail.instructions') }}</h3>
         <ol class="instructions">
           <li v-for="(step, i) in dish.instructions" :key="i">
             <span class="instructions__num tabular">{{ i + 1 }}</span>
@@ -69,16 +72,14 @@ const totalTime = computed(() => {
         </ol>
       </div>
 
-      <p v-if="!hasRecipe && !dish.notes" class="detail__empty">
-        No recipe details yet. Click Edit to add ingredients and instructions.
-      </p>
+      <p v-if="!hasRecipe && !dish.notes" class="detail__empty">{{ t('dishDetail.noRecipe') }}</p>
 
       <footer class="detail__footer">
         <button type="button" class="app-btn app-btn--ghost" @click="$emit('delete', dish)">
-          <Trash2 :size="14" /> Delete
+          <Trash2 :size="14" /> {{ t('common.delete') }}
         </button>
         <button type="button" class="app-btn app-btn--primary" @click="$emit('edit', dish)">
-          <Pencil :size="14" /> Edit
+          <Pencil :size="14" /> {{ t('common.edit') }}
         </button>
       </footer>
     </div>

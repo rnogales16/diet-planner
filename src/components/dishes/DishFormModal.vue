@@ -1,7 +1,10 @@
 <script setup>
 import { reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { X, Plus } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -87,118 +90,118 @@ function handleSave() {
 </script>
 
 <template>
-  <BaseModal :show="show" size="lg" :title="isEditing ? 'Edit dish' : 'Add dish'" @close="$emit('close')">
+  <BaseModal :show="show" size="lg" :title="isEditing ? t('dishForm.editTitle') : t('dishForm.addTitle')" @close="$emit('close')">
     <form class="dish-form" @submit.prevent="handleSave">
       <div v-if="!isEditing && mealLabel" class="dish-form__hint">
-        Adding to <span class="app-pill">{{ mealLabel }}</span>
+        {{ t('dishForm.addingTo') }} <span class="app-pill">{{ mealLabel }}</span>
       </div>
 
       <div class="tabs">
-        <button type="button" :class="['tabs__btn', { 'is-active': activeTab === 'details' }]" @click="activeTab = 'details'">Details</button>
-        <button type="button" :class="['tabs__btn', { 'is-active': activeTab === 'recipe' }]" @click="activeTab = 'recipe'">Recipe</button>
+        <button type="button" :class="['tabs__btn', { 'is-active': activeTab === 'details' }]" @click="activeTab = 'details'">{{ t('dishForm.tabDetails') }}</button>
+        <button type="button" :class="['tabs__btn', { 'is-active': activeTab === 'recipe' }]" @click="activeTab = 'recipe'">{{ t('dishForm.tabRecipe') }}</button>
       </div>
 
       <div v-show="activeTab === 'details'" class="dish-form__section">
         <label class="field">
-          <span class="field__label">Dish name</span>
-          <input v-model="form.name" required class="app-input" placeholder="e.g. Oatmeal with berries" />
+          <span class="field__label">{{ t('dishForm.name') }}</span>
+          <input v-model="form.name" required class="app-input" :placeholder="t('dishForm.namePlaceholder')" />
         </label>
 
         <div class="dish-form__grid-2">
           <label class="field">
-            <span class="field__label">Time</span>
+            <span class="field__label">{{ t('dishForm.time') }}</span>
             <input v-model="form.time" type="time" class="app-input" />
           </label>
           <label class="field">
-            <span class="field__label">Servings</span>
+            <span class="field__label">{{ t('common.servings') }}</span>
             <input v-model.number="form.servings" type="number" min="1" class="app-input" />
           </label>
         </div>
 
         <div class="dish-form__macros">
-          <span class="dish-form__macros-label">Nutrition</span>
+          <span class="dish-form__macros-label">{{ t('dishForm.nutrition') }}</span>
           <div class="dish-form__grid-4">
             <label class="field">
-              <span class="field__label">Calories</span>
+              <span class="field__label">{{ t('settings.profile.calories') }}</span>
               <span class="field__control">
                 <input v-model.number="form.calories" type="number" min="0" class="app-input app-input--with-suffix" />
-                <span class="field__suffix">kcal</span>
+                <span class="field__suffix">{{ t('common.kcal') }}</span>
               </span>
             </label>
             <label class="field">
-              <span class="field__label">Protein</span>
+              <span class="field__label">{{ t('settings.profile.protein') }}</span>
               <span class="field__control">
                 <input v-model.number="form.protein" type="number" min="0" class="app-input app-input--with-suffix" />
-                <span class="field__suffix">g</span>
+                <span class="field__suffix">{{ t('common.g') }}</span>
               </span>
             </label>
             <label class="field">
-              <span class="field__label">Carbs</span>
+              <span class="field__label">{{ t('settings.profile.carbs') }}</span>
               <span class="field__control">
                 <input v-model.number="form.carbs" type="number" min="0" class="app-input app-input--with-suffix" />
-                <span class="field__suffix">g</span>
+                <span class="field__suffix">{{ t('common.g') }}</span>
               </span>
             </label>
             <label class="field">
-              <span class="field__label">Fat</span>
+              <span class="field__label">{{ t('settings.profile.fat') }}</span>
               <span class="field__control">
                 <input v-model.number="form.fat" type="number" min="0" class="app-input app-input--with-suffix" />
-                <span class="field__suffix">g</span>
+                <span class="field__suffix">{{ t('common.g') }}</span>
               </span>
             </label>
           </div>
         </div>
 
         <label class="field">
-          <span class="field__label">Notes</span>
-          <textarea v-model="form.notes" rows="2" class="app-input" placeholder="Optional notes..." />
+          <span class="field__label">{{ t('dishForm.notes') }}</span>
+          <textarea v-model="form.notes" rows="2" class="app-input" :placeholder="t('dishForm.notesPlaceholder')" />
         </label>
       </div>
 
       <div v-show="activeTab === 'recipe'" class="dish-form__section">
         <div class="dish-form__grid-3">
           <label class="field">
-            <span class="field__label">Prep time</span>
+            <span class="field__label">{{ t('dishForm.prep') }}</span>
             <span class="field__control">
               <input v-model.number="form.prepTime" type="number" min="0" class="app-input app-input--with-suffix" />
-              <span class="field__suffix">min</span>
+              <span class="field__suffix">{{ t('common.min') }}</span>
             </span>
           </label>
           <label class="field">
-            <span class="field__label">Cook time</span>
+            <span class="field__label">{{ t('dishForm.cook') }}</span>
             <span class="field__control">
               <input v-model.number="form.cookTime" type="number" min="0" class="app-input app-input--with-suffix" />
-              <span class="field__suffix">min</span>
+              <span class="field__suffix">{{ t('common.min') }}</span>
             </span>
           </label>
           <label class="field">
-            <span class="field__label">Servings</span>
+            <span class="field__label">{{ t('common.servings') }}</span>
             <input v-model.number="form.servings" type="number" min="1" class="app-input" />
           </label>
         </div>
 
         <div class="dish-form__list">
           <div class="dish-form__list-head">
-            <span class="dish-form__list-title">Ingredients</span>
+            <span class="dish-form__list-title">{{ t('dishForm.ingredients') }}</span>
             <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="addIngredient">
-              <Plus :size="12" /> Add
+              <Plus :size="12" /> {{ t('dishForm.addIngredient') }}
             </button>
           </div>
           <div v-for="(ing, i) in form.ingredients" :key="i" class="dish-form__row">
-            <input v-model="ing.name" placeholder="Ingredient" class="app-input" />
-            <input v-model="ing.amount" placeholder="Amount" class="app-input dish-form__row-amount" />
+            <input v-model="ing.name" :placeholder="t('dishForm.ingredientName')" class="app-input" />
+            <input v-model="ing.amount" :placeholder="t('dishForm.ingredientAmount')" class="app-input dish-form__row-amount" />
             <button type="button" class="dish-form__remove" @click="removeIngredient(i)">
               <X :size="14" />
             </button>
           </div>
-          <p v-if="form.ingredients.length === 0" class="dish-form__empty">No ingredients yet</p>
+          <p v-if="form.ingredients.length === 0" class="dish-form__empty">{{ t('dishForm.noIngredients') }}</p>
         </div>
 
         <div class="dish-form__list">
           <div class="dish-form__list-head">
-            <span class="dish-form__list-title">Instructions</span>
+            <span class="dish-form__list-title">{{ t('dishForm.instructions') }}</span>
             <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="addInstruction">
-              <Plus :size="12" /> Add step
+              <Plus :size="12" /> {{ t('dishForm.addStep') }}
             </button>
           </div>
           <div v-for="(step, i) in form.instructions" :key="i" class="dish-form__row dish-form__row--step">
@@ -206,7 +209,7 @@ function handleSave() {
             <textarea
               :value="step"
               rows="2"
-              placeholder="Describe this step..."
+              :placeholder="t('dishForm.stepPlaceholder')"
               class="app-input"
               @input="updateInstruction(i, $event.target.value)"
             />
@@ -214,13 +217,13 @@ function handleSave() {
               <X :size="14" />
             </button>
           </div>
-          <p v-if="form.instructions.length === 0" class="dish-form__empty">No steps yet</p>
+          <p v-if="form.instructions.length === 0" class="dish-form__empty">{{ t('dishForm.noSteps') }}</p>
         </div>
       </div>
 
       <footer class="dish-form__footer">
-        <button type="button" class="app-btn app-btn--ghost" @click="$emit('close')">Cancel</button>
-        <button type="submit" class="app-btn app-btn--primary">{{ isEditing ? 'Save changes' : 'Add dish' }}</button>
+        <button type="button" class="app-btn app-btn--ghost" @click="$emit('close')">{{ t('common.cancel') }}</button>
+        <button type="submit" class="app-btn app-btn--primary">{{ isEditing ? t('dishForm.submitEdit') : t('dishForm.submitNew') }}</button>
       </footer>
     </form>
   </BaseModal>

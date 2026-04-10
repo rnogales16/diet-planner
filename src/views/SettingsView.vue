@@ -1,7 +1,10 @@
 <script setup>
-import { reactive, ref, toRaw, watch } from 'vue'
+import { reactive, ref, toRaw, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
+
+const { t } = useI18n()
 
 const clone = (obj) => JSON.parse(JSON.stringify(obj))
 
@@ -27,25 +30,15 @@ function saveProfile() {
   setTimeout(() => (profileSaved.value = false), 2000)
 }
 
-const GOAL_OPTIONS = [
-  { value: '', label: 'No specific goal' },
-  { value: 'lose_weight', label: 'Lose weight' },
-  { value: 'gain_muscle', label: 'Gain muscle' },
-  { value: 'maintain', label: 'Maintain weight' },
-  { value: 'health', label: 'General health' },
-]
+const GOAL_VALUES = ['', 'lose_weight', 'gain_muscle', 'maintain', 'health']
+const STYLE_VALUES = ['', 'omnivore', 'vegetarian', 'vegan', 'pescatarian', 'mediterranean', 'keto', 'paleo', 'other']
 
-const STYLE_OPTIONS = [
-  { value: '', label: 'No preference' },
-  { value: 'omnivore', label: 'Omnivore' },
-  { value: 'vegetarian', label: 'Vegetarian' },
-  { value: 'vegan', label: 'Vegan' },
-  { value: 'pescatarian', label: 'Pescatarian' },
-  { value: 'mediterranean', label: 'Mediterranean' },
-  { value: 'keto', label: 'Keto' },
-  { value: 'paleo', label: 'Paleo' },
-  { value: 'other', label: 'Other' },
-]
+const goalOptions = computed(() =>
+  GOAL_VALUES.map((v) => ({ value: v, label: t(`settings.profile.goalOptions.${v || 'none'}`) }))
+)
+const styleOptions = computed(() =>
+  STYLE_VALUES.map((v) => ({ value: v, label: t(`settings.profile.styleOptions.${v || 'none'}`) }))
+)
 
 const form = reactive({
   mealTypes: clone(store.mealTypes),
@@ -108,20 +101,20 @@ async function handleImportFile(event) {
     const payload = JSON.parse(text)
     const result = store.importData(payload)
     if (result.success) {
-      importMessage.value = 'Data imported successfully.'
+      importMessage.value = t('settings.data.importedOk')
       setTimeout(() => (importMessage.value = ''), 3000)
     } else {
       importError.value = result.error
     }
   } catch (err) {
-    importError.value = `Could not read file: ${err.message}`
+    importError.value = t('settings.data.importError', { error: err.message })
   } finally {
     event.target.value = ''
   }
 }
 
 function clearAllData() {
-  if (!confirm('Clear all diet data? This cannot be undone.')) return
+  if (!confirm(t('settings.data.clearConfirm'))) return
   localStorage.removeItem('diet')
   location.reload()
 }
@@ -130,111 +123,109 @@ function clearAllData() {
 <template>
   <div class="settings">
     <header class="settings__head">
-      <h1 class="settings__title font-display">Settings</h1>
-      <p class="settings__sub">Customize your meal plan</p>
+      <h1 class="settings__title font-display">{{ t('settings.title') }}</h1>
+      <p class="settings__sub">{{ t('settings.subtitle') }}</p>
     </header>
 
     <!-- Diet profile -->
     <section class="app-card settings__card">
       <header class="settings__card-head">
         <h2 class="settings__card-title font-display">
-          <User :size="14" /> Diet profile
+          <User :size="14" /> {{ t('settings.profile.title') }}
         </h2>
-        <p class="settings__card-sub">
-          Saved once and used every time the AI generates a plan, so you don't have to repeat yourself.
-        </p>
+        <p class="settings__card-sub">{{ t('settings.profile.subtitle') }}</p>
       </header>
 
       <div class="profile-grid">
         <label class="field">
-          <span class="field__label">Goal</span>
+          <span class="field__label">{{ t('settings.profile.goal') }}</span>
           <select v-model="profile.goal" class="app-input">
-            <option v-for="o in GOAL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+            <option v-for="o in goalOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
         </label>
         <label class="field">
-          <span class="field__label">Dietary style</span>
+          <span class="field__label">{{ t('settings.profile.dietaryStyle') }}</span>
           <select v-model="profile.dietaryStyle" class="app-input">
-            <option v-for="o in STYLE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+            <option v-for="o in styleOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
         </label>
       </div>
 
       <label class="field">
-        <span class="field__label">Allergies</span>
-        <input v-model="profile.allergies" class="app-input" placeholder="e.g. peanuts, shellfish" />
+        <span class="field__label">{{ t('settings.profile.allergies') }}</span>
+        <input v-model="profile.allergies" class="app-input" :placeholder="t('settings.profile.allergiesPlaceholder')" />
       </label>
       <label class="field">
-        <span class="field__label">Restrictions and dislikes</span>
-        <input v-model="profile.restrictions" class="app-input" placeholder="e.g. lactose intolerant, no liver" />
+        <span class="field__label">{{ t('settings.profile.restrictions') }}</span>
+        <input v-model="profile.restrictions" class="app-input" :placeholder="t('settings.profile.restrictionsPlaceholder')" />
       </label>
       <label class="field">
-        <span class="field__label">Favourite foods</span>
-        <input v-model="profile.favourites" class="app-input" placeholder="e.g. salmon, avocado, sweet potato" />
+        <span class="field__label">{{ t('settings.profile.favourites') }}</span>
+        <input v-model="profile.favourites" class="app-input" :placeholder="t('settings.profile.favouritesPlaceholder')" />
       </label>
       <label class="field">
-        <span class="field__label">Preferred cuisines</span>
-        <input v-model="profile.cuisines" class="app-input" placeholder="e.g. Mediterranean, Japanese, Mexican" />
+        <span class="field__label">{{ t('settings.profile.cuisines') }}</span>
+        <input v-model="profile.cuisines" class="app-input" :placeholder="t('settings.profile.cuisinesPlaceholder')" />
       </label>
 
       <div class="profile-grid profile-grid--4">
         <label class="field">
-          <span class="field__label">Calories</span>
+          <span class="field__label">{{ t('settings.profile.calories') }}</span>
           <span class="field__control">
             <input v-model.number="profile.calorieTarget" type="number" min="0" placeholder="2000" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">kcal</span>
+            <span class="field__suffix">{{ t('common.kcal') }}</span>
           </span>
         </label>
         <label class="field">
-          <span class="field__label">Protein</span>
+          <span class="field__label">{{ t('settings.profile.protein') }}</span>
           <span class="field__control">
             <input v-model.number="profile.proteinTarget" type="number" min="0" placeholder="150" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">g</span>
+            <span class="field__suffix">{{ t('common.g') }}</span>
           </span>
         </label>
         <label class="field">
-          <span class="field__label">Carbs</span>
+          <span class="field__label">{{ t('settings.profile.carbs') }}</span>
           <span class="field__control">
             <input v-model.number="profile.carbsTarget" type="number" min="0" placeholder="220" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">g</span>
+            <span class="field__suffix">{{ t('common.g') }}</span>
           </span>
         </label>
         <label class="field">
-          <span class="field__label">Fat</span>
+          <span class="field__label">{{ t('settings.profile.fat') }}</span>
           <span class="field__control">
             <input v-model.number="profile.fatTarget" type="number" min="0" placeholder="70" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">g</span>
+            <span class="field__suffix">{{ t('common.g') }}</span>
           </span>
         </label>
       </div>
 
       <div class="profile-grid">
         <label class="field">
-          <span class="field__label">Cooking for</span>
+          <span class="field__label">{{ t('settings.profile.cookingFor') }}</span>
           <span class="field__control">
             <input v-model.number="profile.servings" type="number" min="1" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">people</span>
+            <span class="field__suffix">{{ t('common.people') }}</span>
           </span>
         </label>
         <label class="field">
-          <span class="field__label">Max time per meal</span>
+          <span class="field__label">{{ t('settings.profile.maxTime') }}</span>
           <span class="field__control">
-            <input v-model.number="profile.maxCookTime" type="number" min="0" placeholder="any" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">min</span>
+            <input v-model.number="profile.maxCookTime" type="number" min="0" :placeholder="t('settings.profile.anyTime')" class="app-input app-input--with-suffix" />
+            <span class="field__suffix">{{ t('common.min') }}</span>
           </span>
         </label>
       </div>
 
       <label class="field">
-        <span class="field__label">Notes for the AI</span>
-        <textarea v-model="profile.notes" class="app-input" rows="2" placeholder="anything else worth knowing — e.g. I work out 4 times a week, I hate sandwiches for dinner..." />
+        <span class="field__label">{{ t('settings.profile.notes') }}</span>
+        <textarea v-model="profile.notes" class="app-input" rows="2" :placeholder="t('settings.profile.notesPlaceholder')" />
       </label>
 
       <footer class="settings__card-footer">
-        <button type="button" class="app-btn app-btn--primary" @click="saveProfile">Save profile</button>
+        <button type="button" class="app-btn app-btn--primary" @click="saveProfile">{{ t('settings.profile.saveProfile') }}</button>
         <Transition name="fade">
           <span v-if="profileSaved" class="settings__saved">
-            <Check :size="14" /> Saved
+            <Check :size="14" /> {{ t('common.saved') }}
           </span>
         </Transition>
       </footer>
@@ -243,8 +234,8 @@ function clearAllData() {
     <!-- Meal types -->
     <section class="app-card settings__card">
       <header class="settings__card-head">
-        <h2 class="settings__card-title font-display">Meal types</h2>
-        <p class="settings__card-sub">Customize names and default times of each meal</p>
+        <h2 class="settings__card-title font-display">{{ t('settings.mealTypes.title') }}</h2>
+        <p class="settings__card-sub">{{ t('settings.mealTypes.subtitle') }}</p>
       </header>
       <div class="settings__rows">
         <div v-for="(meal, idx) in form.mealTypes" :key="meal.type" class="meal-row">
@@ -256,11 +247,11 @@ function clearAllData() {
         </div>
       </div>
       <footer class="settings__card-footer">
-        <button type="button" class="app-btn app-btn--primary" @click="save">Save changes</button>
-        <button type="button" class="app-btn app-btn--ghost" @click="reset">Reset</button>
+        <button type="button" class="app-btn app-btn--primary" @click="save">{{ t('common.saveChanges') }}</button>
+        <button type="button" class="app-btn app-btn--ghost" @click="reset">{{ t('common.reset') }}</button>
         <Transition name="fade">
           <span v-if="saved" class="settings__saved">
-            <Check :size="14" /> Saved
+            <Check :size="14" /> {{ t('common.saved') }}
           </span>
         </Transition>
       </footer>
@@ -269,27 +260,27 @@ function clearAllData() {
     <!-- Data management -->
     <section class="app-card settings__card">
       <header class="settings__card-head">
-        <h2 class="settings__card-title font-display">Data management</h2>
-        <p class="settings__card-sub">All your data is stored locally in your browser</p>
+        <h2 class="settings__card-title font-display">{{ t('settings.data.title') }}</h2>
+        <p class="settings__card-sub">{{ t('settings.data.subtitle') }}</p>
       </header>
       <div class="data-row">
         <div class="data-row__copy">
-          <p class="data-row__title">Export data</p>
-          <p class="data-row__desc">Download all your meal plans as a JSON backup file</p>
+          <p class="data-row__title">{{ t('settings.data.export') }}</p>
+          <p class="data-row__desc">{{ t('settings.data.exportDesc') }}</p>
         </div>
         <button type="button" class="app-btn app-btn--primary" @click="exportData">
           <Download :size="14" />
-          Export
+          {{ t('settings.data.exportBtn') }}
         </button>
       </div>
       <div class="data-row">
         <div class="data-row__copy">
-          <p class="data-row__title">Import data</p>
-          <p class="data-row__desc">Restore from a previously exported backup file</p>
+          <p class="data-row__title">{{ t('settings.data.import') }}</p>
+          <p class="data-row__desc">{{ t('settings.data.importDesc') }}</p>
         </div>
         <button type="button" class="app-btn app-btn--secondary" @click="triggerImport">
           <Upload :size="14" />
-          Import
+          {{ t('settings.data.importBtn') }}
         </button>
         <input ref="importInput" type="file" accept="application/json,.json" class="hidden" @change="handleImportFile" />
       </div>
@@ -303,12 +294,12 @@ function clearAllData() {
 
       <div class="data-row data-row--danger">
         <div class="data-row__copy">
-          <p class="data-row__title">Clear all data</p>
-          <p class="data-row__desc">Permanently delete all meal plans and settings</p>
+          <p class="data-row__title">{{ t('settings.data.clear') }}</p>
+          <p class="data-row__desc">{{ t('settings.data.clearDesc') }}</p>
         </div>
         <button type="button" class="app-btn app-btn--danger" @click="clearAllData">
           <Trash2 :size="14" />
-          Clear data
+          {{ t('settings.data.clearBtn') }}
         </button>
       </div>
     </section>
