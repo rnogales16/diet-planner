@@ -2,21 +2,21 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Sparkles, AlertCircle } from 'lucide-vue-next'
+import { Sparkles, AlertCircle, CalendarClock } from 'lucide-vue-next'
 import { translateDishes } from '@/services/translate'
 import { SUPPORTED_LOCALES } from '@/i18n'
-
-const { t } = useI18n()
 import { useDietStore } from '@/stores/dietStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
 import { generateMealPlan } from '@/services/openai'
 import GenerateForm from '@/components/generate/GenerateForm.vue'
 import GenerateLoading from '@/components/generate/GenerateLoading.vue'
 import GeneratePlanPreview from '@/components/generate/GeneratePlanPreview.vue'
+import WeekNavigator from '@/components/calendar/WeekNavigator.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const store = useDietStore()
-const { weekKey, weekRange, init } = useWeekNavigation()
+const { weekKey, weekRange, init, goToPrevWeek, goToNextWeek, goToToday } = useWeekNavigation()
 
 init()
 
@@ -94,6 +94,19 @@ function handleBack() {
       <p class="generate-hero__sub">{{ t('generate.heroSub') }}</p>
     </header>
 
+    <div v-if="phase !== 'loading'" class="target-week">
+      <span class="target-week__label">
+        <CalendarClock :size="14" />
+        {{ t('generate.targetWeek') }}
+      </span>
+      <WeekNavigator
+        :week-range="weekRange"
+        @prev="goToPrevWeek"
+        @next="goToNextWeek"
+        @today="goToToday"
+      />
+    </div>
+
     <div v-if="error" class="generate-error">
       <AlertCircle :size="16" />
       <div>
@@ -158,6 +171,25 @@ function handleBack() {
   font-size: 14px;
   color: var(--text-muted);
   max-width: 480px;
+}
+
+.target-week {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.target-week__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .generate-card {

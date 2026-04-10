@@ -27,6 +27,27 @@ export function getWeekKey(date) {
 }
 
 /**
+ * Parse a week key like "2026-W15" into the Monday of that ISO week.
+ * Returns null if the input is not a valid key.
+ */
+export function parseWeekKey(key) {
+  if (typeof key !== 'string') return null
+  const m = /^(\d{4})-W(\d{1,2})$/.exec(key)
+  if (!m) return null
+  const year = parseInt(m[1], 10)
+  const week = parseInt(m[2], 10)
+  if (week < 1 || week > 53) return null
+  // ISO week 1 is the week containing Jan 4.
+  const jan4 = new Date(year, 0, 4)
+  const jan4Day = jan4.getDay() || 7 // Sun=0 → 7
+  const week1Monday = new Date(year, 0, 4 - (jan4Day - 1))
+  const targetMonday = new Date(week1Monday)
+  targetMonday.setDate(week1Monday.getDate() + (week - 1) * 7)
+  targetMonday.setHours(0, 0, 0, 0)
+  return targetMonday
+}
+
+/**
  * Get Monday of the ISO week containing `date`.
  */
 export function getMonday(date) {

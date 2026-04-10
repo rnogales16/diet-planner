@@ -105,7 +105,8 @@
       "back": "Back to form",
       "apply": "Apply to this week",
       "warning": "Applying replaces all existing dishes for this week."
-    }
+    },
+    "targetWeek": "Generating for"
   },
   "settings": {
     "title": "Settings",

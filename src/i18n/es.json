@@ -105,7 +105,8 @@
       "back": "Volver al formulario",
       "apply": "Aplicar a esta semana",
       "warning": "Aplicar reemplazará todos los platos existentes de esta semana."
-    }
+    },
+    "targetWeek": "Generando para"
   },
   "settings": {
     "title": "Ajustes",
