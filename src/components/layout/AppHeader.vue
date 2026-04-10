@@ -1,6 +1,7 @@
 <script setup>
 import { RouterLink } from 'vue-router'
 import ThemeToggle from './ThemeToggle.vue'
+import SyncIndicator from './SyncIndicator.vue'
 </script>
 
 <template>
@@ -18,6 +19,7 @@ import ThemeToggle from './ThemeToggle.vue'
       </nav>
 
       <div class="app-header__right">
+        <SyncIndicator />
         <ThemeToggle />
         <div class="avatar">R</div>
       </div>
