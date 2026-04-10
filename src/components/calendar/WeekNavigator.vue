@@ -1,5 +1,8 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 defineProps({
   weekRange: { type: String, required: true },
@@ -10,14 +13,14 @@ defineEmits(['prev', 'next', 'today'])
 
 <template>
   <div class="week-nav">
-    <button class="week-nav__chev" type="button" @click="$emit('prev')" aria-label="Previous week">
+    <button class="week-nav__chev" type="button" @click="$emit('prev')" :aria-label="t('weekNav.prev')">
       <ChevronLeft :size="16" />
     </button>
     <div class="week-nav__label font-display tabular">{{ weekRange }}</div>
-    <button class="week-nav__chev" type="button" @click="$emit('next')" aria-label="Next week">
+    <button class="week-nav__chev" type="button" @click="$emit('next')" :aria-label="t('weekNav.next')">
       <ChevronRight :size="16" />
     </button>
-    <button class="week-nav__today" type="button" @click="$emit('today')">Today</button>
+    <button class="week-nav__today" type="button" @click="$emit('today')">{{ t('weekNav.today') }}</button>
   </div>
 </template>
 

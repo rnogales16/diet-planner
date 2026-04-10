@@ -1,20 +1,23 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Cloud, CloudOff, Loader2, Check } from 'lucide-vue-next'
 import { syncStatus, syncError } from '@/services/sync'
+
+const { t } = useI18n()
 
 const display = computed(() => {
   switch (syncStatus.value) {
     case 'loading':
-      return { icon: Loader2, label: 'Loading…', kind: 'busy' }
+      return { icon: Loader2, label: t('sync.loading'), kind: 'busy' }
     case 'saving':
-      return { icon: Loader2, label: 'Saving…', kind: 'busy' }
+      return { icon: Loader2, label: t('sync.saving'), kind: 'busy' }
     case 'saved':
-      return { icon: Check, label: 'Saved', kind: 'ok' }
+      return { icon: Check, label: t('sync.saved'), kind: 'ok' }
     case 'error':
-      return { icon: CloudOff, label: syncError.value || 'Sync error', kind: 'error' }
+      return { icon: CloudOff, label: syncError.value || t('sync.error'), kind: 'error' }
     default:
-      return { icon: Cloud, label: 'Synced', kind: 'idle' }
+      return { icon: Cloud, label: t('sync.synced'), kind: 'idle' }
   }
 })
 </script>

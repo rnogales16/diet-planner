@@ -1,25 +1,27 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { useTheme } from '@/composables/useTheme'
 import { Leaf, Flame, Moon } from 'lucide-vue-next'
 
+const { t } = useI18n()
 const { theme, setTheme } = useTheme()
 
 const options = [
-  { id: 'sage', label: 'Sage', icon: Leaf },
-  { id: 'warm', label: 'Warm', icon: Flame },
-  { id: 'dark', label: 'Dark', icon: Moon },
+  { id: 'sage', icon: Leaf },
+  { id: 'warm', icon: Flame },
+  { id: 'dark', icon: Moon },
 ]
 </script>
 
 <template>
-  <div class="theme-toggle" role="radiogroup" aria-label="Color theme">
+  <div class="theme-toggle" role="radiogroup" :aria-label="t('theme.label')">
     <button
       v-for="opt in options"
       :key="opt.id"
       type="button"
       role="radio"
       :aria-checked="theme === opt.id"
-      :title="opt.label"
+      :title="t(`theme.${opt.id}`)"
       class="theme-toggle__btn"
       :class="{ 'is-active': theme === opt.id }"
       @click="setTheme(opt.id)"
