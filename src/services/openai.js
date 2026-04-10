@@ -95,6 +95,7 @@ export async function generateMealPlan(formData, signal) {
     fridgeContents: formData.fridgeContents || '',
     weeklyExtras: formData.weeklyExtras || '',
     profile: store.profile,
+    language: store.language || 'en',
   }
 
   let response

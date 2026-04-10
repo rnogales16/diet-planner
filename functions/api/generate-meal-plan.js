@@ -24,6 +24,13 @@ const STYLE_LABELS = {
   other: 'unspecified',
 }
 
+const LANGUAGE_NAMES = {
+  en: 'English',
+  es: 'Spanish (español)',
+}
+
+const SUPPORTED_LANGS = new Set(['en', 'es'])
+
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -42,8 +49,11 @@ function num(value) {
   return Math.min(n, 10000)
 }
 
-function buildSystemPrompt() {
+function buildSystemPrompt(language) {
+  const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en
   return `You are a meticulous nutritionist and home cook. You design realistic, varied, healthy weekly meal plans for one person at a time.
+
+LANGUAGE: All human-readable strings in your response (dish names, notes, ingredient names and amounts, instructions) MUST be written in ${langName}. Do not translate the JSON keys themselves — those must stay in English exactly as specified below. The "type" field of each meal must also stay in English (breakfast, morning_snack, lunch, afternoon_snack, dinner).
 
 Hard rules:
 - Output ONLY a single valid JSON object — no markdown, no code fences, no commentary.
@@ -167,8 +177,9 @@ export async function onRequestPost({ request, env }) {
   const profile = sanitizeProfile(body.profile)
   const fridgeContents = trim(body.fridgeContents, 2000)
   const weeklyExtras = trim(body.weeklyExtras, 2000)
+  const language = SUPPORTED_LANGS.has(body.language) ? body.language : 'en'
 
-  const systemPrompt = buildSystemPrompt()
+  const systemPrompt = buildSystemPrompt(language)
   const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras })
 
   let upstream
