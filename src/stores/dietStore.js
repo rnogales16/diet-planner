@@ -210,11 +210,28 @@ const EXAMPLE_DISHES = [
   },
 ]
 
+const DEFAULT_PROFILE = {
+  goal: '',                // 'lose_weight' | 'gain_muscle' | 'maintain' | 'health'
+  dietaryStyle: '',        // 'omnivore' | 'vegetarian' | 'vegan' | 'pescatarian' | 'mediterranean' | 'keto' | 'paleo' | 'other'
+  allergies: '',           // free text
+  restrictions: '',        // free text (dislikes, intolerances)
+  favourites: '',          // free text (loved ingredients/cuisines)
+  cuisines: '',            // free text (preferred cuisines)
+  calorieTarget: null,
+  proteinTarget: null,
+  carbsTarget: null,
+  fatTarget: null,
+  servings: 1,             // people to cook for
+  maxCookTime: null,       // minutes per meal, null means no limit
+  notes: '',               // free text catch-all
+}
+
 export const useDietStore = defineStore('diet', {
   state: () => ({
     weeks: {},
     currentWeekKey: getWeekKey(new Date()),
     mealTypes: JSON.parse(JSON.stringify(DEFAULT_MEAL_TYPES)),
+    profile: { ...DEFAULT_PROFILE },
     // True once the initial server load (or migration) has finished, so we
     // don't push back to the server while we're still hydrating local state.
     hydrated: false,
@@ -323,6 +340,7 @@ export const useDietStore = defineStore('diet', {
         weeks: this.weeks,
         currentWeekKey: this.currentWeekKey,
         mealTypes: this.mealTypes,
+        profile: this.profile,
       }
     },
 
@@ -341,6 +359,9 @@ export const useDietStore = defineStore('diet', {
       if (typeof payload.currentWeekKey === 'string') {
         this.currentWeekKey = payload.currentWeekKey
       }
+      if (payload.profile && typeof payload.profile === 'object') {
+        this.profile = { ...DEFAULT_PROFILE, ...payload.profile }
+      }
       return { success: true }
     },
 
@@ -355,6 +376,9 @@ export const useDietStore = defineStore('diet', {
         if (typeof payload.currentWeekKey === 'string') {
           this.currentWeekKey = payload.currentWeekKey
         }
+        if (payload.profile && typeof payload.profile === 'object') {
+          this.profile = { ...DEFAULT_PROFILE, ...payload.profile }
+        }
       }
       this.hydrated = true
     },
@@ -365,7 +389,12 @@ export const useDietStore = defineStore('diet', {
         weeks: this.weeks,
         currentWeekKey: this.currentWeekKey,
         mealTypes: this.mealTypes,
+        profile: this.profile,
       }
+    },
+
+    updateProfile(patch) {
+      this.profile = { ...this.profile, ...patch }
     },
 
     updateMealTypes(newMealTypes) {
