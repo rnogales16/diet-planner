@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import MealSlot from './MealSlot.vue'
 import { isToday } from '@/utils/dateHelpers'
+
+const { t } = useI18n()
 
 const props = defineProps({
   day: { type: Object, required: true },
@@ -10,10 +13,12 @@ const props = defineProps({
 
 defineEmits(['addDish', 'editDish', 'deleteDish', 'viewDish'])
 
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
 const dateObj = computed(() => new Date(props.day.date))
 const isTodayFlag = computed(() => isToday(dateObj.value))
 const dayNumber = computed(() => dateObj.value.getDate())
-const weekdayShort = computed(() => props.day.dayName.slice(0, 3).toUpperCase())
+const weekdayShort = computed(() => t(`planner.weekday.${WEEKDAY_KEYS[props.dayIndex]}`))
 </script>
 
 <template>

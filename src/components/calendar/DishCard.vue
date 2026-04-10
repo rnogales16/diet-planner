@@ -1,5 +1,8 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { Pencil, Trash2 } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 defineProps({
   dish: { type: Object, required: true },
@@ -11,12 +14,12 @@ defineEmits(['edit', 'delete', 'view'])
 <template>
   <article class="dish-card" @click="$emit('view', dish)">
     <header class="dish-card__head">
-      <h4 class="dish-card__name font-display">{{ dish.name || 'Untitled' }}</h4>
+      <h4 class="dish-card__name font-display">{{ dish.name || t('common.untitled') }}</h4>
       <div class="dish-card__actions">
-        <button type="button" title="Edit" @click.stop="$emit('edit', dish)">
+        <button type="button" :title="t('dishCard.edit')" @click.stop="$emit('edit', dish)">
           <Pencil :size="12" />
         </button>
-        <button type="button" title="Delete" class="danger" @click.stop="$emit('delete', dish)">
+        <button type="button" :title="t('dishCard.delete')" class="danger" @click.stop="$emit('delete', dish)">
           <Trash2 :size="12" />
         </button>
       </div>
@@ -24,7 +27,7 @@ defineEmits(['edit', 'delete', 'view'])
     <div class="dish-card__meta">
       <span class="tabular">{{ dish.time }}</span>
       <span class="dot" aria-hidden="true">·</span>
-      <span class="dish-card__kcal tabular">{{ dish.calories }} kcal</span>
+      <span class="dish-card__kcal tabular">{{ dish.calories }} {{ t('common.kcal') }}</span>
     </div>
   </article>
 </template>

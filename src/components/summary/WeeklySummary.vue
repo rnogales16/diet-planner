@@ -1,7 +1,12 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Sparkles } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
+import { useDietStore } from '@/stores/dietStore'
+
+const { t } = useI18n()
+const store = useDietStore()
 
 const props = defineProps({
   week: { type: Object, default: null },
@@ -25,28 +30,32 @@ const dailyAvg = computed(() => {
   }
 })
 
-// Rough targets used to fill the bars; the user can override these later.
-const TARGETS = { protein: 150, carbs: 220, fat: 70 }
+// Pull targets from the user's profile when present, otherwise use sensible defaults.
+const targets = computed(() => ({
+  protein: store.profile.proteinTarget || 150,
+  carbs: store.profile.carbsTarget || 220,
+  fat: store.profile.fatTarget || 70,
+}))
 
 const macros = computed(() => [
-  { key: 'protein', label: 'Protein', value: dailyAvg.value.protein, target: TARGETS.protein },
-  { key: 'carbs', label: 'Carbs', value: dailyAvg.value.carbs, target: TARGETS.carbs },
-  { key: 'fat', label: 'Fat', value: dailyAvg.value.fat, target: TARGETS.fat },
+  { key: 'protein', label: t('summary.protein'), value: dailyAvg.value.protein, target: targets.value.protein },
+  { key: 'carbs', label: t('summary.carbs'), value: dailyAvg.value.carbs, target: targets.value.carbs },
+  { key: 'fat', label: t('summary.fat'), value: dailyAvg.value.fat, target: targets.value.fat },
 ])
 </script>
 
 <template>
   <aside class="summary">
     <header class="summary__head">
-      <h3 class="summary__title font-display">This week</h3>
-      <p class="summary__sub" v-if="daysWithFood">{{ daysWithFood }} day{{ daysWithFood > 1 ? 's' : '' }} planned</p>
-      <p class="summary__sub" v-else>No dishes yet</p>
+      <h3 class="summary__title font-display">{{ t('summary.title') }}</h3>
+      <p class="summary__sub" v-if="daysWithFood">{{ t('summary.daysPlanned', daysWithFood, { count: daysWithFood }) }}</p>
+      <p class="summary__sub" v-else>{{ t('summary.noDishes') }}</p>
     </header>
 
     <div class="summary__kcal">
-      <span class="summary__kcal-label">Daily average</span>
+      <span class="summary__kcal-label">{{ t('summary.dailyAverage') }}</span>
       <span class="summary__kcal-value font-display tabular">{{ dailyAvg.calories.toLocaleString() }}</span>
-      <span class="summary__kcal-unit">kcal</span>
+      <span class="summary__kcal-unit">{{ t('common.kcal') }}</span>
     </div>
 
     <div class="summary__macros">
@@ -63,7 +72,7 @@ const macros = computed(() => [
 
     <button type="button" class="app-btn app-btn--primary summary__cta" @click="$emit('generate')">
       <Sparkles :size="14" />
-      Generate week
+      {{ t('summary.generateWeek') }}
     </button>
   </aside>
 </template>

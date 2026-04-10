@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus } from 'lucide-vue-next'
 import DishCard from './DishCard.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   meal: { type: Object, required: true },
@@ -37,7 +40,7 @@ const hasDishes = computed(() => props.meal.dishes.length > 0)
       @click="$emit('addDish', meal.type)"
     >
       <Plus :size="12" />
-      <span>Add dish</span>
+      <span>{{ t('mealSlot.addDish') }}</span>
     </button>
   </div>
 </template>
