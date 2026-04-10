@@ -1,18 +1,16 @@
 <script setup>
 import { reactive, ref, toRaw } from 'vue'
+import { Sun, Coffee, Utensils, Apple, Moon, Cpu, Download, Upload, Trash2, Check } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { getModel, setModel } from '@/services/openai'
-import BaseButton from '@/components/ui/BaseButton.vue'
-import BaseInput from '@/components/ui/BaseInput.vue'
 
 const clone = (obj) => JSON.parse(JSON.stringify(obj))
 
 const store = useDietStore()
 const saved = ref(false)
-
-// API key lives in a Cloudflare secret, so we only let the user pick the model here
-const aiModel = ref(getModel())
 const aiSaved = ref(false)
+
+const aiModel = ref(getModel())
 
 function saveAiConfig() {
   setModel(aiModel.value)
@@ -25,11 +23,11 @@ const form = reactive({
 })
 
 const mealIcons = {
-  breakfast: '🌅',
-  morning_snack: '🍎',
-  lunch: '🍽️',
-  afternoon_snack: '🥤',
-  dinner: '🌙',
+  breakfast: Sun,
+  morning_snack: Coffee,
+  lunch: Utensils,
+  afternoon_snack: Apple,
+  dinner: Moon,
 }
 
 function save() {
@@ -93,148 +91,267 @@ function clearAllData() {
 </script>
 
 <template>
-  <div class="max-w-2xl">
-    <div class="flex items-center gap-3 mb-8">
-      <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-sm shadow-emerald-500/25">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      </div>
-      <div>
-        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">Settings</h1>
-        <p class="text-sm text-gray-400 dark:text-gray-500">Customize your meal plan</p>
-      </div>
-    </div>
+  <div class="settings">
+    <header class="settings__head">
+      <h1 class="settings__title font-display">Settings</h1>
+      <p class="settings__sub">Customize your meal plan</p>
+    </header>
 
-    <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden">
-      <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-700/50 dark:to-gray-800 border-b border-gray-100 dark:border-gray-700">
-        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-          <span class="text-base">🍴</span>
-          Meal Types
-        </h2>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Customize names and default times for each meal</p>
-      </div>
-      <div class="p-6 space-y-3">
-        <div
-          v-for="(meal, idx) in form.mealTypes"
-          :key="meal.type"
-          class="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700"
-        >
-          <span class="text-xl w-8 text-center shrink-0">{{ mealIcons[meal.type] || '🍴' }}</span>
-          <div class="flex-1">
-            <BaseInput v-model="form.mealTypes[idx].label" :label="idx === 0 ? 'Label' : ''" />
-          </div>
-          <div class="w-32">
-            <BaseInput v-model="form.mealTypes[idx].defaultTime" :label="idx === 0 ? 'Default Time' : ''" type="time" />
-          </div>
+    <!-- Meal types -->
+    <section class="app-card settings__card">
+      <header class="settings__card-head">
+        <h2 class="settings__card-title font-display">Meal types</h2>
+        <p class="settings__card-sub">Customize names and default times of each meal</p>
+      </header>
+      <div class="settings__rows">
+        <div v-for="(meal, idx) in form.mealTypes" :key="meal.type" class="meal-row">
+          <span class="meal-row__icon">
+            <component :is="mealIcons[meal.type] || Utensils" :size="14" />
+          </span>
+          <input v-model="form.mealTypes[idx].label" class="app-input meal-row__label" />
+          <input v-model="form.mealTypes[idx].defaultTime" type="time" class="app-input meal-row__time" />
         </div>
       </div>
-      <div class="px-6 py-4 bg-gray-50/50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700 flex items-center gap-3">
-        <BaseButton @click="save">Save Changes</BaseButton>
-        <BaseButton variant="secondary" @click="reset">Reset</BaseButton>
+      <footer class="settings__card-footer">
+        <button type="button" class="app-btn app-btn--primary" @click="save">Save changes</button>
+        <button type="button" class="app-btn app-btn--ghost" @click="reset">Reset</button>
         <Transition name="fade">
-          <span v-if="saved" class="text-sm font-medium text-emerald-600 flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            Saved!
+          <span v-if="saved" class="settings__saved">
+            <Check :size="14" /> Saved
           </span>
         </Transition>
-      </div>
+      </footer>
     </section>
 
-    <section class="mt-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden">
-      <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-700/50 dark:to-gray-800 border-b border-gray-100 dark:border-gray-700">
-        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-          <span class="text-base">🤖</span>
-          AI Model
+    <!-- AI model -->
+    <section class="app-card settings__card">
+      <header class="settings__card-head">
+        <h2 class="settings__card-title font-display">
+          <Cpu :size="14" /> AI model
         </h2>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Choose which model generates your meal plans</p>
+        <p class="settings__card-sub">Choose which model generates your meal plans</p>
+      </header>
+      <div class="settings__field">
+        <select v-model="aiModel" class="app-input">
+          <option value="llama-3.3-70b-versatile">Llama 3.3 70B (recommended)</option>
+          <option value="llama-3.1-8b-instant">Llama 3.1 8B (fastest)</option>
+        </select>
       </div>
-      <div class="p-6 space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Model</label>
-          <select
-            v-model="aiModel"
-            class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50/50 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all"
-          >
-            <option value="llama-3.3-70b-versatile">Llama 3.3 70B (recommended)</option>
-            <option value="llama-3.1-8b-instant">Llama 3.1 8B (fastest)</option>
-          </select>
-        </div>
-      </div>
-      <div class="px-6 py-4 bg-gray-50/50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700 flex items-center gap-3">
-        <BaseButton @click="saveAiConfig">Save AI Settings</BaseButton>
+      <footer class="settings__card-footer">
+        <button type="button" class="app-btn app-btn--primary" @click="saveAiConfig">Save</button>
         <Transition name="fade">
-          <span v-if="aiSaved" class="text-sm font-medium text-emerald-600 flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            Saved!
+          <span v-if="aiSaved" class="settings__saved">
+            <Check :size="14" /> Saved
           </span>
         </Transition>
-      </div>
+      </footer>
     </section>
 
-    <section class="mt-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden">
-      <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-700/50 dark:to-gray-800 border-b border-gray-100 dark:border-gray-700">
-        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-          <span class="text-base">💾</span>
-          Data Management
-        </h2>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">All your data is stored locally in your browser</p>
+    <!-- Data management -->
+    <section class="app-card settings__card">
+      <header class="settings__card-head">
+        <h2 class="settings__card-title font-display">Data management</h2>
+        <p class="settings__card-sub">All your data is stored locally in your browser</p>
+      </header>
+      <div class="data-row">
+        <div class="data-row__copy">
+          <p class="data-row__title">Export data</p>
+          <p class="data-row__desc">Download all your meal plans as a JSON backup file</p>
+        </div>
+        <button type="button" class="app-btn app-btn--primary" @click="exportData">
+          <Download :size="14" />
+          Export
+        </button>
       </div>
-      <div class="p-6 space-y-4">
-        <div class="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700">
-          <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Export Data</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Download all your meal plans as a JSON backup file</p>
-          </div>
-          <BaseButton size="sm" @click="exportData">Export</BaseButton>
+      <div class="data-row">
+        <div class="data-row__copy">
+          <p class="data-row__title">Import data</p>
+          <p class="data-row__desc">Restore from a previously exported backup file</p>
         </div>
+        <button type="button" class="app-btn app-btn--secondary" @click="triggerImport">
+          <Upload :size="14" />
+          Import
+        </button>
+        <input ref="importInput" type="file" accept="application/json,.json" class="hidden" @change="handleImportFile" />
+      </div>
 
-        <div class="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700">
-          <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Import Data</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Restore from a previously exported backup file (overwrites current data)</p>
-          </div>
-          <BaseButton variant="secondary" size="sm" @click="triggerImport">Import</BaseButton>
-          <input
-            ref="importInput"
-            type="file"
-            accept="application/json,.json"
-            class="hidden"
-            @change="handleImportFile"
-          />
+      <Transition name="fade">
+        <p v-if="importMessage" class="settings__msg settings__msg--ok">{{ importMessage }}</p>
+      </Transition>
+      <Transition name="fade">
+        <p v-if="importError" class="settings__msg settings__msg--err">{{ importError }}</p>
+      </Transition>
+
+      <div class="data-row data-row--danger">
+        <div class="data-row__copy">
+          <p class="data-row__title">Clear all data</p>
+          <p class="data-row__desc">Permanently delete all meal plans and settings</p>
         </div>
-
-        <Transition name="fade">
-          <p v-if="importMessage" class="text-sm font-medium text-emerald-600">{{ importMessage }}</p>
-        </Transition>
-        <Transition name="fade">
-          <p v-if="importError" class="text-sm font-medium text-red-600">{{ importError }}</p>
-        </Transition>
-
-        <div class="flex items-center justify-between p-4 rounded-xl bg-red-50/50 dark:bg-red-900/20 border border-red-100 dark:border-red-800">
-          <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Clear All Data</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Permanently delete all meal plans and settings</p>
-          </div>
-          <BaseButton variant="danger" size="sm" @click="clearAllData">Clear Data</BaseButton>
-        </div>
+        <button type="button" class="app-btn app-btn--danger" @click="clearAllData">
+          <Trash2 :size="14" />
+          Clear data
+        </button>
       </div>
     </section>
   </div>
 </template>
 
 <style scoped>
+.settings {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings__title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.settings__sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.settings__card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings__card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings__card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.005em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings__card-sub {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.settings__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meal-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 110px;
+  gap: 12px;
+  align-items: center;
+}
+
+.meal-row__icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  border-radius: 999px;
+}
+
+.settings__field {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings__card-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.settings__saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.data-row__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.data-row__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.data-row__desc {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.data-row--danger {
+  background-color: var(--danger-tint);
+}
+
+.data-row--danger .data-row__title {
+  color: var(--danger);
+}
+
+.settings__msg {
+  font-size: 12px;
+  font-weight: 500;
+}
+.settings__msg--ok {
+  color: var(--accent);
+}
+.settings__msg--err {
+  color: var(--danger);
+}
+
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.hidden {
+  display: none;
 }
 </style>
