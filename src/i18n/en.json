@@ -188,7 +188,25 @@
     "title": "Dish details",
     "ingredients": "Ingredients",
     "instructions": "Instructions",
-    "noRecipe": "No recipe details yet. Click Edit to add ingredients and instructions."
+    "noRecipe": "No recipe details yet. Click Edit to add ingredients and instructions.",
+    "tabDetails": "Recipe",
+    "tabChat": "Ask AI"
+  },
+  "dishChat": {
+    "intro": "Ask anything about this dish or request a change. The AI knows the recipe and your diet profile.",
+    "placeholder": "e.g. swap chickpeas for lentils, can I make this gluten-free, why so many carbs…",
+    "send": "Send",
+    "thinking": "Thinking…",
+    "error": "Chat failed: {error}",
+    "appliedTitle": "Dish updated",
+    "appliedSub": "The new version is saved. Switch to the Recipe tab to see it.",
+    "suggestions": {
+      "swap": "Suggest a healthier swap",
+      "vegan": "Make this vegan",
+      "faster": "Suggest a faster version",
+      "explain": "Why these macros?"
+    },
+    "empty": "No messages yet. Try one of the suggestions below."
   },
   "dishForm": {
     "addTitle": "Add dish",

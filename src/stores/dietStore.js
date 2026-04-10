@@ -406,6 +406,62 @@ export const useDietStore = defineStore('diet', {
       this.language = language
     },
 
+    // Updates a dish identified by its id, regardless of which week it lives in.
+    // Used by the dish-chat flow which only knows the dish id.
+    //
+    // The locale parameter routes the text fields: if it matches the dish's
+    // originalLang the base fields are updated; otherwise the text goes into
+    // translations[locale] and the original copy is left alone. Numeric
+    // fields always update the base.
+    updateDishById(dishId, patch, locale) {
+      for (const weekKey in this.weeks) {
+        const week = this.weeks[weekKey]
+        for (const day of week.days) {
+          for (const meal of day.meals) {
+            const idx = meal.dishes.findIndex((d) => d.id === dishId)
+            if (idx === -1) continue
+            const current = meal.dishes[idx]
+            const originalLang = current.originalLang || 'en'
+            const editingOriginal = !locale || locale === originalLang
+
+            const numericKeys = ['time', 'calories', 'protein', 'carbs', 'fat', 'prepTime', 'cookTime', 'servings']
+            const numericPatch = {}
+            for (const k of numericKeys) {
+              if (patch[k] !== undefined) numericPatch[k] = patch[k]
+            }
+
+            if (editingOriginal) {
+              meal.dishes[idx] = {
+                ...current,
+                ...numericPatch,
+                name: patch.name ?? current.name,
+                notes: patch.notes ?? current.notes,
+                ingredients: patch.ingredients ?? current.ingredients,
+                instructions: patch.instructions ?? current.instructions,
+              }
+            } else {
+              const existingTranslations = current.translations || {}
+              meal.dishes[idx] = {
+                ...current,
+                ...numericPatch,
+                translations: {
+                  ...existingTranslations,
+                  [locale]: {
+                    name: patch.name ?? existingTranslations[locale]?.name ?? current.name,
+                    notes: patch.notes ?? existingTranslations[locale]?.notes ?? current.notes,
+                    ingredients: patch.ingredients ?? existingTranslations[locale]?.ingredients ?? current.ingredients,
+                    instructions: patch.instructions ?? existingTranslations[locale]?.instructions ?? current.instructions,
+                  },
+                },
+              }
+            }
+            return true
+          }
+        }
+      }
+      return false
+    },
+
     // Returns every dish currently stored that has no translation for the
     // given target language (and is not originally in that language).
     collectDishesNeedingTranslation(targetLanguage) {

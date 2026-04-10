@@ -188,7 +188,25 @@
     "title": "Detalle del plato",
     "ingredients": "Ingredientes",
     "instructions": "Instrucciones",
-    "noRecipe": "Aún no hay receta. Pulsa Editar para añadir ingredientes y pasos."
+    "noRecipe": "Aún no hay receta. Pulsa Editar para añadir ingredientes y pasos.",
+    "tabDetails": "Receta",
+    "tabChat": "Preguntar a la IA"
+  },
+  "dishChat": {
+    "intro": "Pregunta lo que quieras sobre este plato o pide un cambio. La IA conoce la receta y tu perfil de dieta.",
+    "placeholder": "ej. cámbiame los garbanzos por lentejas, ¿lo puedo hacer sin gluten?, ¿por qué tantos carbohidratos?…",
+    "send": "Enviar",
+    "thinking": "Pensando…",
+    "error": "Chat fallido: {error}",
+    "appliedTitle": "Plato actualizado",
+    "appliedSub": "La nueva versión se ha guardado. Cambia a la pestaña Receta para verla.",
+    "suggestions": {
+      "swap": "Sugiere un cambio más saludable",
+      "vegan": "Hazlo vegano",
+      "faster": "Versión más rápida",
+      "explain": "¿Por qué estos macros?"
+    },
+    "empty": "Aún no hay mensajes. Prueba una de las sugerencias de abajo."
   },
   "dishForm": {
     "addTitle": "Añadir plato",
