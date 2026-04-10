@@ -1,7 +1,244 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Fraunces', 'Georgia', serif;
+}
+
+/* ---------- Theme tokens ---------- */
+/* Three flavors: sage (default), warm, dark.
+   Pick on <html data-theme="..."> via the useTheme composable. */
+
+:root,
+[data-theme='sage'] {
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --surface-2: #f1f3f5;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --accent: #7c9885;
+  --accent-hover: #6b8674;
+  --accent-fg: #ffffff;
+  --accent-tint: #eef2ee;
+  --danger: #ef4444;
+  --danger-tint: #fef2f2;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.06);
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --font-display: var(--font-sans);
+}
+
+[data-theme='warm'] {
+  --bg: #fdf8f3;
+  --surface: #ffffff;
+  --surface-2: #f7efe6;
+  --text: #3d2f24;
+  --text-muted: #7a6a5a;
+  --text-faint: #b4a594;
+  --border: #ece2d3;
+  --border-strong: #d9cab5;
+  --accent: #c9603a;
+  --accent-hover: #b1502d;
+  --accent-fg: #ffffff;
+  --accent-tint: #fbede5;
+  --danger: #c84a3a;
+  --danger-tint: #fdecea;
+  --shadow-sm: 0 1px 2px rgb(125 80 40 / 0.05);
+  --shadow: 0 2px 6px rgb(125 80 40 / 0.06), 0 1px 2px rgb(125 80 40 / 0.04);
+  --shadow-md: 0 6px 18px rgb(125 80 40 / 0.08);
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-md: 20px;
+  --radius-lg: 24px;
+  --font-display: var(--font-serif);
+}
+
+[data-theme='dark'] {
+  --bg: #0a0a0a;
+  --surface: #161616;
+  --surface-2: #1f1f1f;
+  --text: #fafafa;
+  --text-muted: #a1a1a1;
+  --text-faint: #71717a;
+  --border: #2a2a2a;
+  --border-strong: #3a3a3a;
+  --accent: #8b5cf6;
+  --accent-hover: #7c4ff2;
+  --accent-fg: #ffffff;
+  --accent-tint: #1c1530;
+  --danger: #f87171;
+  --danger-tint: #2a1414;
+  --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.02);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.5);
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --font-display: var(--font-sans);
+}
+
+/* ---------- Base styles ---------- */
+
+html {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reusable utility classes wired to the theme tokens */
+
+.app-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+}
+
+.app-input {
+  width: 100%;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-input::placeholder {
+  color: var(--text-faint);
+}
+
+.app-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+textarea.app-input {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.app-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
+  white-space: nowrap;
+}
+
+.app-btn:active {
+  transform: translateY(1px);
+}
+
+.app-btn--primary {
+  background-color: var(--accent);
+  color: var(--accent-fg);
+}
+.app-btn--primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.app-btn--secondary {
+  background-color: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.app-btn--secondary:hover {
+  background-color: var(--surface-2);
+}
+
+.app-btn--ghost {
+  background-color: transparent;
+  color: var(--text-muted);
+}
+.app-btn--ghost:hover {
+  background-color: var(--surface-2);
+  color: var(--text);
+}
+
+.app-btn--danger {
+  background-color: var(--danger);
+  color: #ffffff;
+}
+.app-btn--danger:hover {
+  filter: brightness(0.92);
+}
+
+.app-btn--sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.app-btn--lg {
+  padding: 12px 20px;
+  font-size: 15px;
+}
+
+.app-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: var(--accent-tint);
+  color: var(--accent);
+}
+
+[data-theme='dark'] .app-pill {
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.hairline {
+  height: 1px;
+  background-color: var(--border);
+}
+
+/* Scrollbar styling for the dark theme */
+[data-theme='dark'] ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background-color: #2a2a2a;
+  border-radius: 6px;
+  border: 3px solid #0a0a0a;
+}
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background-color: #0a0a0a;
 }
