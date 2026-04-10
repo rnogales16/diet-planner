@@ -1,10 +1,15 @@
-// Generates a 7-day meal plan with Gemini 2.5 Pro.
+// Generates a 7-day meal plan with Gemini.
 // Cloudflare Access protects this endpoint, so the request is already
-// authenticated by the time it gets here. The API key lives as a Pages
-// secret (GEMINI_API_KEY) and never reaches the browser.
+// authenticated by the time it gets here. API keys live as Pages secrets
+// and never reach the browser.
+//
+// Cascade: try Pro first (best recipes), fall back to Flash on quota issues.
+// Each model is retried with the backup key (different Google Cloud project,
+// independent quota) before falling through to the next model.
 
-const GEMINI_MODEL = 'gemini-2.5-pro'
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+import { callGeminiWithFallback } from './_gemini.js'
+
+const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash']
 
 const GOAL_LABELS = {
   lose_weight: 'lose weight',
@@ -163,10 +168,6 @@ function sanitizeProfile(raw) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!env.GEMINI_API_KEY) {
-    return json({ success: false, error: 'Server is not configured (missing GEMINI_API_KEY).' }, 500)
-  }
-
   let body
   try {
     body = await request.json()
@@ -182,48 +183,29 @@ export async function onRequestPost({ request, env }) {
   const systemPrompt = buildSystemPrompt(language)
   const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras })
 
-  let upstream
-  try {
-    upstream = await fetch(`${GEMINI_ENDPOINT}?key=${env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [
-          { role: 'user', parts: [{ text: userPrompt }] },
-        ],
-        generationConfig: {
-          temperature: 0.85,
-          topP: 0.95,
-          responseMimeType: 'application/json',
-          maxOutputTokens: 16384,
-        },
-      }),
-    })
-  } catch (err) {
-    return json({ success: false, error: `Upstream network error: ${err.message}` }, 502)
-  }
+  const result = await callGeminiWithFallback({
+    env,
+    models: MODEL_CASCADE,
+    payload: {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: {
+        temperature: 0.85,
+        topP: 0.95,
+        responseMimeType: 'application/json',
+        maxOutputTokens: 16384,
+      },
+    },
+  })
 
-  if (!upstream.ok) {
-    const errorBody = await upstream.text().catch(() => '')
-    if (upstream.status === 401 || upstream.status === 403) {
-      return json({ success: false, error: 'Server API key is invalid.' }, 500)
+  if (!result.ok) {
+    if (result.status === 429) {
+      return json({ success: false, error: 'All Gemini quotas exhausted. Try again in a minute.' }, 429)
     }
-    if (upstream.status === 429) {
-      return json({ success: false, error: 'Free tier rate limit reached. Try again in a minute.' }, 429)
-    }
-    return json({ success: false, error: `Upstream error (${upstream.status}): ${errorBody.slice(0, 300) || upstream.statusText}` }, 502)
+    return json({ success: false, error: `Upstream error: ${result.error}` }, 502)
   }
 
-  const result = await upstream.json()
-  const content = result?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
-
-  if (!content) {
-    const reason = result?.candidates?.[0]?.finishReason || 'unknown'
-    return json({ success: false, error: `Empty response from model (finish reason: ${reason}).` }, 502)
-  }
-
-  return json({ success: true, content })
+  return json({ success: true, content: result.content, model: result.model })
 }
 
 export function onRequest({ request }) {

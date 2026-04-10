@@ -1,13 +1,14 @@
 // Batch-translates a list of dishes to a target language using Gemini.
 // Each dish keeps its id so the client can re-attach the translation
 // to the right place in the store.
+//
+// Translation is a simple task — Flash is plenty, and its free tier
+// (15 RPM / 1500 RPD per project) gives us 60x the room of 2.5 Pro.
+// We still keep a Pro fallback in case Flash hits its quota.
 
-// Translation is a simple, well-defined task — Flash is more than enough,
-// and its free tier (15 RPM / 1500 RPD) gives us 60x the room of 2.5 Pro.
-// We keep 2.5 Pro for the actual recipe generation in /api/generate-meal-plan
-// where the extra reasoning is worth it.
-const GEMINI_MODEL = 'gemini-2.5-flash'
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+import { callGeminiWithFallback } from './_gemini.js'
+
+const MODEL_CASCADE = ['gemini-2.5-flash', 'gemini-2.5-pro']
 
 const LANGUAGE_NAMES = {
   en: 'English',
@@ -104,47 +105,29 @@ export async function onRequestPost({ request, env }) {
   const systemPrompt = buildSystemPrompt(targetLang)
   const userPrompt = buildUserPrompt(dishes)
 
-  let upstream
-  try {
-    upstream = await fetch(`${GEMINI_ENDPOINT}?key=${env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [
-          { role: 'user', parts: [{ text: userPrompt }] },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          topP: 0.9,
-          responseMimeType: 'application/json',
-          maxOutputTokens: 32768,
-        },
-      }),
-    })
-  } catch (err) {
-    return json({ success: false, error: `Upstream network error: ${err.message}` }, 502)
-  }
+  const upstream = await callGeminiWithFallback({
+    env,
+    models: MODEL_CASCADE,
+    payload: {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        topP: 0.9,
+        responseMimeType: 'application/json',
+        maxOutputTokens: 32768,
+      },
+    },
+  })
 
   if (!upstream.ok) {
-    const errorBody = await upstream.text().catch(() => '')
-    if (upstream.status === 401 || upstream.status === 403) {
-      return json({ success: false, error: 'Server API key is invalid.' }, 500)
-    }
     if (upstream.status === 429) {
-      return json({ success: false, error: 'Free tier rate limit reached. Try again in a minute.' }, 429)
+      return json({ success: false, error: 'All Gemini quotas exhausted. Try again in a minute.' }, 429)
     }
-    return json({ success: false, error: `Upstream error (${upstream.status}): ${errorBody.slice(0, 300) || upstream.statusText}` }, 502)
+    return json({ success: false, error: `Upstream error: ${upstream.error}` }, 502)
   }
 
-  const result = await upstream.json()
-  const content = result?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
-  if (!content) {
-    const reason = result?.candidates?.[0]?.finishReason || 'unknown'
-    return json({ success: false, error: `Empty response from model (finish reason: ${reason}).` }, 502)
-  }
-
-  const parsed = extractJson(content)
+  const parsed = extractJson(upstream.content)
   if (!parsed || !Array.isArray(parsed.dishes)) {
     return json({ success: false, error: 'Failed to parse translation response.' }, 502)
   }
