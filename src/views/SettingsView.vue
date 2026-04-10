@@ -1,10 +1,11 @@
 <script setup>
 import { reactive, ref, toRaw, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check } from 'lucide-vue-next'
+import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check, Languages } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
+import { translateDishes } from '@/services/translate'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const clone = (obj) => JSON.parse(JSON.stringify(obj))
 
@@ -117,6 +118,41 @@ function clearAllData() {
   if (!confirm(t('settings.data.clearConfirm'))) return
   localStorage.removeItem('diet')
   location.reload()
+}
+
+const translateBusy = ref(false)
+const translateMessage = ref('')
+const translateError = ref('')
+
+const currentLanguageLabel = computed(() => t(`language.${locale.value}`))
+
+async function handleTranslateAll() {
+  translateMessage.value = ''
+  translateError.value = ''
+  const target = locale.value
+  const dishes = store.collectDishesNeedingTranslation(target)
+
+  if (dishes.length === 0) {
+    translateMessage.value = t('settings.data.translateNothing', { lang: currentLanguageLabel.value })
+    setTimeout(() => (translateMessage.value = ''), 4000)
+    return
+  }
+
+  translateBusy.value = true
+  try {
+    const result = await translateDishes(dishes, target)
+    if (!result.success) {
+      translateError.value = t('settings.data.translateError', { error: result.error })
+      return
+    }
+    store.applyDishTranslations(target, result.translations)
+    translateMessage.value = t('settings.data.translateOk', result.translations.length, { count: result.translations.length })
+    setTimeout(() => (translateMessage.value = ''), 4000)
+  } catch (err) {
+    translateError.value = t('settings.data.translateError', { error: err.message })
+  } finally {
+    translateBusy.value = false
+  }
 }
 </script>
 
@@ -290,6 +326,24 @@ function clearAllData() {
       </Transition>
       <Transition name="fade">
         <p v-if="importError" class="settings__msg settings__msg--err">{{ importError }}</p>
+      </Transition>
+
+      <div class="data-row">
+        <div class="data-row__copy">
+          <p class="data-row__title">{{ t('settings.data.translate') }}</p>
+          <p class="data-row__desc">{{ t('settings.data.translateDesc', { lang: currentLanguageLabel }) }}</p>
+        </div>
+        <button type="button" class="app-btn app-btn--secondary" :disabled="translateBusy" @click="handleTranslateAll">
+          <Languages :size="14" />
+          {{ translateBusy ? t('settings.data.translateBusy') : t('settings.data.translateBtn') }}
+        </button>
+      </div>
+
+      <Transition name="fade">
+        <p v-if="translateMessage" class="settings__msg settings__msg--ok">{{ translateMessage }}</p>
+      </Transition>
+      <Transition name="fade">
+        <p v-if="translateError" class="settings__msg settings__msg--err">{{ translateError }}</p>
       </Transition>
 
       <div class="data-row data-row--danger">

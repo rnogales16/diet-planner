@@ -406,6 +406,59 @@ export const useDietStore = defineStore('diet', {
       this.language = language
     },
 
+    // Returns every dish currently stored that has no translation for the
+    // given target language (and is not originally in that language).
+    collectDishesNeedingTranslation(targetLanguage) {
+      const out = []
+      for (const weekKey in this.weeks) {
+        const week = this.weeks[weekKey]
+        for (const day of week.days) {
+          for (const meal of day.meals) {
+            for (const dish of meal.dishes) {
+              const orig = dish.originalLang || 'en'
+              if (orig === targetLanguage) continue
+              if (dish.translations && dish.translations[targetLanguage]) continue
+              out.push(dish)
+            }
+          }
+        }
+      }
+      return out
+    },
+
+    // Walks the store and merges the given { id, name, notes, ingredients,
+    // instructions } objects into each dish under translations[targetLanguage].
+    applyDishTranslations(targetLanguage, translations) {
+      if (!Array.isArray(translations) || translations.length === 0) return
+      const byId = new Map(translations.map((t) => [t.id, t]))
+
+      for (const weekKey in this.weeks) {
+        const week = this.weeks[weekKey]
+        for (const day of week.days) {
+          for (const meal of day.meals) {
+            for (let i = 0; i < meal.dishes.length; i++) {
+              const dish = meal.dishes[i]
+              const t = byId.get(dish.id)
+              if (!t) continue
+              const existing = dish.translations || {}
+              meal.dishes[i] = {
+                ...dish,
+                translations: {
+                  ...existing,
+                  [targetLanguage]: {
+                    name: t.name,
+                    notes: t.notes,
+                    ingredients: t.ingredients,
+                    instructions: t.instructions,
+                  },
+                },
+              }
+            }
+          }
+        }
+      }
+    },
+
     updateMealTypes(newMealTypes) {
       this.mealTypes = newMealTypes
       // Update existing weeks to reflect new meal type labels/times
