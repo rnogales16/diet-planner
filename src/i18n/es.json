@@ -1,0 +1,217 @@
+{
+  "common": {
+    "save": "Guardar",
+    "saveChanges": "Guardar cambios",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "reset": "Restablecer",
+    "back": "Volver",
+    "saved": "Guardado",
+    "loading": "Cargando…",
+    "untitled": "Sin título",
+    "optional": "opcional",
+    "min": "min",
+    "kcal": "kcal",
+    "g": "g",
+    "people": "personas",
+    "servings": "raciones"
+  },
+  "header": {
+    "brand": "Diet Planner",
+    "planner": "Semana",
+    "generate": "Generar",
+    "settings": "Ajustes"
+  },
+  "theme": {
+    "label": "Tema de color",
+    "sage": "Salvia",
+    "warm": "Cálido",
+    "dark": "Oscuro"
+  },
+  "language": {
+    "label": "Idioma",
+    "en": "Inglés",
+    "es": "Español"
+  },
+  "sync": {
+    "loading": "Cargando…",
+    "saving": "Guardando…",
+    "saved": "Guardado",
+    "synced": "Sincronizado",
+    "error": "Error de sincronización",
+    "expired": "Tu sesión ha caducado. Recarga la página para volver a iniciar sesión."
+  },
+  "weekNav": {
+    "today": "Hoy",
+    "prev": "Semana anterior",
+    "next": "Semana siguiente"
+  },
+  "summary": {
+    "title": "Esta semana",
+    "noDishes": "Aún no hay platos",
+    "daysPlanned": "{count} día planificado | {count} días planificados",
+    "dailyAverage": "Media diaria",
+    "protein": "Proteína",
+    "carbs": "Carbohidratos",
+    "fat": "Grasa",
+    "generateWeek": "Generar semana"
+  },
+  "mealSlot": {
+    "addDish": "Añadir plato"
+  },
+  "planner": {
+    "weekday": {
+      "mon": "LUN",
+      "tue": "MAR",
+      "wed": "MIÉ",
+      "thu": "JUE",
+      "fri": "VIE",
+      "sat": "SÁB",
+      "sun": "DOM"
+    }
+  },
+  "generate": {
+    "heroTitle": "Planifica tu semana con IA",
+    "heroSub": "Cuéntanos qué comes y te generaremos un plan equilibrado de 7 días en segundos.",
+    "errorTitle": "Generación fallida",
+    "loadingTitle": "Cocinando tu semana",
+    "loadingSub": "Esto suele tardar entre 15 y 30 segundos",
+    "form": {
+      "usingProfile": "Usando tu perfil de dieta",
+      "noProfile": "Aún no tienes perfil de dieta",
+      "noProfileSub": "Consejo: {link} una vez y la IA lo usará para todos los planes a partir de ahora.",
+      "fillProfile": "rellena tu perfil de dieta",
+      "fridgeLabel": "Qué tienes esta semana en la nevera",
+      "fridgeHint": "Opcional. Ayuda a la IA a planificar con lo que ya tienes.",
+      "fridgePlaceholder": "pollo, brócoli, huevos, arroz integral, yogur griego…",
+      "extrasLabel": "Algo específico para esta semana",
+      "extrasHint": "Opcional. Lo que solo aplica a esta semana en concreto.",
+      "extrasPlaceholder": "ceno fuera el viernes, quiero probar comida tailandesa, presupuesto bajo…",
+      "submit": "Generar plan",
+      "editProfile": "Editar perfil en Ajustes"
+    },
+    "preview": {
+      "title": "Tu semana generada",
+      "subtitle": "{range} · 35 platos",
+      "avgPerDay": "media/día",
+      "back": "Volver al formulario",
+      "apply": "Aplicar a esta semana",
+      "warning": "Aplicar reemplazará todos los platos existentes de esta semana."
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "subtitle": "Personaliza tu plan de comidas",
+    "profile": {
+      "title": "Perfil de dieta",
+      "subtitle": "Lo guardas una vez y la IA lo usa cada vez que genera un plan, así no tienes que repetirlo.",
+      "goal": "Objetivo",
+      "dietaryStyle": "Estilo de alimentación",
+      "allergies": "Alergias",
+      "allergiesPlaceholder": "ej. cacahuetes, marisco",
+      "restrictions": "Restricciones y cosas que no te gustan",
+      "restrictionsPlaceholder": "ej. intolerancia a la lactosa, no me gusta el hígado",
+      "favourites": "Comidas favoritas",
+      "favouritesPlaceholder": "ej. salmón, aguacate, boniato",
+      "cuisines": "Cocinas preferidas",
+      "cuisinesPlaceholder": "ej. mediterránea, japonesa, mexicana",
+      "calories": "Calorías",
+      "protein": "Proteína",
+      "carbs": "Carbohidratos",
+      "fat": "Grasa",
+      "cookingFor": "Cocinas para",
+      "maxTime": "Tiempo máximo por comida",
+      "anyTime": "sin límite",
+      "notes": "Notas para la IA",
+      "notesPlaceholder": "cualquier otra cosa relevante — ej. entreno 4 veces por semana, no quiero sándwich para cenar…",
+      "saveProfile": "Guardar perfil",
+      "goalOptions": {
+        "none": "Sin objetivo concreto",
+        "lose_weight": "Perder peso",
+        "gain_muscle": "Ganar músculo",
+        "maintain": "Mantener peso",
+        "health": "Salud general"
+      },
+      "styleOptions": {
+        "none": "Sin preferencia",
+        "omnivore": "Omnívoro",
+        "vegetarian": "Vegetariano",
+        "vegan": "Vegano",
+        "pescatarian": "Pescetariano",
+        "mediterranean": "Mediterráneo",
+        "keto": "Keto",
+        "paleo": "Paleo",
+        "other": "Otro"
+      }
+    },
+    "mealTypes": {
+      "title": "Tipos de comida",
+      "subtitle": "Personaliza los nombres y horas por defecto de cada comida"
+    },
+    "data": {
+      "title": "Gestión de datos",
+      "subtitle": "Tus datos se sincronizan en una base de datos privada vinculada a tu cuenta.",
+      "export": "Exportar datos",
+      "exportDesc": "Descarga todos tus planes como un fichero JSON de respaldo",
+      "exportBtn": "Exportar",
+      "import": "Importar datos",
+      "importDesc": "Restaura desde un fichero de respaldo previamente exportado",
+      "importBtn": "Importar",
+      "importedOk": "Datos importados correctamente.",
+      "importError": "No se pudo leer el fichero: {error}",
+      "clear": "Borrar todos los datos",
+      "clearDesc": "Elimina permanentemente todos los planes y ajustes",
+      "clearBtn": "Borrar datos",
+      "clearConfirm": "¿Borrar todos los datos? Esto no se puede deshacer."
+    }
+  },
+  "dishCard": {
+    "edit": "Editar",
+    "delete": "Eliminar"
+  },
+  "dishDetail": {
+    "title": "Detalle del plato",
+    "ingredients": "Ingredientes",
+    "instructions": "Instrucciones",
+    "noRecipe": "Aún no hay receta. Pulsa Editar para añadir ingredientes y pasos."
+  },
+  "dishForm": {
+    "addTitle": "Añadir plato",
+    "editTitle": "Editar plato",
+    "addingTo": "Añadiendo a",
+    "tabDetails": "Detalles",
+    "tabRecipe": "Receta",
+    "name": "Nombre del plato",
+    "namePlaceholder": "ej. Avena con frutos rojos",
+    "time": "Hora",
+    "nutrition": "Nutrición",
+    "notes": "Notas",
+    "notesPlaceholder": "Notas opcionales…",
+    "prep": "Preparación",
+    "cook": "Cocción",
+    "ingredients": "Ingredientes",
+    "addIngredient": "Añadir",
+    "noIngredients": "Aún no hay ingredientes",
+    "ingredientName": "Ingrediente",
+    "ingredientAmount": "Cantidad",
+    "instructions": "Instrucciones",
+    "addStep": "Añadir paso",
+    "noSteps": "Aún no hay pasos",
+    "stepPlaceholder": "Describe este paso…",
+    "submitNew": "Añadir plato",
+    "submitEdit": "Guardar cambios"
+  },
+  "deleteDialog": {
+    "title": "Eliminar plato",
+    "body": "¿Eliminar {name}? Esto no se puede deshacer.",
+    "thisDish": "este plato"
+  },
+  "errors": {
+    "network": "Error de red: {message}",
+    "cancelled": "Generación cancelada.",
+    "invalidResponse": "Respuesta inválida del servidor.",
+    "parseFailed": "No se pudo parsear el plan como JSON.",
+    "serverError": "Error del servidor ({code})."
+  }
+}

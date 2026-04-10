@@ -1,0 +1,217 @@
+{
+  "common": {
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "reset": "Reset",
+    "back": "Back",
+    "saved": "Saved",
+    "loading": "Loading…",
+    "untitled": "Untitled",
+    "optional": "optional",
+    "min": "min",
+    "kcal": "kcal",
+    "g": "g",
+    "people": "people",
+    "servings": "servings"
+  },
+  "header": {
+    "brand": "Diet Planner",
+    "planner": "Planner",
+    "generate": "Generate",
+    "settings": "Settings"
+  },
+  "theme": {
+    "label": "Color theme",
+    "sage": "Sage",
+    "warm": "Warm",
+    "dark": "Dark"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "es": "Spanish"
+  },
+  "sync": {
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "synced": "Synced",
+    "error": "Sync error",
+    "expired": "Your session has expired. Please refresh to log in again."
+  },
+  "weekNav": {
+    "today": "Today",
+    "prev": "Previous week",
+    "next": "Next week"
+  },
+  "summary": {
+    "title": "This week",
+    "noDishes": "No dishes yet",
+    "daysPlanned": "{count} day planned | {count} days planned",
+    "dailyAverage": "Daily average",
+    "protein": "Protein",
+    "carbs": "Carbs",
+    "fat": "Fat",
+    "generateWeek": "Generate week"
+  },
+  "mealSlot": {
+    "addDish": "Add dish"
+  },
+  "planner": {
+    "weekday": {
+      "mon": "MON",
+      "tue": "TUE",
+      "wed": "WED",
+      "thu": "THU",
+      "fri": "FRI",
+      "sat": "SAT",
+      "sun": "SUN"
+    }
+  },
+  "generate": {
+    "heroTitle": "Plan your week with AI",
+    "heroSub": "Tell us what you eat and we will generate a balanced 7-day meal plan in seconds.",
+    "errorTitle": "Generation failed",
+    "loadingTitle": "Cooking up your week",
+    "loadingSub": "This usually takes 15 to 30 seconds",
+    "form": {
+      "usingProfile": "Using your diet profile",
+      "noProfile": "No diet profile yet",
+      "noProfileSub": "Tip: {link} once and the AI will use it for every plan from now on.",
+      "fillProfile": "fill in your diet profile",
+      "fridgeLabel": "What is in your fridge this week",
+      "fridgeHint": "Optional. Helps the AI build a plan around what you already have.",
+      "fridgePlaceholder": "chicken breast, broccoli, eggs, brown rice, greek yogurt…",
+      "extrasLabel": "Anything specific for this week",
+      "extrasHint": "Optional. Anything that only applies to this particular week.",
+      "extrasPlaceholder": "having dinner out on Friday, want to try Thai food, low budget…",
+      "submit": "Generate plan",
+      "editProfile": "Edit profile in Settings"
+    },
+    "preview": {
+      "title": "Your generated week",
+      "subtitle": "{range} · 35 dishes",
+      "avgPerDay": "avg/day",
+      "back": "Back to form",
+      "apply": "Apply to this week",
+      "warning": "Applying replaces all existing dishes for this week."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Customize your meal plan",
+    "profile": {
+      "title": "Diet profile",
+      "subtitle": "Saved once and used every time the AI generates a plan, so you don't have to repeat yourself.",
+      "goal": "Goal",
+      "dietaryStyle": "Dietary style",
+      "allergies": "Allergies",
+      "allergiesPlaceholder": "e.g. peanuts, shellfish",
+      "restrictions": "Restrictions and dislikes",
+      "restrictionsPlaceholder": "e.g. lactose intolerant, no liver",
+      "favourites": "Favourite foods",
+      "favouritesPlaceholder": "e.g. salmon, avocado, sweet potato",
+      "cuisines": "Preferred cuisines",
+      "cuisinesPlaceholder": "e.g. Mediterranean, Japanese, Mexican",
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "cookingFor": "Cooking for",
+      "maxTime": "Max time per meal",
+      "anyTime": "any",
+      "notes": "Notes for the AI",
+      "notesPlaceholder": "anything else worth knowing — e.g. I work out 4 times a week, I hate sandwiches for dinner…",
+      "saveProfile": "Save profile",
+      "goalOptions": {
+        "none": "No specific goal",
+        "lose_weight": "Lose weight",
+        "gain_muscle": "Gain muscle",
+        "maintain": "Maintain weight",
+        "health": "General health"
+      },
+      "styleOptions": {
+        "none": "No preference",
+        "omnivore": "Omnivore",
+        "vegetarian": "Vegetarian",
+        "vegan": "Vegan",
+        "pescatarian": "Pescatarian",
+        "mediterranean": "Mediterranean",
+        "keto": "Keto",
+        "paleo": "Paleo",
+        "other": "Other"
+      }
+    },
+    "mealTypes": {
+      "title": "Meal types",
+      "subtitle": "Customize names and default times of each meal"
+    },
+    "data": {
+      "title": "Data management",
+      "subtitle": "Your data is synced to a private database tied to your account.",
+      "export": "Export data",
+      "exportDesc": "Download all your meal plans as a JSON backup file",
+      "exportBtn": "Export",
+      "import": "Import data",
+      "importDesc": "Restore from a previously exported backup file",
+      "importBtn": "Import",
+      "importedOk": "Data imported successfully.",
+      "importError": "Could not read file: {error}",
+      "clear": "Clear all data",
+      "clearDesc": "Permanently delete all meal plans and settings",
+      "clearBtn": "Clear data",
+      "clearConfirm": "Clear all diet data? This cannot be undone."
+    }
+  },
+  "dishCard": {
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "dishDetail": {
+    "title": "Dish details",
+    "ingredients": "Ingredients",
+    "instructions": "Instructions",
+    "noRecipe": "No recipe details yet. Click Edit to add ingredients and instructions."
+  },
+  "dishForm": {
+    "addTitle": "Add dish",
+    "editTitle": "Edit dish",
+    "addingTo": "Adding to",
+    "tabDetails": "Details",
+    "tabRecipe": "Recipe",
+    "name": "Dish name",
+    "namePlaceholder": "e.g. Oatmeal with berries",
+    "time": "Time",
+    "nutrition": "Nutrition",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes…",
+    "prep": "Prep time",
+    "cook": "Cook time",
+    "ingredients": "Ingredients",
+    "addIngredient": "Add",
+    "noIngredients": "No ingredients yet",
+    "ingredientName": "Ingredient",
+    "ingredientAmount": "Amount",
+    "instructions": "Instructions",
+    "addStep": "Add step",
+    "noSteps": "No steps yet",
+    "stepPlaceholder": "Describe this step…",
+    "submitNew": "Add dish",
+    "submitEdit": "Save changes"
+  },
+  "deleteDialog": {
+    "title": "Delete dish",
+    "body": "Delete {name}? This cannot be undone.",
+    "thisDish": "this dish"
+  },
+  "errors": {
+    "network": "Network error: {message}",
+    "cancelled": "Generation cancelled.",
+    "invalidResponse": "Invalid response from server.",
+    "parseFailed": "Failed to parse meal plan as JSON.",
+    "serverError": "Server error ({code})."
+  }
+}
