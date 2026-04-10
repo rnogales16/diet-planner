@@ -4,13 +4,15 @@
 // and never reach the browser.
 //
 // Pro is the default — meal generation deserves the best reasoning.
-// Flash sits at the end of the cascade as a safety net for when Pro is
-// overloaded or both keys are rate-limited. In normal conditions Flash
-// is never reached.
+// Flash and Flash-Lite sit behind it as safety nets for when Pro is
+// overloaded or both keys are rate-limited. Each step is a separate
+// serving pool inside Google so when 2.5 Pro is congested 2.5 Flash
+// (or 2.5 Flash-Lite) often still works. In normal conditions Pro
+// answers on the first attempt.
 
 import { callGeminiWithFallback } from './_gemini.js'
 
-const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash']
+const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
 
 const GOAL_LABELS = {
   lose_weight: 'lose weight',

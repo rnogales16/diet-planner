@@ -7,9 +7,10 @@
 
 import { callGeminiWithFallback } from './_gemini.js'
 
-// Pro by default for quality, Flash as safety net when Pro is overloaded
-// or quota-exhausted on both keys. In normal conditions Flash is never used.
-const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash']
+// Pro by default for quality. Flash and Flash-Lite sit behind it as safety
+// nets — separate serving pools inside Google, so when Pro is congested
+// they often still work.
+const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
 
 const LANGUAGE_NAMES = {
   en: 'English',

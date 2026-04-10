@@ -70,7 +70,6 @@ export async function callGeminiWithFallback({ env, payload, models }) {
   const attempts = []
 
   for (const model of models) {
-    let modelOverloaded = false
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i]
       const result = await callOnce(model, key, payload)
@@ -83,21 +82,14 @@ export async function callGeminiWithFallback({ env, payload, models }) {
       lastError = result.error
       lastStatus = result.status
 
-      // Timeout (504 from our AbortController) or upstream 5xx: model is
-      // overloaded right now. Don't waste budget on the next key with the
-      // same model — fall through to the next model in the cascade.
-      if (result.status === 504 || result.status === 503 || result.status === 502) {
-        modelOverloaded = true
+      // Only skip the rest of this model's keys when the call literally
+      // timed out (504 from our AbortController). A timeout means we've
+      // already burned ~45s and the next key would likely do the same.
+      // Other errors (429, 503, etc.) come back fast, so we keep trying
+      // every key before moving to the next model.
+      if (result.status === 504) {
         break
       }
-
-      // Auth, quota, or other errors: try the next key with the same model.
-      continue
-    }
-    // If we're here, every key for this model failed. Move to the next model.
-    if (modelOverloaded) {
-      // Already broke early; loop continues to next model.
-      continue
     }
   }
 
