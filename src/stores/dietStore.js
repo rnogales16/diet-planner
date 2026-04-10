@@ -232,6 +232,7 @@ export const useDietStore = defineStore('diet', {
     currentWeekKey: getWeekKey(new Date()),
     mealTypes: JSON.parse(JSON.stringify(DEFAULT_MEAL_TYPES)),
     profile: { ...DEFAULT_PROFILE },
+    language: 'en',
     // True once the initial server load (or migration) has finished, so we
     // don't push back to the server while we're still hydrating local state.
     hydrated: false,
@@ -379,6 +380,9 @@ export const useDietStore = defineStore('diet', {
         if (payload.profile && typeof payload.profile === 'object') {
           this.profile = { ...DEFAULT_PROFILE, ...payload.profile }
         }
+        if (typeof payload.language === 'string') {
+          this.language = payload.language
+        }
       }
       this.hydrated = true
     },
@@ -390,11 +394,16 @@ export const useDietStore = defineStore('diet', {
         currentWeekKey: this.currentWeekKey,
         mealTypes: this.mealTypes,
         profile: this.profile,
+        language: this.language,
       }
     },
 
     updateProfile(patch) {
       this.profile = { ...this.profile, ...patch }
+    },
+
+    setLanguage(language) {
+      this.language = language
     },
 
     updateMealTypes(newMealTypes) {

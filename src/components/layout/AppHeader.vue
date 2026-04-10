@@ -1,7 +1,13 @@
 <script setup>
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ThemeToggle from './ThemeToggle.vue'
 import SyncIndicator from './SyncIndicator.vue'
+import LanguageToggle from './LanguageToggle.vue'
+import { useLanguage } from '@/composables/useLanguage'
+
+useLanguage() // bootstrap locale <-> store sync
+const { t } = useI18n()
 </script>
 
 <template>
@@ -9,17 +15,18 @@ import SyncIndicator from './SyncIndicator.vue'
     <div class="app-header__inner">
       <RouterLink to="/" class="brand">
         <span class="brand__dot" />
-        <span class="brand__name font-display">Diet Planner</span>
+        <span class="brand__name font-display">{{ t('header.brand') }}</span>
       </RouterLink>
 
       <nav class="app-nav">
-        <RouterLink to="/" class="app-nav__link" active-class="is-active" exact-active-class="is-active">Planner</RouterLink>
-        <RouterLink to="/generate" class="app-nav__link" active-class="is-active">Generate</RouterLink>
-        <RouterLink to="/settings" class="app-nav__link" active-class="is-active">Settings</RouterLink>
+        <RouterLink to="/" class="app-nav__link" active-class="is-active" exact-active-class="is-active">{{ t('header.planner') }}</RouterLink>
+        <RouterLink to="/generate" class="app-nav__link" active-class="is-active">{{ t('header.generate') }}</RouterLink>
+        <RouterLink to="/settings" class="app-nav__link" active-class="is-active">{{ t('header.settings') }}</RouterLink>
       </nav>
 
       <div class="app-header__right">
         <SyncIndicator />
+        <LanguageToggle />
         <ThemeToggle />
         <div class="avatar">R</div>
       </div>
