@@ -1,0 +1,8 @@
+name = "diet-planner"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-04-09"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "diet-planner"
+database_id = "877e7a52-a008-4387-a0d2-ff4fdaf5d825"
