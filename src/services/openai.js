@@ -13,7 +13,7 @@ const DEFAULT_TIMES = {
   dinner: '20:00',
 }
 
-function validateAndNormalize(raw) {
+function validateAndNormalize(raw, language = 'en') {
   if (!raw || !Array.isArray(raw.days) || raw.days.length === 0) {
     return { success: false, error: 'Invalid response structure: missing days array.' }
   }
@@ -50,6 +50,8 @@ function validateAndNormalize(raw) {
           instructions: Array.isArray(dish.instructions)
             ? dish.instructions.map((s) => String(s)).filter(Boolean)
             : [],
+          originalLang: language,
+          translations: {},
         },
       })
     }
@@ -91,11 +93,12 @@ function extractJson(text) {
 
 export async function generateMealPlan(formData, signal) {
   const store = useDietStore()
+  const language = store.language || 'en'
   const body = {
     fridgeContents: formData.fridgeContents || '',
     weeklyExtras: formData.weeklyExtras || '',
     profile: store.profile,
-    language: store.language || 'en',
+    language,
   }
 
   let response
@@ -134,5 +137,5 @@ export async function generateMealPlan(formData, signal) {
     return { success: false, error: 'Failed to parse meal plan as JSON.' }
   }
 
-  return validateAndNormalize(parsed)
+  return validateAndNormalize(parsed, language)
 }
