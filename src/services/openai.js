@@ -153,7 +153,14 @@ export async function generateMealPlan(formData, signal) {
 
   const parsed = extractJson(payload.content)
   if (!parsed) {
-    return { success: false, error: 'Failed to parse meal plan as JSON.' }
+    const rawStart = (payload.content || '').slice(0, 200)
+    const rawEnd = (payload.content || '').slice(-200)
+    const len = (payload.content || '').length
+    const providerTag = payload.model ? ` [${payload.model}]` : ''
+    return {
+      success: false,
+      error: `Failed to parse meal plan as JSON${providerTag} (content ${len} chars). Start: ${rawStart} … End: ${rawEnd}`,
+    }
   }
 
   const result = validateAndNormalize(parsed, language, enabledMealTypes)

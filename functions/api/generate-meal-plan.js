@@ -388,7 +388,7 @@ export async function onRequestPost({ request, env }) {
       systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
       temperature: 0.7,
-      maxTokens: 8192,
+      maxTokens: 16384,
     })
   }
 
@@ -403,7 +403,7 @@ export async function onRequestPost({ request, env }) {
         { role: 'user', content: correction },
       ],
       temperature: 0.3,
-      maxTokens: 8192,
+      maxTokens: 16384,
     })
   }
 
