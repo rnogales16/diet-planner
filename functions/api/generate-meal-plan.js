@@ -388,7 +388,7 @@ export async function onRequestPost({ request, env }) {
       systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
       temperature: 0.7,
-      maxTokens: 16384,
+      maxTokens: 8192,
     })
   }
 
@@ -403,7 +403,7 @@ export async function onRequestPost({ request, env }) {
         { role: 'user', content: correction },
       ],
       temperature: 0.3,
-      maxTokens: 16384,
+      maxTokens: 8192,
     })
   }
 
@@ -459,7 +459,7 @@ export async function onRequestPost({ request, env }) {
     error: claudeResult.error || null,
   })
   if (!claudeResult.ok) {
-    providerErrors.push(`${CLAUDE_MODEL}: ${claudeResult.status} ${claudeResult.error || 'unknown error'}`)
+    providerErrors.push(`CLAUDE ERROR → status=${claudeResult.status} body=${claudeResult.error || 'unknown'}`)
   }
 
   let result = claudeResult

@@ -41,7 +41,7 @@ async function callOnce(model, apiKey, { systemPrompt, messages, temperature, ma
 
   if (!upstream.ok) {
     const errorBody = await upstream.text().catch(() => '')
-    return { ok: false, status: upstream.status, error: errorBody.slice(0, 300) || upstream.statusText }
+    return { ok: false, status: upstream.status, error: errorBody.slice(0, 500) || upstream.statusText }
   }
 
   const result = await upstream.json()
