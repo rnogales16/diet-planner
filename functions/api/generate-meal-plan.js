@@ -524,16 +524,19 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  // Surface provider failures even when a later fallback succeeded, so the
-  // user (and me while debugging) can see which models went down.
-  if (providerErrors.length > 0) {
-    warnings = [
-      ...providerErrors.map((e) => `Provider fallback: ${e}`),
-      ...warnings,
-    ]
-  }
+  // Provider errors are kept on the response metadata for debugging but we
+  // don't spam the user with them in the warnings banner — those are
+  // reserved for actionable issues (forbidden ingredients still present).
 
-  return json({ success: true, content: result.content, model: result.model, provider: usedProvider, warnings, attempts: allAttempts })
+  return json({
+    success: true,
+    content: result.content,
+    model: result.model,
+    provider: usedProvider,
+    warnings,
+    attempts: allAttempts,
+    providerErrors,
+  })
 }
 
 export function onRequest({ request }) {
