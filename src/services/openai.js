@@ -136,11 +136,15 @@ export async function generateMealPlan(formData, signal) {
     return { success: false, error: 'Your session has expired. Please refresh the page to log in again.' }
   }
 
+  // Read the body as text first so we can diagnose non-JSON responses
+  // (Cloudflare error pages, HTML, truncated bodies, ...).
+  const rawText = await response.text()
   let payload
   try {
-    payload = await response.json()
+    payload = JSON.parse(rawText)
   } catch {
-    return { success: false, error: 'Invalid response from server.' }
+    const snippet = rawText.slice(0, 300).replace(/\s+/g, ' ')
+    return { success: false, error: `Invalid response from server (status ${response.status}): ${snippet || '(empty body)'}` }
   }
 
   if (!response.ok || !payload.success) {
