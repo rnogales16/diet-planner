@@ -481,13 +481,16 @@ export async function onRequestPost({ request, env }) {
   if (!result.ok) {
     const summary = allAttempts.map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
     const lastError = result.error || 'unknown'
+    const detailLines = providerErrors.length > 0
+      ? ` | Details: ${providerErrors.join(' || ')}`
+      : ''
     if (result.status === 429) {
-      return json({ success: false, error: `All AI quotas exhausted. Try again in a minute. [${summary}]`, attempts: allAttempts }, 429)
+      return json({ success: false, error: `All AI quotas exhausted. [${summary}] Last: ${lastError}${detailLines}`, attempts: allAttempts, providerErrors }, 429)
     }
     if (result.status === 503 || result.status === 500 || result.status === 502 || result.status === 504) {
-      return json({ success: false, error: `AI provider temporarily overloaded. [${summary}] Last error: ${lastError}`, attempts: allAttempts }, 503)
+      return json({ success: false, error: `AI provider temporarily overloaded. [${summary}] Last: ${lastError}${detailLines}`, attempts: allAttempts, providerErrors }, 503)
     }
-    return json({ success: false, error: `Upstream error: ${lastError} [${summary}]`, attempts: allAttempts }, 502)
+    return json({ success: false, error: `Upstream error: ${lastError} [${summary}]${detailLines}`, attempts: allAttempts, providerErrors }, 502)
   }
 
   // --- Forbidden-ingredient enforcement ---------------------------------
