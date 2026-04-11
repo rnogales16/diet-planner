@@ -445,21 +445,37 @@ export async function onRequestPost({ request, env }) {
     })
   }
 
-  // Track every attempt so we can surface the whole trace if everything fails.
+  // Track every attempt so we can surface the whole trace if everything fails
+  // AND so we can tell the user which providers failed even when a later one
+  // succeeded.
   const allAttempts = []
+  const providerErrors = []
 
   const claudeResult = await claudeFirstAttempt()
-  allAttempts.push({ model: CLAUDE_MODEL, keyIndex: 0, status: claudeResult.ok ? 200 : claudeResult.status, error: claudeResult.error || null })
+  allAttempts.push({
+    model: CLAUDE_MODEL,
+    keyIndex: 0,
+    status: claudeResult.ok ? 200 : claudeResult.status,
+    error: claudeResult.error || null,
+  })
+  if (!claudeResult.ok) {
+    providerErrors.push(`${CLAUDE_MODEL}: ${claudeResult.status} ${claudeResult.error || 'unknown error'}`)
+  }
 
   let result = claudeResult
   let usedProvider = 'claude'
 
   if (!result.ok) {
-    // Claude failed: fall through to Gemini. Keep Claude's attempt in the
-    // combined summary so we can see exactly why it failed.
     result = await geminiFirstAttempt()
     usedProvider = 'gemini'
-    if (result.attempts) allAttempts.push(...result.attempts)
+    if (result.attempts) {
+      allAttempts.push(...result.attempts)
+      for (const a of result.attempts) {
+        if (a.status >= 400) {
+          providerErrors.push(`${a.model}/k${a.keyIndex}: ${a.status}`)
+        }
+      }
+    }
   }
 
   if (!result.ok) {
@@ -508,7 +524,16 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  return json({ success: true, content: result.content, model: result.model, provider: usedProvider, warnings })
+  // Surface provider failures even when a later fallback succeeded, so the
+  // user (and me while debugging) can see which models went down.
+  if (providerErrors.length > 0) {
+    warnings = [
+      ...providerErrors.map((e) => `Provider fallback: ${e}`),
+      ...warnings,
+    ]
+  }
+
+  return json({ success: true, content: result.content, model: result.model, provider: usedProvider, warnings, attempts: allAttempts })
 }
 
 export function onRequest({ request }) {
