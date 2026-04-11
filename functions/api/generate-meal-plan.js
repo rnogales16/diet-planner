@@ -445,24 +445,33 @@ export async function onRequestPost({ request, env }) {
     })
   }
 
-  let result = await claudeFirstAttempt()
+  // Track every attempt so we can surface the whole trace if everything fails.
+  const allAttempts = []
+
+  const claudeResult = await claudeFirstAttempt()
+  allAttempts.push({ model: CLAUDE_MODEL, keyIndex: 0, status: claudeResult.ok ? 200 : claudeResult.status, error: claudeResult.error || null })
+
+  let result = claudeResult
   let usedProvider = 'claude'
 
   if (!result.ok) {
-    // Claude failed: fall through to Gemini.
+    // Claude failed: fall through to Gemini. Keep Claude's attempt in the
+    // combined summary so we can see exactly why it failed.
     result = await geminiFirstAttempt()
     usedProvider = 'gemini'
+    if (result.attempts) allAttempts.push(...result.attempts)
   }
 
   if (!result.ok) {
-    const summary = (result.attempts || []).map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
+    const summary = allAttempts.map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
+    const lastError = result.error || 'unknown'
     if (result.status === 429) {
-      return json({ success: false, error: `All AI quotas exhausted. Try again in a minute. [${summary}]`, attempts: result.attempts }, 429)
+      return json({ success: false, error: `All AI quotas exhausted. Try again in a minute. [${summary}]`, attempts: allAttempts }, 429)
     }
     if (result.status === 503 || result.status === 500 || result.status === 502 || result.status === 504) {
-      return json({ success: false, error: `AI provider temporarily overloaded. [${summary}] Last error: ${result.error}`, attempts: result.attempts }, 503)
+      return json({ success: false, error: `AI provider temporarily overloaded. [${summary}] Last error: ${lastError}`, attempts: allAttempts }, 503)
     }
-    return json({ success: false, error: `Upstream error: ${result.error} [${summary}]`, attempts: result.attempts }, 502)
+    return json({ success: false, error: `Upstream error: ${lastError} [${summary}]`, attempts: allAttempts }, 502)
   }
 
   // --- Forbidden-ingredient enforcement ---------------------------------
