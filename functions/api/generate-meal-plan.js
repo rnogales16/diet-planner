@@ -9,7 +9,7 @@
 import { callGeminiWithFallback } from './_gemini.js'
 import { callClaude } from './_anthropic.js'
 
-const CLAUDE_MODEL = 'claude-sonnet-4-5'
+const CLAUDE_MODEL = 'claude-sonnet-4-6'
 const GEMINI_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
 
 const GOAL_LABELS = {
