@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, Check, AlertTriangle, RotateCcw } from 'lucide-vue-next'
+import { ChevronLeft, Check, AlertTriangle, RotateCcw, Brain } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 import PreviewDayCard from './PreviewDayCard.vue'
 
@@ -62,7 +62,11 @@ const dailyAvg = computed(() => ({
       <div>
         <h2 class="preview__title font-display">{{ t('generate.preview.title') }}</h2>
         <p class="preview__sub">{{ t('generate.preview.subtitle', { range: weekRange }) }}</p>
-        <p v-if="plan.model" class="preview__model">{{ plan.model }}</p>
+        <div v-if="plan.model" class="preview__model-chip">
+          <Brain :size="13" />
+          <span class="preview__model-label">{{ t('generate.preview.generatedWith') }}</span>
+          <span class="preview__model-name tabular">{{ plan.model }}</span>
+        </div>
       </div>
       <div class="preview__stats">
         <div class="stat">
@@ -138,19 +142,31 @@ const dailyAvg = computed(() => ({
   margin-top: 2px;
 }
 
-.preview__model {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 2px 8px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  background-color: var(--surface-2);
-  border: 1px solid var(--border);
+.preview__model-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 12px;
+  background-color: var(--accent-tint);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   border-radius: 999px;
-  font-family: ui-monospace, monospace;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+[data-theme='dark'] .preview__model-chip {
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.preview__model-label {
+  opacity: 0.75;
+  font-weight: 500;
+}
+
+.preview__model-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .preview__stats {

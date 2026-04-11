@@ -111,6 +111,7 @@
       "title": "Tu semana generada",
       "subtitle": "{range} · 35 platos",
       "avgPerDay": "media/día",
+      "generatedWith": "Generado con",
       "back": "Volver al formulario",
       "apply": "Aplicar a esta semana",
       "warning": "Si la semana ya tiene platos, te preguntaremos si quieres reemplazarlos o añadir los nuevos."
