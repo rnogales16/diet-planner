@@ -82,7 +82,7 @@
   },
   "generation": {
     "bannerLoading": "Cooking up your week",
-    "bannerLoadingSub": "This usually takes 15 to 30 seconds",
+    "bannerLoadingSub": "30-60s. We'll notify you when it's ready",
     "bannerReady": "Your plan is ready",
     "bannerReadySub": "Tap to review and apply",
     "bannerError": "Generation failed"
@@ -92,7 +92,7 @@
     "heroSub": "Tell us what you eat and we will generate a balanced 7-day meal plan in seconds.",
     "errorTitle": "Generation failed",
     "loadingTitle": "Cooking up your week",
-    "loadingSub": "This usually takes 15 to 30 seconds",
+    "loadingSub": "This usually takes 30 to 60 seconds. You can keep using the app — we will notify you when it is ready.",
     "form": {
       "usingProfile": "Using your diet profile",
       "noProfile": "No diet profile yet",
