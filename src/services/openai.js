@@ -155,6 +155,7 @@ export async function generateMealPlan(formData, signal) {
   const result = validateAndNormalize(parsed, language, enabledMealTypes)
   if (result.success) {
     result.data.model = payload.model || null
+    result.data.warnings = Array.isArray(payload.warnings) ? payload.warnings : []
   }
   return result
 }

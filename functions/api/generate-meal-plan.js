@@ -76,7 +76,7 @@ Format:
 - Instructions are step strings written like a real recipe.
 - No duplicate dish names across the week. Vary cuisines, cooking methods and main proteins.
 - Allergies and dietary restrictions are absolute. Never include a forbidden ingredient.
-- Disliked ingredients listed by the user are also absolute. Never include them, not even in trace amounts.
+- Disliked ingredients listed by the user are also absolute. Never include them, not even in trace amounts, not even in smoothies, dressings or garnishes. Treat them as if they were poisonous to the user. Check every ingredient name and dish name before finalising.
 
 RAW WEIGHTS (NON-NEGOTIABLE):
 - All ingredient weights and volumes MUST refer to the RAW, UNCOOKED form. 100g of pasta means 100g of dry uncooked pasta. 150g of rice means 150g of dry rice. 200g of chicken means 200g of raw chicken.
@@ -144,15 +144,36 @@ Output JSON shape (exact field names, order does not matter):
 }`
 }
 
-function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes }) {
+function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, correctiveNote }) {
+  const p = profile || {}
+
   const lines = [
     `Generate a 7-day meal plan tailored to this person. Each day must have exactly ${enabledMealTypes.length} meal(s): ${enabledMealTypes.join(', ')}.`,
     '',
-    '**Treat every line of this profile as a HARD REQUIREMENT.** If the profile says "no mushrooms", you never include mushrooms. If the profile says 2800 kcal and 170g protein, your daily totals match those numbers within ±10%. If the profile says vegetarian, no meat. Do not second-guess the user. Do not soften their constraints toward "normal" values. Do not skip any of the listed targets.',
+    '**Treat every line of this profile as a HARD REQUIREMENT.** Do not second-guess the user. Do not soften their constraints toward "normal" values. Do not skip any of the listed targets.',
   ]
 
+  // Disliked / forbidden ingredients go first, in an impossible-to-miss block.
+  // Commercial LLMs are notorious for sliding common "healthy" ingredients
+  // (cucumber, spinach, tomato…) into dishes even when told not to, so we
+  // repeat them here, in the system prompt, and again at the end.
+  const allergies = (p.allergies || '').trim()
+  const disliked = Array.isArray(p.dislikedIngredients) ? p.dislikedIngredients : []
+  const forbidden = [
+    ...(allergies ? allergies.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : []),
+    ...disliked,
+  ]
+  if (forbidden.length) {
+    lines.push('')
+    lines.push('## FORBIDDEN INGREDIENTS — ABSOLUTE RULE')
+    lines.push('The following ingredients MUST NOT appear anywhere in the response — not in dish names, not in ingredients lists, not in instructions, not even in trace amounts. This is a zero-tolerance rule. If you are about to include one of these, pick a different ingredient instead.')
+    for (const item of forbidden) {
+      lines.push(`- ${item}`)
+    }
+    lines.push('Before outputting the JSON, scan every dish name and every ingredient to make sure NONE of the forbidden items appear.')
+  }
+
   // Profile section
-  const p = profile || {}
   lines.push('\n## Diet profile')
 
   if (Array.isArray(p.goals) && p.goals.length) {
@@ -160,11 +181,7 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
     lines.push(`- Goals: ${labels.join(' AND ')}`)
   }
   if (p.dietaryStyle) lines.push(`- Dietary style: ${STYLE_LABELS[p.dietaryStyle] || p.dietaryStyle}`)
-  if (p.allergies) lines.push(`- Allergies (NEVER use): ${p.allergies}`)
   if (p.restrictions) lines.push(`- Restrictions and dislikes: ${p.restrictions}`)
-  if (Array.isArray(p.dislikedIngredients) && p.dislikedIngredients.length) {
-    lines.push(`- Disliked ingredients (NEVER use, hard rule): ${p.dislikedIngredients.join(', ')}`)
-  }
   if (p.favourites) lines.push(`- Favourite foods (use often): ${p.favourites}`)
   if (p.cuisines) lines.push(`- Preferred cuisines: ${p.cuisines}`)
 
@@ -198,6 +215,13 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
     lines.push('- (no profile set, use balanced defaults)')
   }
 
+  if (correctiveNote) {
+    lines.push('')
+    lines.push('## CORRECTION FROM PREVIOUS ATTEMPT')
+    lines.push(correctiveNote)
+    lines.push('Generate the plan again from scratch. Do NOT repeat the mistake.')
+  }
+
   // Weekly context
   if (fridgeContents || weeklyExtras) {
     lines.push('\n## This week')
@@ -218,6 +242,82 @@ function sanitizeGoals(raw) {
   // Legacy single-string goal
   if (typeof raw === 'string' && VALID_GOALS.has(raw)) return [raw]
   return []
+}
+
+function extractJsonLoose(text) {
+  try { return JSON.parse(text) } catch { /* */ }
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fence) {
+    try { return JSON.parse(fence[1].trim()) } catch { /* */ }
+  }
+  const a = text.indexOf('{')
+  const b = text.lastIndexOf('}')
+  if (a !== -1 && b > a) {
+    try { return JSON.parse(text.slice(a, b + 1)) } catch { /* */ }
+  }
+  return null
+}
+
+// Normalise for matching: lowercase, strip diacritics, collapse whitespace.
+function normaliseText(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Scans every dish in the plan for any of the forbidden terms. Returns a
+// short list of { term, where } violations so the caller can feed them back
+// to the model in a corrective retry.
+function scanForForbidden(plan, forbiddenList) {
+  if (!plan || !Array.isArray(plan.days) || forbiddenList.length === 0) return []
+  const needles = forbiddenList
+    .map((t) => normaliseText(t))
+    .filter(Boolean)
+  if (needles.length === 0) return []
+
+  const hits = []
+  for (const day of plan.days) {
+    if (!Array.isArray(day.meals)) continue
+    for (const meal of day.meals) {
+      const dish = meal?.dish || {}
+      const haystacks = []
+      if (dish.name) haystacks.push(['name', dish.name])
+      if (Array.isArray(dish.ingredients)) {
+        for (const ing of dish.ingredients) {
+          if (ing?.name) haystacks.push(['ingredient', ing.name])
+        }
+      }
+      if (Array.isArray(dish.instructions)) {
+        for (const step of dish.instructions) {
+          if (step) haystacks.push(['instruction', step])
+        }
+      }
+      for (const [where, haystack] of haystacks) {
+        const normalised = normaliseText(haystack)
+        for (const needle of needles) {
+          // Word-ish boundary check: the needle must appear surrounded by
+          // non-letter characters (or at string edges). This avoids false
+          // positives like 'ajo' matching 'ajonjolí'.
+          const re = new RegExp(`(^|[^a-zA-Z])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-zA-Z]|$)`)
+          if (re.test(normalised)) {
+            hits.push({ term: needle, where, dish: dish.name || '(unnamed)' })
+            break
+          }
+        }
+      }
+    }
+  }
+  // Dedupe by (term, dish)
+  const seen = new Set()
+  return hits.filter((h) => {
+    const key = `${h.term}|${h.dish}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function sanitizeProfile(raw) {
@@ -268,24 +368,33 @@ export async function onRequestPost({ request, env }) {
   enabledMealTypes = VALID_MEAL_TYPES.filter((t) => enabledMealTypes.includes(t))
 
   const systemPrompt = buildSystemPrompt(language, enabledMealTypes)
-  const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes })
 
-  const result = await callGeminiWithFallback({
-    env,
-    models: MODEL_CASCADE,
-    payload: {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: {
-        // Lower temperature so the model follows the macro targets more
-        // strictly. Slight loss of variety vs 0.85 is worth the precision.
-        temperature: 0.7,
-        topP: 0.9,
-        responseMimeType: 'application/json',
-        maxOutputTokens: 16384,
+  // Collect the full list of forbidden items so we can also check server-side.
+  const allergyList = (profile.allergies || '')
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const forbiddenList = [...allergyList, ...(profile.dislikedIngredients || [])]
+
+  async function runOnce(correctiveNote) {
+    const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, correctiveNote })
+    return callGeminiWithFallback({
+      env,
+      models: MODEL_CASCADE,
+      payload: {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.9,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 16384,
+        },
       },
-    },
-  })
+    })
+  }
+
+  let result = await runOnce(null)
 
   if (!result.ok) {
     const summary = (result.attempts || []).map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
@@ -298,7 +407,41 @@ export async function onRequestPost({ request, env }) {
     return json({ success: false, error: `Upstream error: ${result.error} [${summary}]`, attempts: result.attempts }, 502)
   }
 
-  return json({ success: true, content: result.content, model: result.model })
+  // Server-side enforcement of the forbidden ingredients list.
+  // If the model included any, we retry ONCE with a corrective note pointing
+  // at the exact violations. A second failure is reported as a warning on
+  // the successful response so the UI can surface it to the user.
+  let warnings = []
+  if (forbiddenList.length > 0) {
+    const plan = extractJsonLoose(result.content)
+    const firstHits = scanForForbidden(plan, forbiddenList)
+    if (firstHits.length > 0) {
+      const corrective = `Your previous attempt used forbidden ingredients. Specifically, ${firstHits
+        .map((h) => `"${h.term}" appeared in ${h.where === 'name' ? 'the dish name' : h.where} of "${h.dish}"`)
+        .join('; ')}. NEVER use any of the forbidden ingredients from the FORBIDDEN INGREDIENTS list. Generate a fresh plan that completely avoids them.`
+
+      const retryResult = await runOnce(corrective)
+      if (retryResult.ok) {
+        result = retryResult
+        const retryPlan = extractJsonLoose(retryResult.content)
+        const secondHits = scanForForbidden(retryPlan, forbiddenList)
+        if (secondHits.length > 0) {
+          warnings = secondHits.map((h) =>
+            `Dish "${h.dish}" still contains forbidden term "${h.term}" (in ${h.where}) after a retry.`
+          )
+        }
+      }
+      // If the retry fails outright, we still return the first response with
+      // a warning about the violations — better than failing entirely.
+      else {
+        warnings = firstHits.map((h) =>
+          `Dish "${h.dish}" contains forbidden term "${h.term}" (in ${h.where}).`
+        )
+      }
+    }
+  }
+
+  return json({ success: true, content: result.content, model: result.model, warnings })
 }
 
 export function onRequest({ request }) {

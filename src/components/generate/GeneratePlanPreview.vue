@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, Check } from 'lucide-vue-next'
+import { ChevronLeft, Check, AlertTriangle } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 import PreviewDayCard from './PreviewDayCard.vue'
 
@@ -41,6 +41,19 @@ const dailyAvg = computed(() => ({
 
 <template>
   <div class="preview">
+    <div v-if="plan.warnings && plan.warnings.length" class="preview__warnings">
+      <div class="preview__warnings-head">
+        <AlertTriangle :size="16" />
+        <div>
+          <p class="preview__warnings-title">{{ t('generate.warningsTitle') }}</p>
+          <p class="preview__warnings-sub">{{ t('generate.warningsSub') }}</p>
+        </div>
+      </div>
+      <ul class="preview__warnings-list">
+        <li v-for="(w, i) in plan.warnings" :key="i">{{ w }}</li>
+      </ul>
+    </div>
+
     <header class="preview__head">
       <div>
         <h2 class="preview__title font-display">{{ t('generate.preview.title') }}</h2>
@@ -179,6 +192,41 @@ const dailyAvg = computed(() => ({
   text-align: center;
   font-size: 11px;
   color: var(--text-faint);
+}
+
+.preview__warnings {
+  padding: 14px 16px;
+  background-color: var(--danger-tint);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+}
+
+.preview__warnings-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.preview__warnings-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.preview__warnings-sub {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.preview__warnings-list {
+  list-style: disc;
+  padding-left: 28px;
+  margin-top: 8px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 @media (min-width: 1024px) {

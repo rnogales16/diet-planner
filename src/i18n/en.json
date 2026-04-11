@@ -115,6 +115,8 @@
       "apply": "Apply to this week",
       "warning": "If the week already has dishes, you'll be asked whether to replace or append."
     },
+    "warningsTitle": "Heads up",
+    "warningsSub": "The AI kept some forbidden items even after a retry. Review before applying.",
     "applyChoice": {
       "title": "This week already has a plan",
       "body": "Do you want to replace the existing dishes with the new plan, or keep both (add the new dishes on top)?",
