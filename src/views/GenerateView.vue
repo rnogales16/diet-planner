@@ -18,7 +18,7 @@ const { t } = useI18n()
 const router = useRouter()
 const store = useDietStore()
 const { weekKey, weekRange, init, goToPrevWeek, goToNextWeek, goToToday } = useWeekNavigation()
-const { phase, plan, error, start, cancel, clear, dismissError } = useGeneration()
+const { phase, plan, error, lastFormData, start, cancel, clear, dismissError } = useGeneration()
 
 init()
 
@@ -83,6 +83,12 @@ function handleBack() {
   dismissError()
   clear()
 }
+
+async function handleRegenerate() {
+  if (lastFormData.value) {
+    await start(lastFormData.value, weekKey.value)
+  }
+}
 </script>
 
 <template>
@@ -128,6 +134,7 @@ function handleBack() {
       :week-range="weekRange"
       @apply="handleApply"
       @back="handleBack"
+      @regenerate="handleRegenerate"
     />
 
     <BaseModal

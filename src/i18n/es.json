@@ -117,6 +117,7 @@
     },
     "warningsTitle": "Atención",
     "warningsSub": "La IA ha dejado algunos ingredientes prohibidos incluso tras un reintento. Revisa antes de aplicar.",
+    "warningsRegenerate": "Regenerar",
     "applyChoice": {
       "title": "Esta semana ya tiene un plan",
       "body": "¿Quieres reemplazar los platos existentes por el plan nuevo, o mantener los dos (añadir los nuevos encima)?",

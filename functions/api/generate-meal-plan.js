@@ -376,25 +376,23 @@ export async function onRequestPost({ request, env }) {
     .filter(Boolean)
   const forbiddenList = [...allergyList, ...(profile.dislikedIngredients || [])]
 
-  async function runOnce(correctiveNote) {
-    const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, correctiveNote })
-    return callGeminiWithFallback({
-      env,
-      models: MODEL_CASCADE,
-      payload: {
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.9,
-          responseMimeType: 'application/json',
-          maxOutputTokens: 16384,
-        },
-      },
-    })
-  }
+  const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes })
 
-  let result = await runOnce(null)
+  // First attempt: plain single-turn.
+  let result = await callGeminiWithFallback({
+    env,
+    models: MODEL_CASCADE,
+    payload: {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        topP: 0.9,
+        responseMimeType: 'application/json',
+        maxOutputTokens: 16384,
+      },
+    },
+  })
 
   if (!result.ok) {
     const summary = (result.attempts || []).map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
@@ -408,19 +406,42 @@ export async function onRequestPost({ request, env }) {
   }
 
   // Server-side enforcement of the forbidden ingredients list.
-  // If the model included any, we retry ONCE with a corrective note pointing
-  // at the exact violations. A second failure is reported as a warning on
-  // the successful response so the UI can surface it to the user.
+  // If the model included any, we re-ask it in MULTI-TURN mode: we send the
+  // bad response back as a model turn and then point out the exact violations
+  // in a new user turn. Seeing its own mistake in-context is more effective
+  // than starting fresh with a "please try again" note.
   let warnings = []
   if (forbiddenList.length > 0) {
     const plan = extractJsonLoose(result.content)
     const firstHits = scanForForbidden(plan, forbiddenList)
     if (firstHits.length > 0) {
-      const corrective = `Your previous attempt used forbidden ingredients. Specifically, ${firstHits
-        .map((h) => `"${h.term}" appeared in ${h.where === 'name' ? 'the dish name' : h.where} of "${h.dish}"`)
-        .join('; ')}. NEVER use any of the forbidden ingredients from the FORBIDDEN INGREDIENTS list. Generate a fresh plan that completely avoids them.`
+      const violationList = firstHits
+        .map((h) => `  - "${h.term}" appeared in ${h.where === 'name' ? 'the name' : `the ${h.where}`} of "${h.dish}"`)
+        .join('\n')
 
-      const retryResult = await runOnce(corrective)
+      const correction = `Your previous response included ingredients that are on the user's FORBIDDEN list. Specifically:\n${violationList}\n\nThis is a zero-tolerance rule. Output a COMPLETELY NEW plan (same structure, same targets, same shopping list) that uses NONE of the forbidden ingredients anywhere — not in dish names, not in ingredient lists, not in instructions. Substitute those items with alternatives the user has not forbidden. Scan every single string before emitting the JSON to make sure you have complied.`
+
+      const retryResult = await callGeminiWithFallback({
+        env,
+        models: MODEL_CASCADE,
+        payload: {
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [
+            { role: 'user', parts: [{ text: userPrompt }] },
+            { role: 'model', parts: [{ text: result.content }] },
+            { role: 'user', parts: [{ text: correction }] },
+          ],
+          generationConfig: {
+            // Much lower temperature on retry: we want the model to follow
+            // our correction precisely, not be creative.
+            temperature: 0.3,
+            topP: 0.85,
+            responseMimeType: 'application/json',
+            maxOutputTokens: 16384,
+          },
+        },
+      })
+
       if (retryResult.ok) {
         result = retryResult
         const retryPlan = extractJsonLoose(retryResult.content)
@@ -430,10 +451,9 @@ export async function onRequestPost({ request, env }) {
             `Dish "${h.dish}" still contains forbidden term "${h.term}" (in ${h.where}) after a retry.`
           )
         }
-      }
-      // If the retry fails outright, we still return the first response with
-      // a warning about the violations — better than failing entirely.
-      else {
+      } else {
+        // Retry failed outright (rate limit, network, etc). Return the first
+        // response with warnings so the user can decide.
         warnings = firstHits.map((h) =>
           `Dish "${h.dish}" contains forbidden term "${h.term}" (in ${h.where}).`
         )

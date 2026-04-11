@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, Check, AlertTriangle } from 'lucide-vue-next'
+import { ChevronLeft, Check, AlertTriangle, RotateCcw } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 import PreviewDayCard from './PreviewDayCard.vue'
 
@@ -12,7 +12,7 @@ const props = defineProps({
   weekRange: { type: String, required: true },
 })
 
-const emit = defineEmits(['apply', 'back'])
+const emit = defineEmits(['apply', 'back', 'regenerate'])
 
 // Use Intl for localized weekday names
 const dayNames = computed(() => {
@@ -44,10 +44,14 @@ const dailyAvg = computed(() => ({
     <div v-if="plan.warnings && plan.warnings.length" class="preview__warnings">
       <div class="preview__warnings-head">
         <AlertTriangle :size="16" />
-        <div>
+        <div class="preview__warnings-body">
           <p class="preview__warnings-title">{{ t('generate.warningsTitle') }}</p>
           <p class="preview__warnings-sub">{{ t('generate.warningsSub') }}</p>
         </div>
+        <button type="button" class="preview__warnings-btn" @click="emit('regenerate')">
+          <RotateCcw :size="13" />
+          {{ t('generate.warningsRegenerate') }}
+        </button>
       </div>
       <ul class="preview__warnings-list">
         <li v-for="(w, i) in plan.warnings" :key="i">{{ w }}</li>
@@ -206,6 +210,30 @@ const dailyAvg = computed(() => ({
   display: flex;
   gap: 10px;
   align-items: flex-start;
+}
+
+.preview__warnings-body {
+  flex: 1;
+}
+
+.preview__warnings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--danger);
+  background-color: var(--surface);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.preview__warnings-btn:hover {
+  background-color: var(--danger-tint);
 }
 
 .preview__warnings-title {

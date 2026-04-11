@@ -117,6 +117,7 @@
     },
     "warningsTitle": "Heads up",
     "warningsSub": "The AI kept some forbidden items even after a retry. Review before applying.",
+    "warningsRegenerate": "Regenerate",
     "applyChoice": {
       "title": "This week already has a plan",
       "body": "Do you want to replace the existing dishes with the new plan, or keep both (add the new dishes on top)?",
