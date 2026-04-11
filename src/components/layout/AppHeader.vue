@@ -21,6 +21,7 @@ const { t } = useI18n()
       <nav class="app-nav">
         <RouterLink to="/" class="app-nav__link" active-class="is-active" exact-active-class="is-active">{{ t('header.planner') }}</RouterLink>
         <RouterLink to="/generate" class="app-nav__link" active-class="is-active">{{ t('header.generate') }}</RouterLink>
+        <RouterLink to="/shopping" class="app-nav__link" active-class="is-active">{{ t('header.shopping') }}</RouterLink>
         <RouterLink to="/settings" class="app-nav__link" active-class="is-active">{{ t('header.settings') }}</RouterLink>
       </nav>
 

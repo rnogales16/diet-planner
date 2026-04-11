@@ -21,6 +21,7 @@
     "brand": "Diet Planner",
     "planner": "Semana",
     "generate": "Generar",
+    "shopping": "Compra",
     "settings": "Ajustes"
   },
   "theme": {
@@ -248,6 +249,29 @@
     "title": "Eliminar plato",
     "body": "¿Eliminar {name}? Esto no se puede deshacer.",
     "thisDish": "este plato"
+  },
+  "shopping": {
+    "title": "Lista de la compra",
+    "subtitle": "Todo lo que necesitas comprar para el plan de la semana",
+    "empty": "Aún no hay lista. Genera un plan primero y aparecerá aquí.",
+    "generatedAt": "Generada {when}",
+    "itemsCount": "{count} elemento | {count} elementos",
+    "categories": {
+      "vegetables": "Verduras",
+      "fruits": "Frutas",
+      "protein": "Carne, pescado y huevos",
+      "dairy": "Lácteos",
+      "grains_and_pasta": "Cereales y pasta",
+      "legumes": "Legumbres",
+      "nuts_and_seeds": "Frutos secos y semillas",
+      "pantry": "Despensa",
+      "herbs_and_spices": "Hierbas y especias",
+      "oils_and_condiments": "Aceites y condimentos",
+      "frozen": "Congelados",
+      "beverages": "Bebidas",
+      "bakery": "Panadería",
+      "other": "Otros"
+    }
   },
   "errors": {
     "network": "Error de red: {message}",

@@ -3,8 +3,10 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MealSlot from './MealSlot.vue'
 import { isToday } from '@/utils/dateHelpers'
+import { useDietStore } from '@/stores/dietStore'
 
 const { t } = useI18n()
+const store = useDietStore()
 
 const props = defineProps({
   day: { type: Object, required: true },
@@ -19,6 +21,21 @@ const dateObj = computed(() => new Date(props.day.date))
 const isTodayFlag = computed(() => isToday(dateObj.value))
 const dayNumber = computed(() => dateObj.value.getDate())
 const weekdayShort = computed(() => t(`planner.weekday.${WEEKDAY_KEYS[props.dayIndex]}`))
+
+// Only show meals whose type is currently enabled in the user's meal type
+// config. If a meal has no matching type in the config (e.g. legacy data),
+// we still show it so the user does not lose anything.
+const enabledTypes = computed(() => {
+  const set = new Set()
+  for (const mt of store.mealTypes) {
+    if (mt.enabled !== false) set.add(mt.type)
+  }
+  return set
+})
+
+const visibleMeals = computed(() =>
+  props.day.meals.filter((m) => enabledTypes.value.has(m.type) || m.dishes.length > 0),
+)
 </script>
 
 <template>
@@ -30,7 +47,7 @@ const weekdayShort = computed(() => t(`planner.weekday.${WEEKDAY_KEYS[props.dayI
 
     <div class="day-col__meals">
       <MealSlot
-        v-for="meal in day.meals"
+        v-for="meal in visibleMeals"
         :key="meal.type"
         :meal="meal"
         @addDish="$emit('addDish', { dayIndex, mealType: $event })"

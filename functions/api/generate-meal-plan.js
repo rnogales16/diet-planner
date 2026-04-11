@@ -57,18 +57,20 @@ function num(value) {
   return Math.min(n, 10000)
 }
 
-function buildSystemPrompt(language) {
+function buildSystemPrompt(language, enabledMealTypes) {
   const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en
-  return `You are a meticulous nutritionist and home cook. You design realistic, varied, healthy weekly meal plans for one person at a time.
+  const typesJoined = enabledMealTypes.join(', ')
+  return `You are a meticulous nutritionist and home cook. You design realistic, varied, healthy weekly meal plans for one person at a time. You respect every constraint the user gives you without exception. The user's profile is a hard contract, not a suggestion.
 
-LANGUAGE: All human-readable strings in your response (dish names, notes, ingredient names and amounts, instructions) MUST be written in ${langName}. Do not translate the JSON keys themselves — those must stay in English exactly as specified below. The "type" field of each meal must also stay in English (breakfast, morning_snack, lunch, afternoon_snack, dinner).
+LANGUAGE: All human-readable strings in your response (dish names, notes, ingredient names and amounts, instructions, shopping list) MUST be written in ${langName}. Do not translate the JSON keys themselves — those must stay in English exactly as specified below. The "type" field of each meal must also stay in English.
 
 ## Hard rules
 
 Format:
 - Output ONLY a single valid JSON object — no markdown, no code fences, no commentary.
 - Exactly 7 days, dayIndex 0..6 (Monday..Sunday).
-- Exactly 5 meals per day with these exact types: breakfast, morning_snack, lunch, afternoon_snack, dinner.
+- Exactly ${enabledMealTypes.length} meal(s) per day, with these exact types in this order: ${typesJoined}.
+- Do NOT include any other meal types. Do NOT skip any of the listed types.
 - Each meal has exactly 1 dish. Times in "HH:MM" 24h. All numeric fields are positive numbers.
 - Ingredients are { "name": "...", "amount": "..." } with realistic weighable quantities (grams, ml, units).
 - Instructions are step strings written like a real recipe.
@@ -86,9 +88,9 @@ RAW WEIGHTS (NON-NEGOTIABLE):
 
 The user provides daily targets for calories, protein, carbs, fat AND vegetables. These are HARD CONSTRAINTS.
 
-- The total of the 5 meals each day MUST land within ±10% of every provided target — calories, protein, carbs, fat AND vegetables. All five, every day.
+- The total of the ${enabledMealTypes.length} meal(s) each day MUST land within ±10% of every provided target — calories, protein, carbs, fat AND vegetables. All five, every day.
 - Do NOT normalize the user's macro split toward a "typical" distribution. If the user asks for a high-carb low-fat plan, deliver exactly that. If they ask for keto, deliver that. The targets always win over your defaults.
-- Distribute the daily target across meals roughly as: breakfast 22%, morning_snack 10%, lunch 33%, afternoon_snack 10%, dinner 25% — of every macro, not just calories. Adjust ±5% per meal as needed for realism. Snacks can carry less of the vegetable target if it makes more sense to put vegetables in lunch and dinner.
+- Distribute the daily totals across the meals sensibly: main meals (breakfast, lunch, dinner) should carry the bulk of the calories and protein; snacks should be appropriately smaller. When the user has disabled snacks, shift that share to lunch and dinner — still respecting the daily target.
 - Ingredient quantities MUST genuinely add up to the dish's stated macros. A dish that says 600 kcal / 40g protein / 80g vegetables must have ingredients whose real-world values total ~600 kcal / ~40g protein and contain ~80g of vegetables. Use accurate per-ingredient values from common nutrition tables.
 - Before finalizing each day, mentally sum the 5 dishes' calories, protein, carbs, fat and vegetables. If any total drifts more than 10% from the daily target, adjust ingredient quantities (typically the staple carb, protein source, or veg portion) to bring it in line. Iterate until all five totals fit.
 
@@ -98,6 +100,16 @@ VEGETABLES FIELD:
 - Sum the raw grams of those ingredients and report it accurately in the vegetables field for each dish.
 
 If no targets are provided, default to ≈2000 kcal/day with a balanced 30P / 45C / 25F split and ~400g of vegetables per day.
+
+## Shopping list
+
+At the end of the JSON, include a "shoppingList" array that aggregates every ingredient used across all 7 days into a single grocery list. Rules:
+- Merge duplicates across dishes and days: if Monday lunch uses 150g of chicken breast and Wednesday dinner uses 200g, the shopping list has one "chicken breast" entry with "350g" total.
+- Use RAW weights (same as the dish ingredients). The user will buy and weigh raw.
+- Round quantities to sensible shopping amounts (whole grams, 50g or 100g steps where it makes sense, whole units for things like eggs/lemons).
+- Normalise names to the shoppable form (e.g. "red pepper" not "sliced red pepper"). Keep names in the user's language.
+- Classify each item in a "category": "vegetables", "fruits", "protein", "dairy", "grains_and_pasta", "legumes", "nuts_and_seeds", "pantry", "herbs_and_spices", "oils_and_condiments", "frozen", "beverages", "bakery", "other". Use exactly one of these keys.
+- Do NOT include tap water, salt, or pepper in the shopping list.
 
 Output JSON shape (exact field names, order does not matter):
 {
@@ -125,12 +137,19 @@ Output JSON shape (exact field names, order does not matter):
         }
       ]
     }
+  ],
+  "shoppingList": [
+    { "name": "string", "amount": "string", "category": "vegetables" }
   ]
 }`
 }
 
-function buildUserPrompt({ profile, fridgeContents, weeklyExtras }) {
-  const lines = ['Generate a 7-day meal plan tailored to this person.']
+function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes }) {
+  const lines = [
+    `Generate a 7-day meal plan tailored to this person. Each day must have exactly ${enabledMealTypes.length} meal(s): ${enabledMealTypes.join(', ')}.`,
+    '',
+    '**Treat every line of this profile as a HARD REQUIREMENT.** If the profile says "no mushrooms", you never include mushrooms. If the profile says 2800 kcal and 170g protein, your daily totals match those numbers within ±10%. If the profile says vegetarian, no meat. Do not second-guess the user. Do not soften their constraints toward "normal" values. Do not skip any of the listed targets.',
+  ]
 
   // Profile section
   const p = profile || {}
@@ -240,8 +259,16 @@ export async function onRequestPost({ request, env }) {
   const weeklyExtras = trim(body.weeklyExtras, 2000)
   const language = SUPPORTED_LANGS.has(body.language) ? body.language : 'en'
 
-  const systemPrompt = buildSystemPrompt(language)
-  const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras })
+  const VALID_MEAL_TYPES = ['breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner']
+  let enabledMealTypes = Array.isArray(body.enabledMealTypes)
+    ? body.enabledMealTypes.filter((t) => VALID_MEAL_TYPES.includes(t))
+    : VALID_MEAL_TYPES
+  if (enabledMealTypes.length === 0) enabledMealTypes = VALID_MEAL_TYPES
+  // Keep the canonical order
+  enabledMealTypes = VALID_MEAL_TYPES.filter((t) => enabledMealTypes.includes(t))
+
+  const systemPrompt = buildSystemPrompt(language, enabledMealTypes)
+  const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes })
 
   const result = await callGeminiWithFallback({
     env,

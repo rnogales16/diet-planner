@@ -53,7 +53,11 @@ function handleCancel() {
 function handleApply() {
   if (!generatedPlan.value) return
   store.ensureWeek(weekKey.value, new Date())
-  store.applyGeneratedPlan(weekKey.value, generatedPlan.value.days)
+  store.applyGeneratedPlan(
+    weekKey.value,
+    generatedPlan.value.days,
+    generatedPlan.value.shoppingList,
+  )
   // Fire-and-forget: translate the brand new dishes to every other supported
   // language in the background so switching languages later is instant.
   void backfillOtherLanguages()

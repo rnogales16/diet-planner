@@ -1,11 +1,11 @@
 import { formatDate, getDayName } from './dateHelpers'
 
 export const DEFAULT_MEAL_TYPES = [
-  { type: 'breakfast', label: 'Breakfast', defaultTime: '08:00' },
-  { type: 'morning_snack', label: 'Morning Snack', defaultTime: '10:30' },
-  { type: 'lunch', label: 'Lunch', defaultTime: '13:00' },
-  { type: 'afternoon_snack', label: 'Afternoon Snack', defaultTime: '16:00' },
-  { type: 'dinner', label: 'Dinner', defaultTime: '20:00' },
+  { type: 'breakfast', label: 'Breakfast', defaultTime: '08:00', enabled: true },
+  { type: 'morning_snack', label: 'Morning Snack', defaultTime: '10:30', enabled: true },
+  { type: 'lunch', label: 'Lunch', defaultTime: '13:00', enabled: true },
+  { type: 'afternoon_snack', label: 'Afternoon Snack', defaultTime: '16:00', enabled: true },
+  { type: 'dinner', label: 'Dinner', defaultTime: '20:00', enabled: true },
 ]
 
 let nextId = Date.now()

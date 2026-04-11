@@ -352,12 +352,21 @@ async function handleTranslateAll() {
         <p class="settings__card-sub">{{ t('settings.mealTypes.subtitle') }}</p>
       </header>
       <div class="settings__rows">
-        <div v-for="(meal, idx) in form.mealTypes" :key="meal.type" class="meal-row">
+        <div
+          v-for="(meal, idx) in form.mealTypes"
+          :key="meal.type"
+          class="meal-row"
+          :class="{ 'is-disabled': !form.mealTypes[idx].enabled }"
+        >
           <span class="meal-row__icon">
             <component :is="mealIcons[meal.type] || Utensils" :size="14" />
           </span>
-          <input v-model="form.mealTypes[idx].label" class="app-input meal-row__label" />
-          <input v-model="form.mealTypes[idx].defaultTime" type="time" class="app-input meal-row__time" />
+          <input v-model="form.mealTypes[idx].label" class="app-input meal-row__label" :disabled="!form.mealTypes[idx].enabled" />
+          <input v-model="form.mealTypes[idx].defaultTime" type="time" class="app-input meal-row__time" :disabled="!form.mealTypes[idx].enabled" />
+          <label class="switch">
+            <input type="checkbox" v-model="form.mealTypes[idx].enabled" />
+            <span class="switch__track" />
+          </label>
         </div>
       </div>
       <footer class="settings__card-footer">
@@ -501,9 +510,57 @@ async function handleTranslateAll() {
 
 .meal-row {
   display: grid;
-  grid-template-columns: 32px 1fr 110px;
+  grid-template-columns: 32px 1fr 110px 34px;
   gap: 12px;
   align-items: center;
+}
+
+.meal-row.is-disabled .meal-row__icon,
+.meal-row.is-disabled .app-input {
+  opacity: 0.4;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch__track {
+  position: absolute;
+  inset: 0;
+  background-color: var(--border-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.switch__track::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  top: 2px;
+  background-color: var(--surface);
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  transition: transform 0.2s ease;
+}
+
+.switch input:checked + .switch__track {
+  background-color: var(--accent);
+}
+
+.switch input:checked + .switch__track::before {
+  transform: translateX(14px);
 }
 
 .profile-grid {

@@ -3,8 +3,6 @@
 
 import { useDietStore } from '@/stores/dietStore'
 
-const MEAL_TYPES = ['breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner']
-
 const DEFAULT_TIMES = {
   breakfast: '08:00',
   morning_snack: '10:30',
@@ -13,10 +11,14 @@ const DEFAULT_TIMES = {
   dinner: '20:00',
 }
 
-function validateAndNormalize(raw, language = 'en') {
+function validateAndNormalize(raw, language = 'en', enabledMealTypes = null) {
   if (!raw || !Array.isArray(raw.days) || raw.days.length === 0) {
     return { success: false, error: 'Invalid response structure: missing days array.' }
   }
+
+  const types = enabledMealTypes && enabledMealTypes.length
+    ? enabledMealTypes
+    : ['breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner']
 
   const days = []
 
@@ -24,7 +26,7 @@ function validateAndNormalize(raw, language = 'en') {
     const srcDay = raw.days[i] || raw.days[raw.days.length - 1]
     const meals = []
 
-    for (const type of MEAL_TYPES) {
+    for (const type of types) {
       const srcMeal = srcDay.meals?.find((m) => m.type === type)
       const dish = srcMeal?.dish || {}
 
@@ -60,7 +62,17 @@ function validateAndNormalize(raw, language = 'en') {
     days.push({ dayIndex: i, meals })
   }
 
-  return { success: true, data: { days } }
+  const shoppingList = Array.isArray(raw.shoppingList)
+    ? raw.shoppingList
+        .map((item) => ({
+          name: String(item?.name || '').trim(),
+          amount: String(item?.amount || '').trim(),
+          category: String(item?.category || 'other').trim(),
+        }))
+        .filter((i) => i.name)
+    : []
+
+  return { success: true, data: { days, shoppingList } }
 }
 
 function extractJson(text) {
@@ -95,11 +107,13 @@ function extractJson(text) {
 export async function generateMealPlan(formData, signal) {
   const store = useDietStore()
   const language = store.language || 'en'
+  const enabledMealTypes = store.mealTypes.filter((mt) => mt.enabled !== false).map((mt) => mt.type)
   const body = {
     fridgeContents: formData.fridgeContents || '',
     weeklyExtras: formData.weeklyExtras || '',
     profile: store.profile,
     language,
+    enabledMealTypes,
   }
 
   let response
@@ -138,7 +152,7 @@ export async function generateMealPlan(formData, signal) {
     return { success: false, error: 'Failed to parse meal plan as JSON.' }
   }
 
-  const result = validateAndNormalize(parsed, language)
+  const result = validateAndNormalize(parsed, language, enabledMealTypes)
   if (result.success) {
     result.data.model = payload.model || null
   }

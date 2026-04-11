@@ -9,6 +9,11 @@ const routes = [
     component: () => import('@/views/GenerateView.vue'),
   },
   {
+    path: '/shopping',
+    name: 'shopping',
+    component: () => import('@/views/ShoppingView.vue'),
+  },
+  {
     path: '/settings',
     name: 'settings',
     component: () => import('@/views/SettingsView.vue'),

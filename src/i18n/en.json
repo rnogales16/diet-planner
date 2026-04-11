@@ -21,6 +21,7 @@
     "brand": "Diet Planner",
     "planner": "Planner",
     "generate": "Generate",
+    "shopping": "Shopping",
     "settings": "Settings"
   },
   "theme": {
@@ -248,6 +249,29 @@
     "title": "Delete dish",
     "body": "Delete {name}? This cannot be undone.",
     "thisDish": "this dish"
+  },
+  "shopping": {
+    "title": "Shopping list",
+    "subtitle": "Everything you need to buy for the week's meal plan",
+    "empty": "No shopping list yet. Generate a plan first and it will appear here.",
+    "generatedAt": "Generated {when}",
+    "itemsCount": "{count} item | {count} items",
+    "categories": {
+      "vegetables": "Vegetables",
+      "fruits": "Fruits",
+      "protein": "Meat, fish & eggs",
+      "dairy": "Dairy",
+      "grains_and_pasta": "Grains & pasta",
+      "legumes": "Legumes",
+      "nuts_and_seeds": "Nuts & seeds",
+      "pantry": "Pantry",
+      "herbs_and_spices": "Herbs & spices",
+      "oils_and_condiments": "Oils & condiments",
+      "frozen": "Frozen",
+      "beverages": "Beverages",
+      "bakery": "Bakery",
+      "other": "Other"
+    }
   },
   "errors": {
     "network": "Network error: {message}",

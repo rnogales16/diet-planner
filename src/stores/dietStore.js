@@ -315,7 +315,7 @@ export const useDietStore = defineStore('diet', {
       meal.dishes = meal.dishes.filter((d) => d.id !== dishId)
     },
 
-    applyGeneratedPlan(weekKey, generatedDays) {
+    applyGeneratedPlan(weekKey, generatedDays, shoppingList) {
       const week = this.weeks[weekKey]
       if (!week) return
 
@@ -332,6 +332,17 @@ export const useDietStore = defineStore('diet', {
             ingredients: genMeal.dish.ingredients.map((i) => ({ ...i })),
             instructions: [...genMeal.dish.instructions],
           }]
+        }
+      }
+
+      if (Array.isArray(shoppingList)) {
+        week.shoppingList = {
+          generatedAt: Date.now(),
+          items: shoppingList.map((item) => ({
+            name: String(item.name || '').trim(),
+            amount: String(item.amount || '').trim(),
+            category: String(item.category || 'other').trim(),
+          })).filter((i) => i.name),
         }
       }
     },
@@ -374,7 +385,11 @@ export const useDietStore = defineStore('diet', {
           this.weeks = payload.weeks
         }
         if (Array.isArray(payload.mealTypes) && payload.mealTypes.length) {
-          this.mealTypes = payload.mealTypes
+          // Old meal types did not have an enabled flag — default to true.
+          this.mealTypes = payload.mealTypes.map((mt) => ({
+            ...mt,
+            enabled: mt.enabled === undefined ? true : !!mt.enabled,
+          }))
         }
         if (typeof payload.currentWeekKey === 'string') {
           this.currentWeekKey = payload.currentWeekKey
