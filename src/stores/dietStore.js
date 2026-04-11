@@ -315,7 +315,7 @@ export const useDietStore = defineStore('diet', {
       meal.dishes = meal.dishes.filter((d) => d.id !== dishId)
     },
 
-    applyGeneratedPlan(weekKey, generatedDays, shoppingList) {
+    applyGeneratedPlan(weekKey, generatedDays, shoppingList, mode = 'replace') {
       const week = this.weeks[weekKey]
       if (!week) return
 
@@ -326,23 +326,34 @@ export const useDietStore = defineStore('diet', {
         for (const genMeal of genDay.meals) {
           const meal = day.meals.find((m) => m.type === genMeal.type)
           if (!meal) continue
-          meal.dishes = [{
+          const newDish = {
             ...genMeal.dish,
             id: generateId(),
             ingredients: genMeal.dish.ingredients.map((i) => ({ ...i })),
             instructions: [...genMeal.dish.instructions],
-          }]
+          }
+          if (mode === 'append') {
+            meal.dishes = [...meal.dishes, newDish]
+          } else {
+            meal.dishes = [newDish]
+          }
         }
       }
 
       if (Array.isArray(shoppingList)) {
-        week.shoppingList = {
-          generatedAt: Date.now(),
-          items: shoppingList.map((item) => ({
-            name: String(item.name || '').trim(),
-            amount: String(item.amount || '').trim(),
-            category: String(item.category || 'other').trim(),
-          })).filter((i) => i.name),
+        const newItems = shoppingList.map((item) => ({
+          name: String(item.name || '').trim(),
+          amount: String(item.amount || '').trim(),
+          category: String(item.category || 'other').trim(),
+        })).filter((i) => i.name)
+
+        if (mode === 'append' && week.shoppingList?.items?.length) {
+          week.shoppingList = {
+            generatedAt: Date.now(),
+            items: [...week.shoppingList.items, ...newItems],
+          }
+        } else {
+          week.shoppingList = { generatedAt: Date.now(), items: newItems }
         }
       }
     },
@@ -446,6 +457,20 @@ export const useDietStore = defineStore('diet', {
 
     setLanguage(language) {
       this.language = language
+    },
+
+    // Returns true if the given week exists and has at least one dish in
+    // any meal. Used by the generate flow to decide whether to ask the
+    // user about replacing or appending.
+    weekHasDishes(weekKey) {
+      const week = this.weeks[weekKey]
+      if (!week) return false
+      for (const day of week.days) {
+        for (const meal of day.meals) {
+          if (meal.dishes.length > 0) return true
+        }
+      }
+      return false
     },
 
     // Updates a dish identified by its id, regardless of which week it lives in.

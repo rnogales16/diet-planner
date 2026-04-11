@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Sparkles, AlertCircle, CalendarClock } from 'lucide-vue-next'
+import { Sparkles, AlertCircle, CalendarClock, RefreshCw, Plus } from 'lucide-vue-next'
 import { translateDishes } from '@/services/translate'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { useDietStore } from '@/stores/dietStore'
@@ -12,6 +12,7 @@ import GenerateForm from '@/components/generate/GenerateForm.vue'
 import GenerateLoading from '@/components/generate/GenerateLoading.vue'
 import GeneratePlanPreview from '@/components/generate/GeneratePlanPreview.vue'
 import WeekNavigator from '@/components/calendar/WeekNavigator.vue'
+import BaseModal from '@/components/ui/BaseModal.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -50,13 +51,27 @@ function handleCancel() {
   phase.value = 'form'
 }
 
+const showApplyChoice = ref(false)
+
 function handleApply() {
   if (!generatedPlan.value) return
   store.ensureWeek(weekKey.value, new Date())
+  // If the target week already has dishes, let the user pick replace vs append.
+  if (store.weekHasDishes(weekKey.value)) {
+    showApplyChoice.value = true
+    return
+  }
+  doApply('replace')
+}
+
+function doApply(mode) {
+  showApplyChoice.value = false
+  if (!generatedPlan.value) return
   store.applyGeneratedPlan(
     weekKey.value,
     generatedPlan.value.days,
     generatedPlan.value.shoppingList,
+    mode,
   )
   // Fire-and-forget: translate the brand new dishes to every other supported
   // language in the background so switching languages later is instant.
@@ -132,6 +147,34 @@ function handleBack() {
       @apply="handleApply"
       @back="handleBack"
     />
+
+    <BaseModal
+      :show="showApplyChoice"
+      size="sm"
+      :title="t('generate.applyChoice.title')"
+      @close="showApplyChoice = false"
+    >
+      <p class="apply-choice__body">{{ t('generate.applyChoice.body') }}</p>
+      <div class="apply-choice__options">
+        <button type="button" class="apply-choice__btn" @click="doApply('replace')">
+          <RefreshCw :size="16" />
+          <span class="apply-choice__label">
+            <span class="apply-choice__title">{{ t('generate.applyChoice.replace') }}</span>
+            <span class="apply-choice__hint">{{ t('generate.applyChoice.replaceHint') }}</span>
+          </span>
+        </button>
+        <button type="button" class="apply-choice__btn" @click="doApply('append')">
+          <Plus :size="16" />
+          <span class="apply-choice__label">
+            <span class="apply-choice__title">{{ t('generate.applyChoice.append') }}</span>
+            <span class="apply-choice__hint">{{ t('generate.applyChoice.appendHint') }}</span>
+          </span>
+        </button>
+      </div>
+      <div class="apply-choice__cancel">
+        <button type="button" class="app-btn app-btn--ghost" @click="showApplyChoice = false">{{ t('common.cancel') }}</button>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -229,5 +272,72 @@ function handleBack() {
   .generate-hero__title {
     font-size: 26px;
   }
+}
+
+.apply-choice__body {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+
+.apply-choice__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.apply-choice__btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.apply-choice__btn:hover {
+  border-color: var(--accent);
+  background-color: var(--accent-tint);
+  color: var(--accent);
+}
+
+[data-theme='dark'] .apply-choice__btn:hover {
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.apply-choice__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.apply-choice__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.apply-choice__hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.apply-choice__btn:hover .apply-choice__hint {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.apply-choice__cancel {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
 }
 </style>

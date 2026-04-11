@@ -106,7 +106,15 @@
       "avgPerDay": "media/día",
       "back": "Volver al formulario",
       "apply": "Aplicar a esta semana",
-      "warning": "Aplicar reemplazará todos los platos existentes de esta semana."
+      "warning": "Si la semana ya tiene platos, te preguntaremos si quieres reemplazarlos o añadir los nuevos."
+    },
+    "applyChoice": {
+      "title": "Esta semana ya tiene un plan",
+      "body": "¿Quieres reemplazar los platos existentes por el plan nuevo, o mantener los dos (añadir los nuevos encima)?",
+      "replace": "Reemplazar",
+      "append": "Añadir a los existentes",
+      "replaceHint": "Borra todo lo que hay actualmente en esta semana",
+      "appendHint": "Mantiene los platos viejos y apila los nuevos encima"
     },
     "targetWeek": "Generando para"
   },

@@ -106,7 +106,15 @@
       "avgPerDay": "avg/day",
       "back": "Back to form",
       "apply": "Apply to this week",
-      "warning": "Applying replaces all existing dishes for this week."
+      "warning": "If the week already has dishes, you'll be asked whether to replace or append."
+    },
+    "applyChoice": {
+      "title": "This week already has a plan",
+      "body": "Do you want to replace the existing dishes with the new plan, or keep both (add the new dishes on top)?",
+      "replace": "Replace",
+      "append": "Add to existing",
+      "replaceHint": "Deletes everything currently in this week",
+      "appendHint": "Keeps old dishes and stacks the new ones"
     },
     "targetWeek": "Generating for"
   },
