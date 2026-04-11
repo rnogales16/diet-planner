@@ -1,18 +1,16 @@
-// Generates a 7-day meal plan with Gemini.
-// Cloudflare Access protects this endpoint, so the request is already
-// authenticated by the time it gets here. API keys live as Pages secrets
-// and never reach the browser.
+// Generates a 7-day meal plan.
 //
-// Pro is the default — meal generation deserves the best reasoning.
-// Flash and Flash-Lite sit behind it as safety nets for when Pro is
-// overloaded or both keys are rate-limited. Each step is a separate
-// serving pool inside Google so when 2.5 Pro is congested 2.5 Flash
-// (or 2.5 Flash-Lite) often still works. In normal conditions Pro
-// answers on the first attempt.
+// Claude Sonnet 4.5 is the primary model — it follows "don't use X"
+// constraints noticeably better than Gemini, which matters for the
+// user's disliked-ingredients list. Gemini Pro / Flash / Flash-Lite sit
+// behind as a fallback chain in case Claude is down, rate limited or
+// too slow.
 
 import { callGeminiWithFallback } from './_gemini.js'
+import { callClaude } from './_anthropic.js'
 
-const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
+const CLAUDE_MODEL = 'claude-sonnet-4-5'
+const GEMINI_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
 
 const GOAL_LABELS = {
   lose_weight: 'lose weight',
@@ -378,38 +376,97 @@ export async function onRequestPost({ request, env }) {
 
   const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes })
 
-  // First attempt: plain single-turn.
-  let result = await callGeminiWithFallback({
-    env,
-    models: MODEL_CASCADE,
-    payload: {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.9,
-        responseMimeType: 'application/json',
-        maxOutputTokens: 16384,
+  // --- Primary: Claude Sonnet 4.5 --------------------------------------
+  // Single-turn attempt first. If Claude also leaks forbidden ingredients we
+  // do a multi-turn retry with the bad response visible. If Claude fails
+  // completely (down, rate limited, key exhausted) we fall back to Gemini.
+
+  async function claudeFirstAttempt() {
+    return callClaude({
+      env,
+      model: CLAUDE_MODEL,
+      systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+      temperature: 0.7,
+      maxTokens: 16384,
+    })
+  }
+
+  async function claudeRetry(badContent, correction) {
+    return callClaude({
+      env,
+      model: CLAUDE_MODEL,
+      systemPrompt,
+      messages: [
+        { role: 'user', content: userPrompt },
+        { role: 'assistant', content: badContent },
+        { role: 'user', content: correction },
+      ],
+      temperature: 0.3,
+      maxTokens: 16384,
+    })
+  }
+
+  async function geminiFirstAttempt() {
+    return callGeminiWithFallback({
+      env,
+      models: GEMINI_CASCADE,
+      payload: {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.9,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 16384,
+        },
       },
-    },
-  })
+    })
+  }
+
+  async function geminiRetry(badContent, correction) {
+    return callGeminiWithFallback({
+      env,
+      models: GEMINI_CASCADE,
+      payload: {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [
+          { role: 'user', parts: [{ text: userPrompt }] },
+          { role: 'model', parts: [{ text: badContent }] },
+          { role: 'user', parts: [{ text: correction }] },
+        ],
+        generationConfig: {
+          temperature: 0.3,
+          topP: 0.85,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 16384,
+        },
+      },
+    })
+  }
+
+  let result = await claudeFirstAttempt()
+  let usedProvider = 'claude'
+
+  if (!result.ok) {
+    // Claude failed: fall through to Gemini.
+    result = await geminiFirstAttempt()
+    usedProvider = 'gemini'
+  }
 
   if (!result.ok) {
     const summary = (result.attempts || []).map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
     if (result.status === 429) {
-      return json({ success: false, error: `All Gemini quotas exhausted. Try again in a minute. [${summary}]`, attempts: result.attempts }, 429)
+      return json({ success: false, error: `All AI quotas exhausted. Try again in a minute. [${summary}]`, attempts: result.attempts }, 429)
     }
     if (result.status === 503 || result.status === 500 || result.status === 502 || result.status === 504) {
-      return json({ success: false, error: `Google AI is temporarily overloaded. [${summary}] Last error: ${result.error}`, attempts: result.attempts }, 503)
+      return json({ success: false, error: `AI provider temporarily overloaded. [${summary}] Last error: ${result.error}`, attempts: result.attempts }, 503)
     }
     return json({ success: false, error: `Upstream error: ${result.error} [${summary}]`, attempts: result.attempts }, 502)
   }
 
-  // Server-side enforcement of the forbidden ingredients list.
-  // If the model included any, we re-ask it in MULTI-TURN mode: we send the
-  // bad response back as a model turn and then point out the exact violations
-  // in a new user turn. Seeing its own mistake in-context is more effective
-  // than starting fresh with a "please try again" note.
+  // --- Forbidden-ingredient enforcement ---------------------------------
+
   let warnings = []
   if (forbiddenList.length > 0) {
     const plan = extractJsonLoose(result.content)
@@ -421,26 +478,9 @@ export async function onRequestPost({ request, env }) {
 
       const correction = `Your previous response included ingredients that are on the user's FORBIDDEN list. Specifically:\n${violationList}\n\nThis is a zero-tolerance rule. Output a COMPLETELY NEW plan (same structure, same targets, same shopping list) that uses NONE of the forbidden ingredients anywhere — not in dish names, not in ingredient lists, not in instructions. Substitute those items with alternatives the user has not forbidden. Scan every single string before emitting the JSON to make sure you have complied.`
 
-      const retryResult = await callGeminiWithFallback({
-        env,
-        models: MODEL_CASCADE,
-        payload: {
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [
-            { role: 'user', parts: [{ text: userPrompt }] },
-            { role: 'model', parts: [{ text: result.content }] },
-            { role: 'user', parts: [{ text: correction }] },
-          ],
-          generationConfig: {
-            // Much lower temperature on retry: we want the model to follow
-            // our correction precisely, not be creative.
-            temperature: 0.3,
-            topP: 0.85,
-            responseMimeType: 'application/json',
-            maxOutputTokens: 16384,
-          },
-        },
-      })
+      const retryResult = usedProvider === 'claude'
+        ? await claudeRetry(result.content, correction)
+        : await geminiRetry(result.content, correction)
 
       if (retryResult.ok) {
         result = retryResult
@@ -452,8 +492,6 @@ export async function onRequestPost({ request, env }) {
           )
         }
       } else {
-        // Retry failed outright (rate limit, network, etc). Return the first
-        // response with warnings so the user can decide.
         warnings = firstHits.map((h) =>
           `Dish "${h.dish}" contains forbidden term "${h.term}" (in ${h.where}).`
         )
@@ -461,7 +499,7 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  return json({ success: true, content: result.content, model: result.model, warnings })
+  return json({ success: true, content: result.content, model: result.model, provider: usedProvider, warnings })
 }
 
 export function onRequest({ request }) {
