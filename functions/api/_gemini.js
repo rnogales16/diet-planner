@@ -6,18 +6,21 @@
 const ENDPOINT = (model) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
-// Hard per-call timeout. Gemini Pro can take 30-60s on a complex meal plan,
-// so we give it 45s and then move on. With 2 keys that's a worst case of 90s,
-// safely under Cloudflare's 100s limit.
-const CALL_TIMEOUT_MS = 45000
+// Default per-call timeout. Callers can override via options.timeoutMs.
+const DEFAULT_TIMEOUT_MS = 45000
 
-function getKeys(env) {
+function getKeys(env, { freeOnly = false } = {}) {
+  if (freeOnly) {
+    // Only the primary (free-tier) key. Useful when Claude has just failed
+    // and we do NOT want to burn money on the billed backup key.
+    return [env.GEMINI_API_KEY].filter(Boolean)
+  }
   return [env.GEMINI_API_KEY, env.GEMINI_API_KEY_BACKUP].filter(Boolean)
 }
 
-async function callOnce(model, key, payload) {
+async function callOnce(model, key, payload, timeoutMs) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   let upstream
   try {
@@ -30,7 +33,7 @@ async function callOnce(model, key, payload) {
   } catch (err) {
     clearTimeout(timeout)
     if (err.name === 'AbortError') {
-      return { ok: false, status: 504, error: `Timed out after ${CALL_TIMEOUT_MS / 1000}s` }
+      return { ok: false, status: 504, error: `Timed out after ${timeoutMs / 1000}s` }
     }
     return { ok: false, status: 0, error: `Network error: ${err.message}` }
   }
@@ -59,8 +62,8 @@ async function callOnce(model, key, payload) {
 // another 45s on the same model is wasted budget.
 //
 // Returns { ok, content, model, attempts, lastError }.
-export async function callGeminiWithFallback({ env, payload, models }) {
-  const keys = getKeys(env)
+export async function callGeminiWithFallback({ env, payload, models, freeOnly = false, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+  const keys = getKeys(env, { freeOnly })
   if (keys.length === 0) {
     return { ok: false, status: 500, error: 'Server is not configured (no Gemini API keys).' }
   }
@@ -72,7 +75,7 @@ export async function callGeminiWithFallback({ env, payload, models }) {
   for (const model of models) {
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i]
-      const result = await callOnce(model, key, payload)
+      const result = await callOnce(model, key, payload, timeoutMs)
       attempts.push({ model, keyIndex: i, status: result.status || (result.ok ? 200 : 0) })
 
       if (result.ok) {
@@ -82,13 +85,11 @@ export async function callGeminiWithFallback({ env, payload, models }) {
       lastError = result.error
       lastStatus = result.status
 
-      // Only skip the rest of this model's keys when the call literally
-      // timed out (504 from our AbortController). A timeout means we've
-      // already burned ~45s and the next key would likely do the same.
-      // Other errors (429, 503, etc.) come back fast, so we keep trying
-      // every key before moving to the next model.
+      // Stop everything on timeout. A 504 means we burned the whole budget
+      // on this combo and the next one would probably do the same, and each
+      // aborted call may still cost money on a billed key.
       if (result.status === 504) {
-        break
+        return { ok: false, status: lastStatus, error: lastError, attempts }
       }
     }
   }

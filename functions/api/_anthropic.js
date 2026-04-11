@@ -5,8 +5,10 @@
 const ENDPOINT = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
 
-// 45s hard timeout per call so Cloudflare's 100s wall clock is safe.
-const CALL_TIMEOUT_MS = 45000
+// Hard per-call timeout. Long enough that Claude Sonnet can actually finish
+// a full 7-day plan (typically 30-60s) without us prematurely aborting and
+// burning tokens we still get charged for.
+const CALL_TIMEOUT_MS = 70000
 
 async function callOnce(model, apiKey, { systemPrompt, messages, temperature, maxTokens }) {
   const controller = new AbortController()

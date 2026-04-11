@@ -1,16 +1,15 @@
 // Generates a 7-day meal plan.
 //
-// Claude Sonnet 4.5 is the primary model — it follows "don't use X"
-// constraints noticeably better than Gemini, which matters for the
-// user's disliked-ingredients list. Gemini Pro / Flash / Flash-Lite sit
-// behind as a fallback chain in case Claude is down, rate limited or
-// too slow.
+// Claude Sonnet 4.6 is the primary model (best at negative constraints).
+// If Claude fails we fall back to Gemini 2.5 Pro on the FREE-tier key only
+// — never the billed key — so failed attempts never cost money. The
+// billed Gemini key is reserved for the chat and translate endpoints.
 
 import { callGeminiWithFallback } from './_gemini.js'
 import { callClaude } from './_anthropic.js'
 
 const CLAUDE_MODEL = 'claude-sonnet-4-6'
-const GEMINI_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
+const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro']
 
 const GOAL_LABELS = {
   lose_weight: 'lose weight',
@@ -392,52 +391,19 @@ export async function onRequestPost({ request, env }) {
     })
   }
 
-  async function claudeRetry(badContent, correction) {
-    return callClaude({
-      env,
-      model: CLAUDE_MODEL,
-      systemPrompt,
-      messages: [
-        { role: 'user', content: userPrompt },
-        { role: 'assistant', content: badContent },
-        { role: 'user', content: correction },
-      ],
-      temperature: 0.3,
-      maxTokens: 16384,
-    })
-  }
 
   async function geminiFirstAttempt() {
     return callGeminiWithFallback({
       env,
-      models: GEMINI_CASCADE,
+      models: GEMINI_FALLBACK_MODELS,
+      freeOnly: true, // never touch the billed backup key here
+      timeoutMs: 25000, // fallback should be fast or not at all
       payload: {
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
         generationConfig: {
           temperature: 0.7,
           topP: 0.9,
-          responseMimeType: 'application/json',
-          maxOutputTokens: 16384,
-        },
-      },
-    })
-  }
-
-  async function geminiRetry(badContent, correction) {
-    return callGeminiWithFallback({
-      env,
-      models: GEMINI_CASCADE,
-      payload: {
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [
-          { role: 'user', parts: [{ text: userPrompt }] },
-          { role: 'model', parts: [{ text: badContent }] },
-          { role: 'user', parts: [{ text: correction }] },
-        ],
-        generationConfig: {
-          temperature: 0.3,
-          topP: 0.85,
           responseMimeType: 'application/json',
           maxOutputTokens: 16384,
         },
@@ -494,36 +460,21 @@ export async function onRequestPost({ request, env }) {
   }
 
   // --- Forbidden-ingredient enforcement ---------------------------------
+  //
+  // Previously we did an automatic multi-turn retry when the response
+  // contained forbidden ingredients. That burned another 30-60s and another
+  // paid API call EVERY time the model misbehaved, with no guarantee it
+  // would succeed. Now we just surface the violations as warnings — the
+  // user can click "Regenerate" manually to try again.
 
   let warnings = []
   if (forbiddenList.length > 0) {
     const plan = extractJsonLoose(result.content)
-    const firstHits = scanForForbidden(plan, forbiddenList)
-    if (firstHits.length > 0) {
-      const violationList = firstHits
-        .map((h) => `  - "${h.term}" appeared in ${h.where === 'name' ? 'the name' : `the ${h.where}`} of "${h.dish}"`)
-        .join('\n')
-
-      const correction = `Your previous response included ingredients that are on the user's FORBIDDEN list. Specifically:\n${violationList}\n\nThis is a zero-tolerance rule. Output a COMPLETELY NEW plan (same structure, same targets, same shopping list) that uses NONE of the forbidden ingredients anywhere — not in dish names, not in ingredient lists, not in instructions. Substitute those items with alternatives the user has not forbidden. Scan every single string before emitting the JSON to make sure you have complied.`
-
-      const retryResult = usedProvider === 'claude'
-        ? await claudeRetry(result.content, correction)
-        : await geminiRetry(result.content, correction)
-
-      if (retryResult.ok) {
-        result = retryResult
-        const retryPlan = extractJsonLoose(retryResult.content)
-        const secondHits = scanForForbidden(retryPlan, forbiddenList)
-        if (secondHits.length > 0) {
-          warnings = secondHits.map((h) =>
-            `Dish "${h.dish}" still contains forbidden term "${h.term}" (in ${h.where}) after a retry.`
-          )
-        }
-      } else {
-        warnings = firstHits.map((h) =>
-          `Dish "${h.dish}" contains forbidden term "${h.term}" (in ${h.where}).`
-        )
-      }
+    const hits = scanForForbidden(plan, forbiddenList)
+    if (hits.length > 0) {
+      warnings = hits.map((h) =>
+        `Dish "${h.dish}" contains forbidden term "${h.term}" (in ${h.where}). Click Regenerate to try again.`
+      )
     }
   }
 
