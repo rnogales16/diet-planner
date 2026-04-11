@@ -112,6 +112,8 @@
       "subtitle": "{range} · 35 dishes",
       "avgPerDay": "avg/day",
       "generatedWith": "Generated with",
+      "whyFallback": "Why this model?",
+      "debugTitle": "Provider fallback trace",
       "back": "Back to form",
       "apply": "Apply to this week",
       "warning": "If the week already has dishes, you'll be asked whether to replace or append."

@@ -1,7 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, Check, AlertTriangle, RotateCcw, Brain } from 'lucide-vue-next'
+import { ChevronLeft, Check, AlertTriangle, RotateCcw, Brain, Info, ChevronDown } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 import PreviewDayCard from './PreviewDayCard.vue'
 
@@ -37,6 +37,9 @@ const dailyAvg = computed(() => ({
   carbs: Math.round(weekTotals.value.carbs / 7),
   fat: Math.round(weekTotals.value.fat / 7),
 }))
+
+const debugExpanded = ref(false)
+const hasProviderErrors = computed(() => Array.isArray(props.plan.providerErrors) && props.plan.providerErrors.length > 0)
 </script>
 
 <template>
@@ -66,6 +69,21 @@ const dailyAvg = computed(() => ({
           <Brain :size="13" />
           <span class="preview__model-label">{{ t('generate.preview.generatedWith') }}</span>
           <span class="preview__model-name tabular">{{ plan.model }}</span>
+          <button
+            v-if="hasProviderErrors"
+            type="button"
+            class="preview__debug-toggle"
+            :title="t('generate.preview.whyFallback')"
+            @click="debugExpanded = !debugExpanded"
+          >
+            <Info :size="12" />
+          </button>
+        </div>
+        <div v-if="hasProviderErrors && debugExpanded" class="preview__debug">
+          <p class="preview__debug-title">{{ t('generate.preview.debugTitle') }}</p>
+          <ul class="preview__debug-list">
+            <li v-for="(e, i) in plan.providerErrors" :key="i">{{ e }}</li>
+          </ul>
         </div>
       </div>
       <div class="preview__stats">
@@ -167,6 +185,63 @@ const dailyAvg = computed(() => ({
 
 .preview__model-name {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.preview__debug-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  opacity: 0.7;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.preview__debug-toggle:hover {
+  opacity: 1;
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.preview__debug {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+.preview__debug-title {
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.preview__debug-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+
+.preview__debug-list li {
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+}
+
+.preview__debug-list li:first-child {
+  border-top: none;
 }
 
 .preview__stats {

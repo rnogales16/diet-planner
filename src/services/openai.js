@@ -156,6 +156,7 @@ export async function generateMealPlan(formData, signal) {
   if (result.success) {
     result.data.model = payload.model || null
     result.data.warnings = Array.isArray(payload.warnings) ? payload.warnings : []
+    result.data.providerErrors = Array.isArray(payload.providerErrors) ? payload.providerErrors : []
   }
   return result
 }
