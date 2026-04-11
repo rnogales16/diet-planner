@@ -6,9 +6,11 @@ const ENDPOINT = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
 
 // Hard per-call timeout. Long enough that Claude Sonnet can actually finish
-// a full 7-day plan (typically 30-60s) without us prematurely aborting and
-// burning tokens we still get charged for.
-const CALL_TIMEOUT_MS = 70000
+// a full 7-day plan (typically 30-70s) without us prematurely aborting and
+// burning tokens we still get charged for. The rest of the budget leaves
+// ~20s for the single Gemini fallback attempt so we stay under Cloudflare's
+// 100s edge limit.
+const CALL_TIMEOUT_MS = 80000
 
 async function callOnce(model, apiKey, { systemPrompt, messages, temperature, maxTokens }) {
   const controller = new AbortController()

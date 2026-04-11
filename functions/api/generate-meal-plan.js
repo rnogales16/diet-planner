@@ -70,7 +70,13 @@ Format:
 - Do NOT include any other meal types. Do NOT skip any of the listed types.
 - Each meal has exactly 1 dish. Times in "HH:MM" 24h. All numeric fields are positive numbers.
 - Ingredients are { "name": "...", "amount": "..." } with realistic weighable quantities (grams, ml, units).
-- Instructions are step strings written like a real recipe.
+
+BREVITY RULES (IMPORTANT — output must fit in a single response):
+- Dish names: max 6 words. No marketing adjectives.
+- Ingredient names: the common cooking name only (e.g. "chicken breast", not "organic boneless skinless chicken breast"). Max 4 words.
+- Instructions: 3 to 5 short steps per dish, each step max 18 words. No introductions, no "enjoy", no "tips".
+- Notes field: leave empty unless strictly necessary (allergy warning, storage tip). Max 10 words.
+- Shopping list entries: name max 3 words, amount compact ("350g", "2 units", "500ml").
 - No duplicate dish names across the week. Vary cuisines, cooking methods and main proteins.
 - Allergies and dietary restrictions are absolute. Never include a forbidden ingredient.
 - Disliked ingredients listed by the user are also absolute. Never include them, not even in trace amounts, not even in smoothies, dressings or garnishes. Treat them as if they were poisonous to the user. Check every ingredient name and dish name before finalising.
@@ -397,7 +403,7 @@ export async function onRequestPost({ request, env }) {
       env,
       models: GEMINI_FALLBACK_MODELS,
       freeOnly: true, // never touch the billed backup key here
-      timeoutMs: 25000, // fallback should be fast or not at all
+      timeoutMs: 18000, // fallback must be fast, budget is tight after Claude
       payload: {
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
