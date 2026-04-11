@@ -319,6 +319,19 @@ export const useDietStore = defineStore('diet', {
       const week = this.weeks[weekKey]
       if (!week) return
 
+      // Replace mode means "fresh start": wipe every meal in the week,
+      // including ones that aren't in the new plan (e.g. dishes that got
+      // stuck in a meal type the user later disabled). Otherwise those
+      // ghost dishes keep getting summed into the weekly totals and
+      // disagree with what the user sees on screen.
+      if (mode === 'replace') {
+        for (const day of week.days) {
+          for (const meal of day.meals) {
+            meal.dishes = []
+          }
+        }
+      }
+
       for (const genDay of generatedDays) {
         const day = week.days[genDay.dayIndex]
         if (!day) continue

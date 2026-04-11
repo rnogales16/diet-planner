@@ -36,6 +36,7 @@ const dailyAvg = computed(() => ({
   protein: Math.round(weekTotals.value.protein / 7),
   carbs: Math.round(weekTotals.value.carbs / 7),
   fat: Math.round(weekTotals.value.fat / 7),
+  vegetables: Math.round((weekTotals.value.vegetables || 0) / 7),
 }))
 
 const debugExpanded = ref(false)
@@ -102,6 +103,10 @@ const hasProviderErrors = computed(() => Array.isArray(props.plan.providerErrors
         <div class="stat">
           <span class="stat__label">F</span>
           <span class="stat__value tabular">{{ dailyAvg.fat }}{{ t('common.g') }}</span>
+        </div>
+        <div class="stat">
+          <span class="stat__label">V</span>
+          <span class="stat__value tabular">{{ dailyAvg.vegetables }}{{ t('common.g') }}</span>
         </div>
       </div>
     </header>
