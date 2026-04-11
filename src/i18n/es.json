@@ -82,7 +82,7 @@
   },
   "generation": {
     "bannerLoading": "Cocinando tu semana",
-    "bannerLoadingSub": "30-60s. Te avisamos cuando esté listo",
+    "bannerLoadingSub": "Puede tardar varios minutos. Te avisamos",
     "bannerReady": "Tu plan está listo",
     "bannerReadySub": "Pulsa para revisar y aplicar",
     "bannerError": "Generación fallida"
@@ -92,7 +92,7 @@
     "heroSub": "Cuéntanos qué comes y te generaremos un plan equilibrado de 7 días en segundos.",
     "errorTitle": "Generación fallida",
     "loadingTitle": "Cocinando tu semana",
-    "loadingSub": "Esto suele tardar entre 30 y 60 segundos. Puedes seguir usando la app — te avisamos cuando esté lista.",
+    "loadingSub": "Puede tardar varios minutos. Puedes seguir usando la app — te avisamos cuando esté lista.",
     "form": {
       "usingProfile": "Usando tu perfil de dieta",
       "noProfile": "Aún no tienes perfil de dieta",
