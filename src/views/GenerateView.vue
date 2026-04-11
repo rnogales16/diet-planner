@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Sparkles, AlertCircle, CalendarClock, RefreshCw, Plus } from 'lucide-vue-next'
@@ -7,7 +7,7 @@ import { translateDishes } from '@/services/translate'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { useDietStore } from '@/stores/dietStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
-import { generateMealPlan } from '@/services/openai'
+import { useGeneration } from '@/composables/useGeneration'
 import GenerateForm from '@/components/generate/GenerateForm.vue'
 import GenerateLoading from '@/components/generate/GenerateLoading.vue'
 import GeneratePlanPreview from '@/components/generate/GeneratePlanPreview.vue'
@@ -18,45 +18,29 @@ const { t } = useI18n()
 const router = useRouter()
 const store = useDietStore()
 const { weekKey, weekRange, init, goToPrevWeek, goToNextWeek, goToToday } = useWeekNavigation()
+const { phase, plan, error, start, cancel, clear, dismissError } = useGeneration()
 
 init()
 
-const phase = ref('form') // form | loading | preview
-const error = ref('')
-const generatedPlan = ref(null)
-
-let abortController = null
+// The form phase is the default. The composable uses 'idle' for that.
+const uiPhase = computed(() => {
+  if (phase.value === 'idle') return 'form'
+  return phase.value
+})
 
 async function handleGenerate(formData) {
-  error.value = ''
-  phase.value = 'loading'
-  abortController = new AbortController()
-
-  const result = await generateMealPlan(formData, abortController.signal)
-
-  if (result.success) {
-    generatedPlan.value = result.data
-    phase.value = 'preview'
-  } else {
-    error.value = result.error
-    phase.value = 'form'
-  }
+  await start(formData, weekKey.value)
 }
 
 function handleCancel() {
-  if (abortController) {
-    abortController.abort()
-    abortController = null
-  }
-  phase.value = 'form'
+  cancel()
 }
 
 const showApplyChoice = ref(false)
 
 function handleApply() {
-  if (!generatedPlan.value) return
+  if (!plan.value) return
   store.ensureWeek(weekKey.value, new Date())
-  // If the target week already has dishes, let the user pick replace vs append.
   if (store.weekHasDishes(weekKey.value)) {
     showApplyChoice.value = true
     return
@@ -66,16 +50,15 @@ function handleApply() {
 
 function doApply(mode) {
   showApplyChoice.value = false
-  if (!generatedPlan.value) return
+  if (!plan.value) return
   store.applyGeneratedPlan(
     weekKey.value,
-    generatedPlan.value.days,
-    generatedPlan.value.shoppingList,
+    plan.value.days,
+    plan.value.shoppingList,
     mode,
   )
-  // Fire-and-forget: translate the brand new dishes to every other supported
-  // language in the background so switching languages later is instant.
   void backfillOtherLanguages()
+  clear()
   router.push('/')
 }
 
@@ -91,21 +74,20 @@ async function backfillOtherLanguages() {
         store.applyDishTranslations(target, result.translations)
       }
     } catch {
-      // Silent: this is best-effort. The user can always run the manual
-      // translate button later if anything got missed.
+      // Silent: best-effort.
     }
   }
 }
 
 function handleBack() {
-  error.value = ''
-  phase.value = 'form'
+  dismissError()
+  clear()
 }
 </script>
 
 <template>
   <div class="generate-view">
-    <header class="generate-hero" v-if="phase === 'form'">
+    <header class="generate-hero" v-if="uiPhase === 'form'">
       <div class="generate-hero__icon">
         <Sparkles :size="20" />
       </div>
@@ -113,7 +95,7 @@ function handleBack() {
       <p class="generate-hero__sub">{{ t('generate.heroSub') }}</p>
     </header>
 
-    <div v-if="phase !== 'loading'" class="target-week">
+    <div v-if="uiPhase !== 'loading'" class="target-week">
       <span class="target-week__label">
         <CalendarClock :size="14" />
         {{ t('generate.targetWeek') }}
@@ -126,7 +108,7 @@ function handleBack() {
       />
     </div>
 
-    <div v-if="error" class="generate-error">
+    <div v-if="error && uiPhase !== 'preview'" class="generate-error">
       <AlertCircle :size="16" />
       <div>
         <p class="generate-error__title">{{ t('generate.errorTitle') }}</p>
@@ -134,15 +116,15 @@ function handleBack() {
       </div>
     </div>
 
-    <div v-if="phase === 'form'" class="generate-card app-card">
+    <div v-if="uiPhase === 'form' || uiPhase === 'error'" class="generate-card app-card">
       <GenerateForm @generate="handleGenerate" />
     </div>
 
-    <GenerateLoading v-else-if="phase === 'loading'" @cancel="handleCancel" />
+    <GenerateLoading v-else-if="uiPhase === 'loading'" @cancel="handleCancel" />
 
     <GeneratePlanPreview
-      v-else-if="phase === 'preview' && generatedPlan"
-      :plan="generatedPlan"
+      v-else-if="uiPhase === 'preview' && plan"
+      :plan="plan"
       :week-range="weekRange"
       @apply="handleApply"
       @back="handleBack"

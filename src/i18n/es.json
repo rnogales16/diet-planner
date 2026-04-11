@@ -80,6 +80,13 @@
       "sun": "DOM"
     }
   },
+  "generation": {
+    "bannerLoading": "Cocinando tu semana",
+    "bannerLoadingSub": "Esto suele tardar entre 15 y 30 segundos",
+    "bannerReady": "Tu plan está listo",
+    "bannerReadySub": "Pulsa para revisar y aplicar",
+    "bannerError": "Generación fallida"
+  },
   "generate": {
     "heroTitle": "Planifica tu semana con IA",
     "heroSub": "Cuéntanos qué comes y te generaremos un plan equilibrado de 7 días en segundos.",

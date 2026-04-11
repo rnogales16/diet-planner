@@ -1,5 +1,6 @@
 <script setup>
 import AppHeader from '@/components/layout/AppHeader.vue'
+import GenerationBanner from '@/components/layout/GenerationBanner.vue'
 import { useTheme } from '@/composables/useTheme'
 
 useTheme()
@@ -11,6 +12,7 @@ useTheme()
     <main class="app-main">
       <RouterView />
     </main>
+    <GenerationBanner />
   </div>
 </template>
 

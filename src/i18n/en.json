@@ -80,6 +80,13 @@
       "sun": "SUN"
     }
   },
+  "generation": {
+    "bannerLoading": "Cooking up your week",
+    "bannerLoadingSub": "This usually takes 15 to 30 seconds",
+    "bannerReady": "Your plan is ready",
+    "bannerReadySub": "Tap to review and apply",
+    "bannerError": "Generation failed"
+  },
   "generate": {
     "heroTitle": "Plan your week with AI",
     "heroSub": "Tell us what you eat and we will generate a balanced 7-day meal plan in seconds.",
