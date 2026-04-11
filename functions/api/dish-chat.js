@@ -98,7 +98,8 @@ function buildContextMessage(dish, profile) {
   if (profile && typeof profile === 'object') {
     lines.push('\n## User diet profile')
     const p = {}
-    if (profile.goal) p.goal = profile.goal
+    if (Array.isArray(profile.goals) && profile.goals.length) p.goals = profile.goals
+    else if (typeof profile.goal === 'string' && profile.goal) p.goals = [profile.goal]
     if (profile.dietaryStyle) p.dietaryStyle = profile.dietaryStyle
     if (profile.allergies) p.allergies = profile.allergies
     if (profile.restrictions) p.restrictions = profile.restrictions

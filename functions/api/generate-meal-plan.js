@@ -136,7 +136,10 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras }) {
   const p = profile || {}
   lines.push('\n## Diet profile')
 
-  if (p.goal) lines.push(`- Goal: ${GOAL_LABELS[p.goal] || p.goal}`)
+  if (Array.isArray(p.goals) && p.goals.length) {
+    const labels = p.goals.map((g) => GOAL_LABELS[g] || g)
+    lines.push(`- Goals: ${labels.join(' AND ')}`)
+  }
   if (p.dietaryStyle) lines.push(`- Dietary style: ${STYLE_LABELS[p.dietaryStyle] || p.dietaryStyle}`)
   if (p.allergies) lines.push(`- Allergies (NEVER use): ${p.allergies}`)
   if (p.restrictions) lines.push(`- Restrictions and dislikes: ${p.restrictions}`)
@@ -187,10 +190,21 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras }) {
   return lines.join('\n')
 }
 
+const VALID_GOALS = new Set(['lose_weight', 'gain_muscle', 'maintain', 'health'])
+
+function sanitizeGoals(raw) {
+  if (Array.isArray(raw)) {
+    return raw.filter((g) => typeof g === 'string' && VALID_GOALS.has(g)).slice(0, 4)
+  }
+  // Legacy single-string goal
+  if (typeof raw === 'string' && VALID_GOALS.has(raw)) return [raw]
+  return []
+}
+
 function sanitizeProfile(raw) {
   if (!raw || typeof raw !== 'object') return {}
   return {
-    goal: trim(raw.goal, 40),
+    goals: sanitizeGoals(raw.goals ?? raw.goal),
     dietaryStyle: trim(raw.dietaryStyle, 40),
     allergies: trim(raw.allergies, 500),
     restrictions: trim(raw.restrictions, 500),

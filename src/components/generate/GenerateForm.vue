@@ -23,7 +23,9 @@ const profile = computed(() => store.profile)
 const profileChips = computed(() => {
   const chips = []
   const p = profile.value
-  if (p.goal) chips.push(t(`settings.profile.goalOptions.${p.goal}`))
+  if (Array.isArray(p.goals)) {
+    for (const g of p.goals) chips.push(t(`settings.profile.goalOptions.${g}`))
+  }
   if (p.dietaryStyle) chips.push(t(`settings.profile.styleOptions.${p.dietaryStyle}`))
   if (p.calorieTarget) chips.push(`${p.calorieTarget} ${t('common.kcal')}`)
   if (p.proteinTarget) chips.push(`${p.proteinTarget}${t('common.g')} ${t('summary.protein').toLowerCase()}`)

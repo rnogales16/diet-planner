@@ -211,7 +211,7 @@ const EXAMPLE_DISHES = [
 ]
 
 const DEFAULT_PROFILE = {
-  goal: '',                // 'lose_weight' | 'gain_muscle' | 'maintain' | 'health'
+  goals: [],               // any combination of 'lose_weight' | 'gain_muscle' | 'maintain' | 'health'
   dietaryStyle: '',        // 'omnivore' | 'vegetarian' | 'vegan' | 'pescatarian' | 'mediterranean' | 'keto' | 'paleo' | 'other'
   allergies: '',           // free text
   restrictions: '',        // free text (dislikes, intolerances)
@@ -380,7 +380,13 @@ export const useDietStore = defineStore('diet', {
           this.currentWeekKey = payload.currentWeekKey
         }
         if (payload.profile && typeof payload.profile === 'object') {
-          this.profile = { ...DEFAULT_PROFILE, ...payload.profile }
+          const incoming = { ...DEFAULT_PROFILE, ...payload.profile }
+          // Legacy profiles had a single `goal` string. Migrate to `goals`.
+          if (!Array.isArray(incoming.goals)) {
+            incoming.goals = incoming.goal ? [incoming.goal] : []
+          }
+          delete incoming.goal
+          this.profile = incoming
         }
         if (typeof payload.language === 'string') {
           this.language = payload.language

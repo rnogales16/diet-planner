@@ -115,7 +115,8 @@
     "profile": {
       "title": "Diet profile",
       "subtitle": "Saved once and used every time the AI generates a plan, so you don't have to repeat yourself.",
-      "goal": "Goal",
+      "goals": "Goals",
+      "goalsHint": "You can pick more than one (e.g. gain muscle + maintain weight).",
       "dietaryStyle": "Dietary style",
       "allergies": "Allergies",
       "allergiesPlaceholder": "e.g. peanuts, shellfish",
@@ -142,7 +143,6 @@
       "dislikedEmpty": "No ingredients excluded yet.",
       "dislikedRemove": "Remove from list",
       "goalOptions": {
-        "none": "No specific goal",
         "lose_weight": "Lose weight",
         "gain_muscle": "Gain muscle",
         "maintain": "Maintain weight",

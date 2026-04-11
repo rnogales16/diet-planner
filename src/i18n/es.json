@@ -115,7 +115,8 @@
     "profile": {
       "title": "Perfil de dieta",
       "subtitle": "Lo guardas una vez y la IA lo usa cada vez que genera un plan, así no tienes que repetirlo.",
-      "goal": "Objetivo",
+      "goals": "Objetivos",
+      "goalsHint": "Puedes elegir más de uno (ej. ganar músculo + mantener peso).",
       "dietaryStyle": "Estilo de alimentación",
       "allergies": "Alergias",
       "allergiesPlaceholder": "ej. cacahuetes, marisco",
@@ -142,7 +143,6 @@
       "dislikedEmpty": "Aún no hay ingredientes excluidos.",
       "dislikedRemove": "Quitar de la lista",
       "goalOptions": {
-        "none": "Sin objetivo concreto",
         "lose_weight": "Perder peso",
         "gain_muscle": "Ganar músculo",
         "maintain": "Mantener peso",

@@ -46,15 +46,27 @@ function removeDislike(name) {
   store.removeDislikedIngredient(name)
 }
 
-const GOAL_VALUES = ['', 'lose_weight', 'gain_muscle', 'maintain', 'health']
+const GOAL_VALUES = ['lose_weight', 'gain_muscle', 'maintain', 'health']
 const STYLE_VALUES = ['', 'omnivore', 'vegetarian', 'vegan', 'pescatarian', 'mediterranean', 'keto', 'paleo', 'other']
 
 const goalOptions = computed(() =>
-  GOAL_VALUES.map((v) => ({ value: v, label: t(`settings.profile.goalOptions.${v || 'none'}`) }))
+  GOAL_VALUES.map((v) => ({ value: v, label: t(`settings.profile.goalOptions.${v}`) }))
 )
 const styleOptions = computed(() =>
   STYLE_VALUES.map((v) => ({ value: v, label: t(`settings.profile.styleOptions.${v || 'none'}`) }))
 )
+
+function isGoalActive(value) {
+  return Array.isArray(profile.goals) && profile.goals.includes(value)
+}
+
+function toggleGoal(value) {
+  const current = Array.isArray(profile.goals) ? [...profile.goals] : []
+  const idx = current.indexOf(value)
+  if (idx === -1) current.push(value)
+  else current.splice(idx, 1)
+  profile.goals = current
+}
 
 // Map the stored meal types to their localized label whenever the user
 // has not customized them. This way the editor reflects the current
@@ -197,20 +209,30 @@ async function handleTranslateAll() {
         <p class="settings__card-sub">{{ t('settings.profile.subtitle') }}</p>
       </header>
 
-      <div class="profile-grid">
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.goal') }}</span>
-          <select v-model="profile.goal" class="app-input">
-            <option v-for="o in goalOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-          </select>
-        </label>
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.dietaryStyle') }}</span>
-          <select v-model="profile.dietaryStyle" class="app-input">
-            <option v-for="o in styleOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-          </select>
-        </label>
+      <div class="field">
+        <span class="field__label">{{ t('settings.profile.goals') }}</span>
+        <div class="chip-group">
+          <button
+            v-for="o in goalOptions"
+            :key="o.value"
+            type="button"
+            class="chip-toggle"
+            :class="{ 'is-active': isGoalActive(o.value) }"
+            @click="toggleGoal(o.value)"
+          >
+            <Check v-if="isGoalActive(o.value)" :size="12" />
+            {{ o.label }}
+          </button>
+        </div>
+        <span class="field__hint">{{ t('settings.profile.goalsHint') }}</span>
       </div>
+
+      <label class="field">
+        <span class="field__label">{{ t('settings.profile.dietaryStyle') }}</span>
+        <select v-model="profile.dietaryStyle" class="app-input">
+          <option v-for="o in styleOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+        </select>
+      </label>
 
       <label class="field">
         <span class="field__label">{{ t('settings.profile.allergies') }}</span>
@@ -512,6 +534,49 @@ async function handleTranslateAll() {
   .profile-grid--5 {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.chip-toggle:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.chip-toggle.is-active {
+  background-color: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+[data-theme='dark'] .chip-toggle.is-active {
+  background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.field__hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 4px;
 }
 
 .dislike-block {
