@@ -1,11 +1,14 @@
 <script setup>
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X, Plus } from 'lucide-vue-next'
+import { X, Plus, Calculator } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { localizedDish } from '@/utils/dishLocale'
+import { chatAboutDish } from '@/services/dishChat'
+import { useDietStore } from '@/stores/dietStore'
 
 const { t, locale } = useI18n()
+const store = useDietStore()
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -76,6 +79,56 @@ function removeInstruction(index) {
 }
 function updateInstruction(index, value) {
   form.instructions[index] = value
+}
+
+const recalcBusy = ref(false)
+const recalcMsg = ref('')
+
+async function recalculateMacros() {
+  const ingredients = form.ingredients.filter((i) => i.name.trim())
+  if (ingredients.length === 0) return
+
+  recalcBusy.value = true
+  recalcMsg.value = ''
+
+  const fakeDish = {
+    name: form.name || 'Dish',
+    time: form.time,
+    calories: form.calories,
+    protein: form.protein,
+    carbs: form.carbs,
+    fat: form.fat,
+    vegetables: form.vegetables,
+    prepTime: form.prepTime,
+    cookTime: form.cookTime,
+    servings: form.servings,
+    ingredients,
+    instructions: form.instructions,
+    notes: form.notes,
+  }
+
+  const result = await chatAboutDish({
+    dish: fakeDish,
+    profile: store.profile,
+    history: [],
+    message: 'Recalculate the macros (calories, protein, carbs, fat, vegetables) based on the current ingredients and their amounts. Return the updatedDish with corrected values. Do not change any ingredients or instructions — only update the numeric nutrition fields.',
+    language: locale.value,
+  })
+
+  recalcBusy.value = false
+
+  if (result.success && result.updatedDish) {
+    form.calories = result.updatedDish.calories ?? form.calories
+    form.protein = result.updatedDish.protein ?? form.protein
+    form.carbs = result.updatedDish.carbs ?? form.carbs
+    form.fat = result.updatedDish.fat ?? form.fat
+    form.vegetables = result.updatedDish.vegetables ?? form.vegetables
+    recalcMsg.value = t('dishForm.recalculated')
+    setTimeout(() => (recalcMsg.value = ''), 3000)
+  } else {
+    recalcMsg.value = t('dishForm.recalculateError', { error: result.error || 'unknown' })
+    setTimeout(() => (recalcMsg.value = ''), 5000)
+  }
 }
 
 function handleSave() {
@@ -156,7 +209,23 @@ function handleSave() {
         </div>
 
         <div class="dish-form__macros">
-          <span class="dish-form__macros-label">{{ t('dishForm.nutrition') }}</span>
+          <div class="dish-form__macros-head">
+            <span class="dish-form__macros-label">{{ t('dishForm.nutrition') }}</span>
+            <button
+              type="button"
+              class="dish-form__recalc"
+              :disabled="recalcBusy"
+              @click="recalculateMacros"
+            >
+              <Calculator :size="12" />
+              {{ recalcBusy ? t('dishForm.recalculating') : t('dishForm.recalculate') }}
+            </button>
+          </div>
+          <Transition name="fade">
+            <p v-if="recalcMsg" class="dish-form__recalc-msg" :class="{ 'is-error': recalcMsg.includes('error') || recalcMsg.includes('No se') }">
+              {{ recalcMsg }}
+            </p>
+          </Transition>
           <div class="dish-form__grid-5">
             <label class="field">
               <span class="field__label">{{ t('settings.profile.calories') }}</span>
@@ -356,12 +425,64 @@ function handleSave() {
   border: 1px solid var(--border);
 }
 
+.dish-form__macros-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .dish-form__macros-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 700;
   color: var(--text-faint);
+}
+
+.dish-form__recalc {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.dish-form__recalc:hover:not(:disabled) {
+  background-color: var(--accent-tint);
+  border-color: var(--accent);
+}
+
+.dish-form__recalc:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dish-form__recalc-msg {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.dish-form__recalc-msg.is-error {
+  color: var(--danger);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 .dish-form__list {
