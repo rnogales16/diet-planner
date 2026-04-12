@@ -1,5 +1,5 @@
 <script setup>
-import { watch } from 'vue'
+import { watch, onUnmounted } from 'vue'
 import { X } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -17,31 +17,42 @@ function onBackdropClick(e) {
 }
 
 // Scroll lock: prevents the background page from scrolling while the modal
-// is open. On iOS this requires position:fixed on the body (overflow:hidden
-// alone is not enough because of rubber-band scrolling). We save and restore
-// the scroll position so the page doesn't jump.
+// is open. On iOS this requires position:fixed on the body.
 let savedScrollY = 0
+
+function lockScroll() {
+  savedScrollY = window.scrollY
+  document.body.style.position = 'fixed'
+  document.body.style.top = `-${savedScrollY}px`
+  document.body.style.left = '0'
+  document.body.style.right = '0'
+  document.body.style.overflow = 'hidden'
+}
+
+function unlockScroll() {
+  if (document.body.style.position !== 'fixed') return
+  document.body.style.position = ''
+  document.body.style.top = ''
+  document.body.style.left = ''
+  document.body.style.right = ''
+  document.body.style.overflow = ''
+  window.scrollTo(0, savedScrollY)
+}
 
 watch(
   () => props.show,
   (open) => {
-    if (open) {
-      savedScrollY = window.scrollY
-      document.body.style.position = 'fixed'
-      document.body.style.top = `-${savedScrollY}px`
-      document.body.style.left = '0'
-      document.body.style.right = '0'
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.left = ''
-      document.body.style.right = ''
-      document.body.style.overflow = ''
-      window.scrollTo(0, savedScrollY)
-    }
+    if (open) lockScroll()
+    else unlockScroll()
   },
 )
+
+// Safety net: if the component is destroyed (e.g. user navigated away
+// with the browser back button) without show being set to false, make
+// sure we release the scroll lock so the page doesn't get stuck.
+onUnmounted(() => {
+  unlockScroll()
+})
 </script>
 
 <template>
@@ -82,7 +93,6 @@ watch(
   background-color: rgb(0 0 0 / 0.45);
   backdrop-filter: blur(4px);
   padding: 16px;
-  /* Prevent iOS rubber-band on the backdrop itself */
   overscroll-behavior: contain;
 }
 
@@ -145,9 +155,6 @@ watch(
 .modal-body {
   padding: 24px;
   overflow-y: auto;
-  /* Contain the scroll to this element — stops body from scrolling and
-     prevents Chrome from toggling the address bar on/off while you
-     scroll inside the modal. */
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
@@ -178,18 +185,19 @@ watch(
 @media (max-width: 768px) {
   .modal-backdrop {
     padding: 0;
-    /* Align to bottom so the card acts as a bottom-sheet that grows
-       upward. Short content stays compact; long content fills the
-       screen and scrolls internally. */
-    align-items: flex-end;
+    /* The card fills the backdrop; it manages its own height. */
+    align-items: stretch;
+    justify-content: stretch;
   }
 
   .modal-card {
+    /* Fill the fixed-inset backdrop which is exactly the viewport. Using
+       flex:1 instead of 100vh/100dvh because those units are broken on
+       iOS Chrome and cause the header to get cut off. */
+    flex: 1;
     max-width: 100%;
-    max-height: 100dvh;
-    max-height: 100vh; /* fallback */
-    height: auto; /* content-driven, NOT forced full screen */
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: none;
+    border-radius: 0;
     border: none;
   }
 
@@ -216,16 +224,14 @@ watch(
     padding: 16px;
     flex: 1;
     min-height: 0;
-    /* Extra bottom padding so content isn't hidden behind the iPhone
-       home indicator when the sheet is tall enough to touch the bottom. */
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .modal-content-enter-from {
-    transform: translateY(100%);
+    transform: translateY(40px);
   }
   .modal-content-leave-to {
-    transform: translateY(100%);
+    transform: translateY(40px);
   }
 }
 </style>
