@@ -57,3 +57,8 @@ async function bootstrap() {
 }
 
 bootstrap()
+
+// Register the service worker for PWA (offline shell + installability).
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {})
+}
