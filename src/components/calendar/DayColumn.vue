@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MealSlot from './MealSlot.vue'
 import { isToday } from '@/utils/dateHelpers'
+import { sumMeals } from '@/utils/nutritionHelpers'
 import { useDietStore } from '@/stores/dietStore'
 
 const { t } = useI18n()
@@ -36,6 +37,9 @@ const enabledTypes = computed(() => {
 const visibleMeals = computed(() =>
   props.day.meals.filter((m) => enabledTypes.value.has(m.type)),
 )
+
+const dayTotals = computed(() => sumMeals(visibleMeals.value))
+const hasDishes = computed(() => visibleMeals.value.some((m) => m.dishes.length > 0))
 </script>
 
 <template>
@@ -56,6 +60,17 @@ const visibleMeals = computed(() =>
         @viewDish="$emit('viewDish', { dayIndex, ...$event })"
       />
     </div>
+
+    <footer v-if="hasDishes" class="day-col__footer">
+      <span class="day-col__total tabular">{{ dayTotals.calories }} {{ t('common.kcal') }}</span>
+      <div class="day-col__macros">
+        <span class="tabular">P{{ dayTotals.protein }}</span>
+        <span class="day-col__dot">·</span>
+        <span class="tabular">C{{ dayTotals.carbs }}</span>
+        <span class="day-col__dot">·</span>
+        <span class="tabular">F{{ dayTotals.fat }}</span>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -106,5 +121,34 @@ const visibleMeals = computed(() =>
   display: flex;
   flex-direction: column;
   gap: 14px;
+  flex: 1;
+}
+
+.day-col__footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 4px 0;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+
+.day-col__total {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.day-col__macros {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.day-col__dot {
+  color: var(--border-strong);
 }
 </style>
