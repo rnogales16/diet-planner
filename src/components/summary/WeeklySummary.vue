@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sparkles } from 'lucide-vue-next'
+import { Sparkles, Printer } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 import { useDietStore } from '@/stores/dietStore'
 
@@ -13,6 +13,10 @@ const props = defineProps({
 })
 
 defineEmits(['generate'])
+
+function printPlan() {
+  window.print()
+}
 
 const totals = computed(() => (props.week ? sumDays(props.week.days) : { calories: 0, protein: 0, carbs: 0, fat: 0 }))
 
@@ -76,6 +80,9 @@ const macros = computed(() => [
     <button type="button" class="app-btn app-btn--primary summary__cta" @click="$emit('generate')">
       <Sparkles :size="14" />
       {{ t('summary.generateWeek') }}
+    </button>
+    <button type="button" class="app-btn app-btn--ghost summary__print" @click="printPlan">
+      <Printer :size="14" />
     </button>
   </aside>
 </template>
@@ -190,6 +197,11 @@ const macros = computed(() => [
 .summary__cta {
   width: 100%;
   margin-top: 4px;
+}
+
+.summary__print {
+  width: 100%;
+  margin-top: -4px;
 }
 
 @media (max-width: 768px) {

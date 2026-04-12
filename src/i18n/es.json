@@ -292,12 +292,23 @@
     "body": "¿Eliminar {name}? Esto no se puede deshacer.",
     "thisDish": "este plato"
   },
+  "history": {
+    "title": "Historial",
+    "subtitle": "Medias semanales a lo largo del tiempo",
+    "empty": "Aún no hay semanas con datos. Genera un plan y aparecerá aquí.",
+    "week": "Semana",
+    "avg": "media/día"
+  },
   "shopping": {
     "title": "Lista de la compra",
     "subtitle": "Todo lo que necesitas comprar para el plan de la semana",
     "empty": "Aún no hay lista. Genera un plan primero y aparecerá aquí.",
     "generatedAt": "Generada {when}",
     "itemsCount": "{count} elemento | {count} elementos",
+    "copyList": "Copiar como texto",
+    "copied": "Copiado!",
+    "hideChecked": "Ocultar marcados",
+    "showAll": "Mostrar todos",
     "categories": {
       "vegetables": "Verduras",
       "fruits": "Frutas",

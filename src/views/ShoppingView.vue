@@ -29,14 +29,34 @@ const CATEGORY_ORDER = [
   'other',
 ]
 
-// Checked state is local to the session — we don't persist it to D1.
-const checked = ref(new Set())
+// Persist checked items in the week's shoppingList so they survive refresh.
+const hideChecked = ref(false)
+const copyMsg = ref('')
+
+const checkedSet = computed(() => new Set(week.value?.shoppingList?.checkedItems || []))
 
 function toggle(key) {
-  const next = new Set(checked.value)
-  if (next.has(key)) next.delete(key)
-  else next.add(key)
-  checked.value = next
+  if (!week.value?.shoppingList) return
+  const current = [...(week.value.shoppingList.checkedItems || [])]
+  const idx = current.indexOf(key)
+  if (idx === -1) current.push(key)
+  else current.splice(idx, 1)
+  week.value.shoppingList.checkedItems = current
+}
+
+function copyAsText() {
+  const lines = []
+  for (const group of grouped.value) {
+    lines.push(`\n${t(`shopping.categories.${group.key}`).toUpperCase()}`)
+    for (const item of group.items) {
+      const mark = checkedSet.value.has(item.name) ? '✓' : '○'
+      lines.push(`  ${mark} ${item.name} — ${item.amount}`)
+    }
+  }
+  navigator.clipboard.writeText(lines.join('\n').trim()).then(() => {
+    copyMsg.value = t('shopping.copied')
+    setTimeout(() => (copyMsg.value = ''), 2000)
+  }).catch(() => {})
 }
 
 const week = computed(() => store.currentWeek)
@@ -88,9 +108,19 @@ const generatedAtLabel = computed(() => {
       <p>{{ t('shopping.empty') }}</p>
     </div>
 
-    <div v-else class="shopping__meta">
-      <span>{{ t('shopping.itemsCount', items.length, { count: items.length }) }}</span>
-      <span v-if="generatedAtLabel">{{ generatedAtLabel }}</span>
+    <div v-else class="shopping__toolbar">
+      <div class="shopping__meta">
+        <span>{{ t('shopping.itemsCount', items.length, { count: items.length }) }}</span>
+        <span v-if="generatedAtLabel">{{ generatedAtLabel }}</span>
+      </div>
+      <div class="shopping__actions">
+        <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="hideChecked = !hideChecked">
+          {{ hideChecked ? t('shopping.showAll') : t('shopping.hideChecked') }}
+        </button>
+        <button type="button" class="app-btn app-btn--secondary app-btn--sm" @click="copyAsText">
+          {{ copyMsg || t('shopping.copyList') }}
+        </button>
+      </div>
     </div>
 
     <section v-for="group in grouped" :key="group.key" class="shopping__section app-card">
@@ -99,12 +129,13 @@ const generatedAtLabel = computed(() => {
         <li
           v-for="(item, i) in group.items"
           :key="`${group.key}-${i}-${item.name}`"
+          v-show="!hideChecked || !checkedSet.has(item.name)"
           class="shopping-item"
-          :class="{ 'is-checked': checked.has(`${group.key}-${i}-${item.name}`) }"
-          @click="toggle(`${group.key}-${i}-${item.name}`)"
+          :class="{ 'is-checked': checkedSet.has(item.name) }"
+          @click="toggle(item.name)"
         >
           <span class="shopping-item__checkbox">
-            <span v-if="checked.has(`${group.key}-${i}-${item.name}`)" class="shopping-item__tick">✓</span>
+            <span v-if="checkedSet.has(item.name)" class="shopping-item__tick">✓</span>
           </span>
           <span class="shopping-item__name">{{ item.name }}</span>
           <span v-if="item.amount" class="shopping-item__amount tabular">{{ item.amount }}</span>
@@ -171,13 +202,24 @@ const generatedAtLabel = computed(() => {
   text-align: center;
 }
 
+.shopping__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .shopping__meta {
   display: flex;
-  justify-content: space-between;
   gap: 12px;
   font-size: 12px;
   color: var(--text-faint);
-  padding: 0 4px;
+}
+
+.shopping__actions {
+  display: flex;
+  gap: 8px;
 }
 
 .shopping__section {
