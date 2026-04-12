@@ -8,7 +8,9 @@
 
 import { callGeminiWithFallback } from './_gemini.js'
 
-const MODEL_CASCADE = ['gemini-2.5-flash']
+// Flash-Lite is the cheapest model available. Translation is a simple
+// mechanical task — quality is fine and cost is ~10x lower than Flash.
+const MODEL_CASCADE = ['gemini-2.5-flash-lite', 'gemini-2.5-flash']
 
 const LANGUAGE_NAMES = {
   en: 'English',

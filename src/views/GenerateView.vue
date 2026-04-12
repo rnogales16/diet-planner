@@ -63,18 +63,28 @@ function doApply(mode) {
 }
 
 async function backfillOtherLanguages() {
+  // Wait a bit so the store sync has time to persist the plan first.
+  await new Promise((r) => setTimeout(r, 3000))
+
   const sourceLang = store.language || 'en'
   const others = SUPPORTED_LOCALES.filter((l) => l !== sourceLang)
   for (const target of others) {
-    try {
-      const dishes = store.collectDishesNeedingTranslation(target)
-      if (dishes.length === 0) continue
-      const result = await translateDishes(dishes, target)
-      if (result.success) {
-        store.applyDishTranslations(target, result.translations)
+    const dishes = store.collectDishesNeedingTranslation(target)
+    if (dishes.length === 0) continue
+
+    // Try up to 2 times with a pause between attempts.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const result = await translateDishes(dishes, target)
+        if (result.success && result.translations?.length) {
+          store.applyDishTranslations(target, result.translations)
+          break
+        }
+        // Non-success: wait and retry
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 5000))
+      } catch {
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 5000))
       }
-    } catch {
-      // Silent: best-effort.
     }
   }
 }
