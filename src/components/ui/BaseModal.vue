@@ -16,8 +16,6 @@ function onBackdropClick(e) {
   }
 }
 
-// Scroll lock: prevents the background page from scrolling while the modal
-// is open. On iOS this requires position:fixed on the body.
 let savedScrollY = 0
 
 function lockScroll() {
@@ -47,9 +45,6 @@ watch(
   },
 )
 
-// Safety net: if the component is destroyed (e.g. user navigated away
-// with the browser back button) without show being set to false, make
-// sure we release the scroll lock so the page doesn't get stuck.
 onUnmounted(() => {
   unlockScroll()
 })
@@ -185,20 +180,23 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .modal-backdrop {
     padding: 0;
-    /* The card fills the backdrop; it manages its own height. */
-    align-items: stretch;
-    justify-content: stretch;
+    /* Bottom-sheet: card grows upward from the bottom edge. For short
+       content the plan is visible above; for long content the card fills
+       the screen. The body scroll lock prevents Chrome bar animation. */
+    align-items: flex-end;
   }
 
   .modal-card {
-    /* Fill the fixed-inset backdrop which is exactly the viewport. Using
-       flex:1 instead of 100vh/100dvh because those units are broken on
-       iOS Chrome and cause the header to get cut off. */
-    flex: 1;
     max-width: 100%;
-    max-height: none;
-    border-radius: 0;
+    /* 100% of the fixed-inset backdrop = the current viewport. Using %
+       instead of dvh because iOS Chrome miscalculates dvh when its
+       address bar animates. With the body scroll lock active the Chrome
+       bar is frozen, so % is stable and correct. */
+    max-height: 100%;
+    height: auto; /* content-driven — short = compact, long = fills up */
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     border: none;
+    box-shadow: 0 -4px 24px rgb(0 0 0 / 0.15);
   }
 
   .modal-card--sm,
@@ -222,16 +220,16 @@ onUnmounted(() => {
 
   .modal-body {
     padding: 16px;
-    flex: 1;
+    flex-shrink: 1;
     min-height: 0;
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .modal-content-enter-from {
-    transform: translateY(40px);
+    transform: translateY(100%);
   }
   .modal-content-leave-to {
-    transform: translateY(40px);
+    transform: translateY(100%);
   }
 }
 </style>
