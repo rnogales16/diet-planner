@@ -234,6 +234,7 @@ export const useDietStore = defineStore('diet', {
     mealTypes: JSON.parse(JSON.stringify(DEFAULT_MEAL_TYPES)),
     profile: { ...DEFAULT_PROFILE },
     language: 'en',
+    favorites: [], // saved dishes the user can reuse across weeks
     // True once the initial server load (or migration) has finished, so we
     // don't push back to the server while we're still hydrating local state.
     hydrated: false,
@@ -436,6 +437,9 @@ export const useDietStore = defineStore('diet', {
         if (typeof payload.language === 'string') {
           this.language = payload.language
         }
+        if (Array.isArray(payload.favorites)) {
+          this.favorites = payload.favorites
+        }
       }
       this.hydrated = true
     },
@@ -448,6 +452,7 @@ export const useDietStore = defineStore('diet', {
         mealTypes: this.mealTypes,
         profile: this.profile,
         language: this.language,
+        favorites: this.favorites,
       }
     },
 
@@ -476,6 +481,47 @@ export const useDietStore = defineStore('diet', {
 
     setLanguage(language) {
       this.language = language
+    },
+
+    // Favorites
+    addFavorite(dish) {
+      const clone = JSON.parse(JSON.stringify(dish))
+      clone.favId = String(Date.now())
+      delete clone.id // will get a new id when added to a meal
+      this.favorites.push(clone)
+      return clone.favId
+    },
+
+    removeFavorite(favId) {
+      this.favorites = this.favorites.filter((d) => d.favId !== favId)
+    },
+
+    isFavorite(dishName) {
+      return this.favorites.some((f) => f.name === dishName)
+    },
+
+    // Copy a dish to another day/meal in the current week
+    copyDishTo(weekKey, fromDayIndex, fromMealType, dishId, toDayIndex, toMealType) {
+      const week = this.weeks[weekKey]
+      if (!week) return false
+      const srcMeal = week.days[fromDayIndex]?.meals.find((m) => m.type === fromMealType)
+      const dish = srcMeal?.dishes.find((d) => d.id === dishId)
+      if (!dish) return false
+      const clone = JSON.parse(JSON.stringify(dish))
+      clone.id = generateId()
+      const destMeal = week.days[toDayIndex]?.meals.find((m) => m.type === toMealType)
+      if (!destMeal) return false
+      destMeal.dishes = [clone] // replace
+      return true
+    },
+
+    // Move a dish (copy + delete original)
+    moveDishTo(weekKey, fromDayIndex, fromMealType, dishId, toDayIndex, toMealType) {
+      const copied = this.copyDishTo(weekKey, fromDayIndex, fromMealType, dishId, toDayIndex, toMealType)
+      if (copied) {
+        this.deleteDish(weekKey, fromDayIndex, fromMealType, dishId)
+      }
+      return copied
     },
 
     // Returns true if the given week exists and has at least one dish in

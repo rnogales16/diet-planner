@@ -1,10 +1,12 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pencil, Trash2 } from 'lucide-vue-next'
+import { Pencil, Trash2, Heart } from 'lucide-vue-next'
 import { localizedDish } from '@/utils/dishLocale'
+import { useDietStore } from '@/stores/dietStore'
 
 const { t, locale } = useI18n()
+const store = useDietStore()
 
 const props = defineProps({
   dish: { type: Object, required: true },
@@ -13,6 +15,17 @@ const props = defineProps({
 defineEmits(['edit', 'delete', 'view'])
 
 const view = computed(() => localizedDish(props.dish, locale.value))
+const isFav = computed(() => store.isFavorite(props.dish.name))
+
+function toggleFavorite(e) {
+  e.stopPropagation()
+  if (isFav.value) {
+    const fav = store.favorites.find((f) => f.name === props.dish.name)
+    if (fav) store.removeFavorite(fav.favId)
+  } else {
+    store.addFavorite(props.dish)
+  }
+}
 </script>
 
 <template>
@@ -20,6 +33,14 @@ const view = computed(() => localizedDish(props.dish, locale.value))
     <header class="dish-card__head">
       <h4 class="dish-card__name font-display">{{ view.name || t('common.untitled') }}</h4>
       <div class="dish-card__actions">
+        <button
+          type="button"
+          :title="isFav ? t('dishCard.unfavorite') : t('dishCard.favorite')"
+          :class="{ 'is-fav': isFav }"
+          @click="toggleFavorite"
+        >
+          <Heart :size="12" :fill="isFav ? 'currentColor' : 'none'" />
+        </button>
         <button type="button" :title="t('dishCard.edit')" @click.stop="$emit('edit', dish)">
           <Pencil :size="12" />
         </button>
@@ -113,6 +134,10 @@ const view = computed(() => localizedDish(props.dish, locale.value))
 
 .dish-card__actions button.danger:hover {
   color: var(--danger);
+}
+
+.dish-card__actions button.is-fav {
+  color: #e74c3c;
 }
 
 .dish-card__meta {

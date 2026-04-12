@@ -23,6 +23,7 @@ const { t } = useI18n()
         <RouterLink to="/" class="app-nav__link" active-class="is-active" exact-active-class="is-active">{{ t('header.planner') }}</RouterLink>
         <RouterLink to="/generate" class="app-nav__link" active-class="is-active">{{ t('header.generate') }}</RouterLink>
         <RouterLink to="/shopping" class="app-nav__link" active-class="is-active">{{ t('header.shopping') }}</RouterLink>
+        <RouterLink to="/favorites" class="app-nav__link" active-class="is-active">{{ t('header.favorites') }}</RouterLink>
         <RouterLink to="/settings" class="app-nav__link" active-class="is-active">{{ t('header.settings') }}</RouterLink>
       </nav>
 

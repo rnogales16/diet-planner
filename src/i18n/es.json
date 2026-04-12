@@ -22,6 +22,7 @@
     "planner": "Semana",
     "generate": "Generar",
     "shopping": "Compra",
+    "favorites": "Favoritos",
     "settings": "Ajustes"
   },
   "theme": {
@@ -212,7 +213,23 @@
   },
   "dishCard": {
     "edit": "Editar",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "favorite": "Guardar en favoritos",
+    "unfavorite": "Quitar de favoritos",
+    "copyTo": "Copiar a…",
+    "moveTo": "Mover a…"
+  },
+  "copyMove": {
+    "title": "Selecciona destino",
+    "copy": "Copiar aquí",
+    "move": "Mover aquí"
+  },
+  "favorites": {
+    "title": "Platos favoritos",
+    "subtitle": "Platos que has guardado para reutilizar",
+    "empty": "Aún no hay favoritos. Pulsa el corazón en cualquier plato para guardarlo aquí.",
+    "addTo": "Añadir al planificador",
+    "remove": "Eliminar"
   },
   "dishDetail": {
     "title": "Detalle del plato",
