@@ -3,7 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDietStore } from '@/stores/dietStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
-import { createEmptyDish } from '@/utils/defaults'
+import { createEmptyDish, generateId } from '@/utils/defaults'
+import { regenerateSingleMeal } from '@/services/regenerateMeal'
 import WeekNavigator from '@/components/calendar/WeekNavigator.vue'
 import WeeklyCalendar from '@/components/calendar/WeeklyCalendar.vue'
 import WeeklySummary from '@/components/summary/WeeklySummary.vue'
@@ -110,6 +111,41 @@ function confirmDelete() {
 function goToGenerate() {
   router.push('/generate')
 }
+
+// Regenerate a single meal slot via AI
+const regenDay = ref(-1)
+const regenMeal = ref('')
+
+async function handleRegenerateMeal({ dayIndex, mealType }) {
+  regenDay.value = dayIndex
+  regenMeal.value = mealType
+
+  const result = await regenerateSingleMeal({
+    mealType,
+    dayIndex,
+    weekKey: weekKey.value,
+  })
+
+  regenDay.value = -1
+  regenMeal.value = ''
+
+  if (result.success && result.dish) {
+    store.addDish(weekKey.value, dayIndex, mealType, {
+      ...result.dish,
+      id: generateId(),
+    })
+    // In replace-style: remove existing dishes for this meal first, keep only the new one
+    const week = store.weeks[weekKey.value]
+    if (week) {
+      const day = week.days[dayIndex]
+      const meal = day?.meals.find((m) => m.type === mealType)
+      if (meal && meal.dishes.length > 1) {
+        // Keep only the last one (the one we just added)
+        meal.dishes = [meal.dishes[meal.dishes.length - 1]]
+      }
+    }
+  }
+}
 </script>
 
 <template>
@@ -128,10 +164,13 @@ function goToGenerate() {
         v-if="store.currentWeek"
         class="planner__calendar"
         :week="store.currentWeek"
+        :regeneratingDay="regenDay"
+        :regeneratingMeal="regenMeal"
         @addDish="handleAddDish"
         @editDish="handleEditDish"
         @deleteDish="handleDeleteDish"
         @viewDish="handleViewDish"
+        @regenerateMeal="handleRegenerateMeal"
       />
 
       <WeeklySummary :week="store.currentWeek" @generate="goToGenerate" />

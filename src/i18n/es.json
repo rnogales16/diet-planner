@@ -60,7 +60,9 @@
     "generateWeek": "Generar semana"
   },
   "mealSlot": {
-    "addDish": "Añadir plato"
+    "addDish": "Añadir plato",
+    "regenerate": "Regenerar",
+    "regenerating": "Generando…"
   },
   "mealTypes": {
     "breakfast": "Desayuno",

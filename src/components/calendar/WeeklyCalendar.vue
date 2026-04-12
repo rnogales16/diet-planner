@@ -3,9 +3,11 @@ import DayColumn from './DayColumn.vue'
 
 defineProps({
   week: { type: Object, required: true },
+  regeneratingDay: { type: Number, default: -1 },
+  regeneratingMeal: { type: String, default: '' },
 })
 
-defineEmits(['addDish', 'editDish', 'deleteDish', 'viewDish'])
+defineEmits(['addDish', 'editDish', 'deleteDish', 'viewDish', 'regenerateMeal'])
 </script>
 
 <template>
@@ -15,10 +17,12 @@ defineEmits(['addDish', 'editDish', 'deleteDish', 'viewDish'])
       :key="day.date"
       :day="day"
       :dayIndex="idx"
+      :regeneratingMeal="regeneratingDay === idx ? regeneratingMeal : ''"
       @addDish="$emit('addDish', $event)"
       @editDish="$emit('editDish', $event)"
       @deleteDish="$emit('deleteDish', $event)"
       @viewDish="$emit('viewDish', $event)"
+      @regenerateMeal="$emit('regenerateMeal', $event)"
     />
   </div>
 </template>

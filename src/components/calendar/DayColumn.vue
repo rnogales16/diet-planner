@@ -12,9 +12,10 @@ const store = useDietStore()
 const props = defineProps({
   day: { type: Object, required: true },
   dayIndex: { type: Number, required: true },
+  regeneratingMeal: { type: String, default: '' },
 })
 
-defineEmits(['addDish', 'editDish', 'deleteDish', 'viewDish'])
+defineEmits(['addDish', 'editDish', 'deleteDish', 'viewDish', 'regenerateMeal'])
 
 const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
@@ -54,10 +55,12 @@ const hasDishes = computed(() => visibleMeals.value.some((m) => m.dishes.length 
         v-for="meal in visibleMeals"
         :key="meal.type"
         :meal="meal"
+        :regenerating="regeneratingMeal === meal.type"
         @addDish="$emit('addDish', { dayIndex, mealType: $event })"
         @editDish="$emit('editDish', { dayIndex, ...$event })"
         @deleteDish="$emit('deleteDish', { dayIndex, ...$event })"
         @viewDish="$emit('viewDish', { dayIndex, ...$event })"
+        @regenerate="$emit('regenerateMeal', { dayIndex, mealType: $event })"
       />
     </div>
 
