@@ -199,9 +199,20 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
     lines.push(`### MANDATORY DAILY TARGETS — must be met within ±10% every day`)
     lines.push(`${targets.join(' · ')}`)
     if (p.calorieTarget && p.proteinTarget && p.carbsTarget && p.fatTarget) {
-      // Sanity check the math: 1g protein = 4 kcal, 1g carb = 4 kcal, 1g fat = 9 kcal
       const macroKcal = p.proteinTarget * 4 + p.carbsTarget * 4 + p.fatTarget * 9
-      lines.push(`(For reference, ${p.proteinTarget}P + ${p.carbsTarget}C + ${p.fatTarget}F adds up to about ${macroKcal} kcal — make sure your dish quantities respect this.)`)
+      const gap = Math.abs(macroKcal - p.calorieTarget)
+      if (gap > p.calorieTarget * 0.05) {
+        // Macro grams don't add up to the calorie target. Tell the model
+        // to follow the CALORIE target as primary and scale macros up/down.
+        const scale = p.calorieTarget / macroKcal
+        const adjP = Math.round(p.proteinTarget * scale)
+        const adjC = Math.round(p.carbsTarget * scale)
+        const adjF = Math.round(p.fatTarget * scale)
+        lines.push('')
+        lines.push(`IMPORTANT: the stated macros (${p.proteinTarget}P + ${p.carbsTarget}C + ${p.fatTarget}F) add up to ~${macroKcal} kcal, but the calorie target is ${p.calorieTarget} kcal. THE CALORIE TARGET IS PRIMARY. Scale all ingredient quantities so that each day totals ${p.calorieTarget} kcal ±10%. Use these adjusted macro targets instead: ~${adjP}g protein, ~${adjC}g carbs, ~${adjF}g fat. These adjusted values add up to ~${p.calorieTarget} kcal.`)
+      } else {
+        lines.push(`(For reference, ${p.proteinTarget}P + ${p.carbsTarget}C + ${p.fatTarget}F adds up to about ${macroKcal} kcal — make sure your dish quantities respect this.)`)
+      }
     }
     lines.push('Do NOT normalize these toward typical ratios. The user picked these targets on purpose.')
   }
