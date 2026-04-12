@@ -182,11 +182,12 @@ function close() {
   opacity: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .gen-banner {
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
+    left: 12px;
+    right: 12px;
+    /* Sit above the mobile bottom nav bar */
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
     min-width: 0;
     max-width: none;
   }

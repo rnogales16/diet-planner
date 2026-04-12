@@ -254,12 +254,22 @@ async function handleRegenerate() {
   opacity: 0.85;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .generate-card {
-    padding: 20px;
+    padding: 16px;
+  }
+  .generate-hero {
+    margin: 8px 0 0;
   }
   .generate-hero__title {
-    font-size: 26px;
+    font-size: 22px;
+  }
+  .generate-hero__sub {
+    font-size: 13px;
+  }
+  .target-week {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 

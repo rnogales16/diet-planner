@@ -130,21 +130,22 @@ const { t } = useI18n()
   border: 1px solid var(--border);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .app-header__inner {
     grid-template-columns: 1fr auto;
-    gap: 12px;
+    height: 52px;
+    padding: 0 12px;
+    gap: 8px;
   }
+  /* Navigation moves to the MobileNav bottom bar */
   .app-nav {
-    grid-column: 1 / -1;
-    order: 3;
-    justify-self: stretch;
-    justify-content: space-between;
+    display: none;
   }
-  .app-header__inner {
-    height: auto;
-    padding: 12px 16px;
-    grid-template-rows: auto auto;
+  .avatar {
+    display: none;
+  }
+  .brand__name {
+    font-size: 15px;
   }
 }
 </style>

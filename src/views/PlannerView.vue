@@ -191,4 +191,13 @@ function goToGenerate() {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .planner {
+    gap: 16px;
+  }
+  .planner__layout {
+    gap: 16px;
+  }
+}
 </style>

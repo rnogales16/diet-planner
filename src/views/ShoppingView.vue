@@ -251,4 +251,18 @@ const generatedAtLabel = computed(() => {
   text-decoration: line-through;
   color: var(--text-faint);
 }
+
+@media (max-width: 768px) {
+  .shopping__head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .shopping__section {
+    padding: 16px;
+  }
+  .shopping__title {
+    font-size: 22px;
+  }
+}
 </style>

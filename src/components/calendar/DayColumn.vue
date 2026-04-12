@@ -34,7 +34,7 @@ const enabledTypes = computed(() => {
 })
 
 const visibleMeals = computed(() =>
-  props.day.meals.filter((m) => enabledTypes.value.has(m.type) || m.dishes.length > 0),
+  props.day.meals.filter((m) => enabledTypes.value.has(m.type)),
 )
 </script>
 

@@ -85,6 +85,13 @@ const view = computed(() => localizedDish(props.dish, locale.value))
   opacity: 1;
 }
 
+/* Touch devices have no hover — always show the actions */
+@media (hover: none) {
+  .dish-card__actions {
+    opacity: 1;
+  }
+}
+
 .dish-card__actions button {
   width: 20px;
   height: 20px;

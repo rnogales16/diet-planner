@@ -1,5 +1,6 @@
 <script setup>
 import AppHeader from '@/components/layout/AppHeader.vue'
+import MobileNav from '@/components/layout/MobileNav.vue'
 import GenerationBanner from '@/components/layout/GenerationBanner.vue'
 import { useTheme } from '@/composables/useTheme'
 
@@ -12,6 +13,7 @@ useTheme()
     <main class="app-main">
       <RouterView />
     </main>
+    <MobileNav />
     <GenerationBanner />
   </div>
 </template>
@@ -29,9 +31,11 @@ useTheme()
   padding: 32px 24px 64px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .app-main {
-    padding: 20px 16px 48px;
+    padding: 16px 12px;
+    /* Space for the fixed bottom navigation bar */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>

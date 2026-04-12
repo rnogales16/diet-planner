@@ -191,4 +191,13 @@ const macros = computed(() => [
   width: 100%;
   margin-top: 4px;
 }
+
+@media (max-width: 768px) {
+  .summary {
+    position: static;
+  }
+  .summary__kcal-value {
+    font-size: 26px;
+  }
+}
 </style>

@@ -78,4 +78,15 @@ defineEmits(['prev', 'next', 'today'])
   color: var(--accent);
   border-color: var(--accent);
 }
+
+@media (max-width: 768px) {
+  .week-nav {
+    width: 100%;
+    justify-content: center;
+  }
+  .week-nav__label {
+    min-width: 140px;
+    font-size: 13px;
+  }
+}
 </style>

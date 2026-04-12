@@ -563,6 +563,34 @@ async function handleTranslateAll() {
   transform: translateX(14px);
 }
 
+@media (max-width: 768px) {
+  .settings__title {
+    font-size: 24px;
+  }
+  .settings__card {
+    padding: 16px;
+  }
+  .meal-row {
+    grid-template-columns: 28px 1fr 90px 34px;
+    gap: 8px;
+  }
+  .profile-grid--5 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .chip-group {
+    gap: 5px;
+  }
+  .chip-toggle {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  .data-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

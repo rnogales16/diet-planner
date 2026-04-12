@@ -457,6 +457,12 @@ function dislikeIngredient(name) {
   opacity: 1;
 }
 
+@media (hover: none) {
+  .ingredients__dislike {
+    opacity: 0.7;
+  }
+}
+
 .ingredients__dislike:hover:not(:disabled) {
   color: var(--danger);
   background-color: var(--danger-tint);
