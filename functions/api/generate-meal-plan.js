@@ -93,7 +93,13 @@ The user provides daily targets for calories, protein, carbs, fat AND vegetables
 
 - The total of the ${enabledMealTypes.length} meal(s) each day MUST land within ±10% of every provided target — calories, protein, carbs, fat AND vegetables. All five, every day.
 - Do NOT normalize the user's macro split toward a "typical" distribution. If the user asks for a high-carb low-fat plan, deliver exactly that. If they ask for keto, deliver that. The targets always win over your defaults.
-- Distribute the daily totals across the meals sensibly: main meals (breakfast, lunch, dinner) should carry the bulk of the calories and protein; snacks should be appropriately smaller. When the user has disabled snacks, shift that share to lunch and dinner — still respecting the daily target.
+- Distribute the daily totals across the meals following this hierarchy:
+  * LUNCH is always the biggest meal of the day (~30-35% of daily kcal). It should have the most calories.
+  * BREAKFAST is the second biggest (~22-25%).
+  * DINNER must be LIGHTER than lunch (~20-25%). Never make dinner the heaviest meal — heavier dinners hurt sleep and insulin sensitivity.
+  * SNACKS (morning_snack, afternoon_snack) are small (~8-12% each).
+  * When the user has disabled snacks, redistribute their share to lunch and breakfast — NOT to dinner.
+  * This hierarchy applies to all macros, not just calories.
 - Ingredient quantities MUST genuinely add up to the dish's stated macros. A dish that says 600 kcal / 40g protein / 80g vegetables must have ingredients whose real-world values total ~600 kcal / ~40g protein and contain ~80g of vegetables. Use accurate per-ingredient values from common nutrition tables.
 - Before finalizing each day, mentally sum the 5 dishes' calories, protein, carbs, fat and vegetables. If any total drifts more than 10% from the daily target, adjust ingredient quantities (typically the staple carb, protein source, or veg portion) to bring it in line. Iterate until all five totals fit.
 
