@@ -178,17 +178,18 @@ watch(
 @media (max-width: 768px) {
   .modal-backdrop {
     padding: 0;
-    align-items: stretch;
+    /* Align to bottom so the card acts as a bottom-sheet that grows
+       upward. Short content stays compact; long content fills the
+       screen and scrolls internally. */
+    align-items: flex-end;
   }
 
   .modal-card {
     max-width: 100%;
-    max-height: 100%;
-    /* dvh = dynamic viewport height: adjusts when Chrome's address bar
-       hides/shows. 100dvh always equals the visible area. */
-    height: 100dvh;
-    height: 100vh; /* fallback for browsers without dvh */
-    border-radius: 0;
+    max-height: 100dvh;
+    max-height: 100vh; /* fallback */
+    height: auto; /* content-driven, NOT forced full screen */
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     border: none;
   }
 
@@ -199,7 +200,6 @@ watch(
 
   .modal-head {
     padding: 14px 16px;
-    /* Make sure the close button is always reachable even with long titles */
     gap: 12px;
   }
 
@@ -216,6 +216,9 @@ watch(
     padding: 16px;
     flex: 1;
     min-height: 0;
+    /* Extra bottom padding so content isn't hidden behind the iPhone
+       home indicator when the sheet is tall enough to touch the bottom. */
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .modal-content-enter-from {

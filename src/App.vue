@@ -35,7 +35,7 @@ useTheme()
   .app-main {
     padding: 16px 12px;
     /* Space for the fixed bottom navigation bar */
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>

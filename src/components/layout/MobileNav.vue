@@ -44,8 +44,8 @@ const links = [
     z-index: 40;
     background-color: var(--surface);
     border-top: 1px solid var(--border);
-    padding: 6px 8px;
-    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 8px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     justify-content: space-around;
     gap: 4px;
   }
