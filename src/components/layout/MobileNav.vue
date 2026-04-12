@@ -50,6 +50,21 @@ const links = [
     gap: 4px;
   }
 
+  /* Extend the nav background past the bottom edge so there's never a
+     gap when Chrome's address bar hides on iOS/Android. The pseudo-
+     element covers any space below the safe-area inset all the way to
+     the physical bottom of the screen. */
+  .mobile-nav::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -100px;
+    height: 100px;
+    background-color: var(--surface);
+    pointer-events: none;
+  }
+
   .mobile-nav__link {
     display: flex;
     flex-direction: column;
