@@ -163,13 +163,10 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
   ]
 
   // Disliked / forbidden ingredients go first, in an impossible-to-miss block.
-  // Commercial LLMs are notorious for sliding common "healthy" ingredients
-  // (cucumber, spinach, tomato…) into dishes even when told not to, so we
-  // repeat them here, in the system prompt, and again at the end.
-  const allergies = (p.allergies || '').trim()
+  const allergiesRaw = (p.allergiesAndIntolerances || p.allergies || '').trim()
   const disliked = Array.isArray(p.dislikedIngredients) ? p.dislikedIngredients : []
   const forbidden = [
-    ...(allergies ? allergies.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : []),
+    ...(allergiesRaw ? allergiesRaw.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : []),
     ...disliked,
   ]
   if (forbidden.length) {
@@ -190,7 +187,6 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
     lines.push(`- Goals: ${labels.join(' AND ')}`)
   }
   if (p.dietaryStyle) lines.push(`- Dietary style: ${STYLE_LABELS[p.dietaryStyle] || p.dietaryStyle}`)
-  if (p.restrictions) lines.push(`- Restrictions and dislikes: ${p.restrictions}`)
   if (p.favourites) lines.push(`- Favourite foods (use often): ${p.favourites}`)
   if (p.cuisines) lines.push(`- Preferred cuisines: ${p.cuisines}`)
 
@@ -345,8 +341,7 @@ function sanitizeProfile(raw) {
   return {
     goals: sanitizeGoals(raw.goals ?? raw.goal),
     dietaryStyle: trim(raw.dietaryStyle, 40),
-    allergies: trim(raw.allergies, 500),
-    restrictions: trim(raw.restrictions, 500),
+    allergiesAndIntolerances: trim(raw.allergiesAndIntolerances || raw.allergies || '', 500),
     favourites: trim(raw.favourites, 500),
     cuisines: trim(raw.cuisines, 500),
     calorieTarget: num(raw.calorieTarget),
@@ -390,7 +385,7 @@ export async function onRequestPost({ request, env }) {
   const systemPrompt = buildSystemPrompt(language, enabledMealTypes)
 
   // Collect the full list of forbidden items so we can also check server-side.
-  const allergyList = (profile.allergies || '')
+  const allergyList = (profile.allergiesAndIntolerances || profile.allergies || '')
     .split(/[,;]/)
     .map((s) => s.trim())
     .filter(Boolean)

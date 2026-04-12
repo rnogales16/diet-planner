@@ -213,8 +213,7 @@ const EXAMPLE_DISHES = [
 const DEFAULT_PROFILE = {
   goals: [],               // any combination of 'lose_weight' | 'gain_muscle' | 'maintain' | 'health'
   dietaryStyle: '',        // 'omnivore' | 'vegetarian' | 'vegan' | 'pescatarian' | 'mediterranean' | 'keto' | 'paleo' | 'other'
-  allergies: '',           // free text
-  restrictions: '',        // free text (dislikes, intolerances)
+  allergiesAndIntolerances: '', // free text — allergies, intolerances, medical restrictions
   favourites: '',          // free text (loved ingredients/cuisines)
   cuisines: '',            // free text (preferred cuisines)
   calorieTarget: null,
@@ -425,6 +424,13 @@ export const useDietStore = defineStore('diet', {
             incoming.goals = incoming.goal ? [incoming.goal] : []
           }
           delete incoming.goal
+          // Legacy profiles had separate allergies + restrictions fields.
+          if (!incoming.allergiesAndIntolerances && (incoming.allergies || incoming.restrictions)) {
+            const parts = [incoming.allergies, incoming.restrictions].filter(Boolean)
+            incoming.allergiesAndIntolerances = parts.join(', ')
+          }
+          delete incoming.allergies
+          delete incoming.restrictions
           this.profile = incoming
         }
         if (typeof payload.language === 'string') {

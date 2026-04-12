@@ -235,12 +235,8 @@ async function handleTranslateAll() {
       </label>
 
       <label class="field">
-        <span class="field__label">{{ t('settings.profile.allergies') }}</span>
-        <input v-model="profile.allergies" class="app-input" :placeholder="t('settings.profile.allergiesPlaceholder')" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('settings.profile.restrictions') }}</span>
-        <input v-model="profile.restrictions" class="app-input" :placeholder="t('settings.profile.restrictionsPlaceholder')" />
+        <span class="field__label">{{ t('settings.profile.allergiesAndIntolerances') }}</span>
+        <input v-model="profile.allergiesAndIntolerances" class="app-input" :placeholder="t('settings.profile.allergiesAndIntolerancesPlaceholder')" />
       </label>
       <label class="field">
         <span class="field__label">{{ t('settings.profile.favourites') }}</span>

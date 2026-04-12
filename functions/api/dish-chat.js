@@ -101,8 +101,9 @@ function buildContextMessage(dish, profile) {
     if (Array.isArray(profile.goals) && profile.goals.length) p.goals = profile.goals
     else if (typeof profile.goal === 'string' && profile.goal) p.goals = [profile.goal]
     if (profile.dietaryStyle) p.dietaryStyle = profile.dietaryStyle
-    if (profile.allergies) p.allergies = profile.allergies
-    if (profile.restrictions) p.restrictions = profile.restrictions
+    if (profile.allergiesAndIntolerances || profile.allergies) {
+      p.allergiesAndIntolerances = profile.allergiesAndIntolerances || profile.allergies
+    }
     if (Array.isArray(profile.dislikedIngredients) && profile.dislikedIngredients.length) {
       p.dislikedIngredients = profile.dislikedIngredients
     }
