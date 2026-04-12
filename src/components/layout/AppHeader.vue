@@ -1,6 +1,7 @@
 <script setup>
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import AppLogo from './AppLogo.vue'
 import ThemeToggle from './ThemeToggle.vue'
 import SyncIndicator from './SyncIndicator.vue'
 import LanguageToggle from './LanguageToggle.vue'
@@ -14,7 +15,7 @@ const { t } = useI18n()
   <header class="app-header">
     <div class="app-header__inner">
       <RouterLink to="/" class="brand">
-        <span class="brand__dot" />
+        <AppLogo :size="26" />
         <span class="brand__name font-display">{{ t('header.brand') }}</span>
       </RouterLink>
 
@@ -63,14 +64,6 @@ const { t } = useI18n()
   text-decoration: none;
   color: var(--text);
   justify-self: start;
-}
-
-.brand__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .brand__name {
