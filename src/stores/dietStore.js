@@ -1,4 +1,27 @@
 import { defineStore } from 'pinia'
+
+// Merge a list of amount strings like ["150g", "200g", "1 unit"] into a
+// single string. If they share the same unit, sum them. Otherwise join.
+function mergeAmounts(amounts) {
+  const filtered = amounts.map((a) => String(a || '').trim()).filter(Boolean)
+  if (filtered.length === 0) return ''
+  if (filtered.length === 1) return filtered[0]
+
+  // Try numeric merge: parse "150g" → { value: 150, unit: 'g' }
+  const parsed = filtered.map((s) => {
+    const m = s.match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/)
+    if (!m) return null
+    return { value: parseFloat(m[1].replace(',', '.')), unit: m[2].toLowerCase().trim() }
+  })
+
+  if (parsed.every((p) => p && p.unit === parsed[0]?.unit)) {
+    const total = parsed.reduce((sum, p) => sum + p.value, 0)
+    const unit = parsed[0].unit
+    return `${Math.round(total * 10) / 10}${unit ? ' ' + unit : ''}`
+  }
+
+  return filtered.join(' + ')
+}
 import { getWeekKey, getWeekDates } from '@/utils/dateHelpers'
 import { DEFAULT_MEAL_TYPES, createEmptyWeek, generateId } from '@/utils/defaults'
 
@@ -481,6 +504,44 @@ export const useDietStore = defineStore('diet', {
 
     setLanguage(language) {
       this.language = language
+    },
+
+    // Rebuild the shopping list from the current dishes in the week.
+    // Groups by ingredient name (case-insensitive), sums amounts when
+    // they share the same unit, otherwise concatenates.
+    rebuildShoppingList(weekKey) {
+      const week = this.weeks[weekKey]
+      if (!week) return
+
+      const map = new Map() // lowercase name → { name, amounts: Map<unit, number>, raw: string[] }
+
+      for (const day of week.days) {
+        for (const meal of day.meals) {
+          for (const dish of meal.dishes) {
+            for (const ing of (dish.ingredients || [])) {
+              if (!ing.name) continue
+              const key = ing.name.toLowerCase().trim()
+              if (!map.has(key)) {
+                map.set(key, { name: ing.name, raw: [] })
+              }
+              map.get(key).raw.push(ing.amount || '')
+            }
+          }
+        }
+      }
+
+      // Try to merge amounts: parse "150g" + "200g" → "350g"
+      const items = []
+      for (const [, entry] of map) {
+        const merged = mergeAmounts(entry.raw)
+        items.push({ name: entry.name, amount: merged, category: 'other' })
+      }
+
+      week.shoppingList = {
+        generatedAt: Date.now(),
+        items,
+        checkedItems: week.shoppingList?.checkedItems || [],
+      }
     },
 
     // Favorites

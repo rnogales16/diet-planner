@@ -58,7 +58,12 @@
     "carbs": "Carbs",
     "fat": "Fat",
     "vegetables": "Vegetables",
-    "generateWeek": "Generate week"
+    "generateWeek": "Generate week",
+    "swapPlaceholder": "e.g. potato → sweet potato",
+    "swapBtn": "Swap",
+    "swapping": "Swapping…",
+    "swapDone": "Swapped in {count} dish | Swapped in {count} dishes",
+    "swapNone": "No dishes found with that ingredient"
   },
   "mealSlot": {
     "addDish": "Add dish",
@@ -305,6 +310,8 @@
     "empty": "No shopping list yet. Generate a plan first and it will appear here.",
     "generatedAt": "Generated {when}",
     "itemsCount": "{count} item | {count} items",
+    "recalcList": "Recalculate from dishes",
+    "recalcDone": "List updated",
     "copyList": "Copy as text",
     "copied": "Copied!",
     "hideChecked": "Hide checked",

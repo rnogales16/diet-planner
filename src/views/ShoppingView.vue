@@ -44,6 +44,14 @@ function toggle(key) {
   week.value.shoppingList.checkedItems = current
 }
 
+const recalcMsg = ref('')
+
+function recalcList() {
+  store.rebuildShoppingList(store.currentWeekKey)
+  recalcMsg.value = t('shopping.recalcDone')
+  setTimeout(() => (recalcMsg.value = ''), 2000)
+}
+
 function copyAsText() {
   const lines = []
   for (const group of grouped.value) {
@@ -114,6 +122,9 @@ const generatedAtLabel = computed(() => {
         <span v-if="generatedAtLabel">{{ generatedAtLabel }}</span>
       </div>
       <div class="shopping__actions">
+        <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="recalcList">
+          {{ recalcMsg || t('shopping.recalcList') }}
+        </button>
         <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="hideChecked = !hideChecked">
           {{ hideChecked ? t('shopping.showAll') : t('shopping.hideChecked') }}
         </button>

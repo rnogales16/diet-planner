@@ -1,11 +1,13 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sparkles, Printer } from 'lucide-vue-next'
+import { Sparkles, Printer, ArrowRightLeft } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 import { useDietStore } from '@/stores/dietStore'
+import { chatAboutDish } from '@/services/dishChat'
+import { localizedDish } from '@/utils/dishLocale'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const store = useDietStore()
 
 const props = defineProps({
@@ -16,6 +18,74 @@ defineEmits(['generate'])
 
 function printPlan() {
   window.print()
+}
+
+// Bulk ingredient swap
+const swapInput = ref('')
+const swapping = ref(false)
+const swapMsg = ref('')
+
+async function handleSwap() {
+  const raw = swapInput.value.trim()
+  if (!raw || swapping.value) return
+
+  // Parse "patata → boniato" or "patata -> boniato" or "patata por boniato"
+  const parts = raw.split(/\s*(?:→|->|por)\s*/i)
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return
+
+  const from = parts[0].trim()
+  const to = parts[1].trim()
+
+  // Find all dishes containing the ingredient
+  const week = props.week
+  if (!week) return
+
+  const targets = []
+  for (const day of week.days) {
+    for (const meal of day.meals) {
+      for (const dish of meal.dishes) {
+        const view = localizedDish(dish, locale.value)
+        const hasIt = (view.ingredients || []).some((ing) =>
+          ing.name.toLowerCase().includes(from.toLowerCase()),
+        )
+        if (hasIt) targets.push(dish)
+      }
+    }
+  }
+
+  if (targets.length === 0) {
+    swapMsg.value = t('summary.swapNone')
+    setTimeout(() => (swapMsg.value = ''), 3000)
+    return
+  }
+
+  swapping.value = true
+  swapMsg.value = ''
+  let swapped = 0
+
+  for (const dish of targets) {
+    const result = await chatAboutDish({
+      dish: localizedDish(dish, locale.value),
+      profile: store.profile,
+      history: [],
+      message: `Replace all "${from}" with "${to}" in this dish. Recalculate macros accordingly. Keep everything else the same.`,
+      language: locale.value,
+    })
+
+    if (result.success && result.updatedDish) {
+      store.updateDishById(dish.id, result.updatedDish, locale.value)
+      swapped++
+    }
+  }
+
+  swapping.value = false
+  swapInput.value = ''
+
+  if (swapped > 0) {
+    swapMsg.value = t('summary.swapDone', swapped, { count: swapped })
+    store.rebuildShoppingList(store.currentWeekKey)
+  }
+  setTimeout(() => (swapMsg.value = ''), 4000)
 }
 
 const totals = computed(() => (props.week ? sumDays(props.week.days) : { calories: 0, protein: 0, carbs: 0, fat: 0 }))
@@ -81,6 +151,28 @@ const macros = computed(() => [
       <Sparkles :size="14" />
       {{ t('summary.generateWeek') }}
     </button>
+    <div class="summary__swap">
+      <div class="summary__swap-row">
+        <ArrowRightLeft :size="12" />
+        <input
+          v-model="swapInput"
+          class="app-input summary__swap-input"
+          :placeholder="t('summary.swapPlaceholder')"
+          :disabled="swapping"
+          @keydown.enter.prevent="handleSwap"
+        />
+        <button
+          type="button"
+          class="app-btn app-btn--primary app-btn--sm"
+          :disabled="swapping || !swapInput.trim()"
+          @click="handleSwap"
+        >
+          {{ swapping ? t('summary.swapping') : t('summary.swapBtn') }}
+        </button>
+      </div>
+      <p v-if="swapMsg" class="summary__swap-msg">{{ swapMsg }}</p>
+    </div>
+
     <button type="button" class="app-btn app-btn--ghost summary__print" @click="printPlan">
       <Printer :size="14" />
     </button>
@@ -197,6 +289,32 @@ const macros = computed(() => [
 .summary__cta {
   width: 100%;
   margin-top: 4px;
+}
+
+.summary__swap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary__swap-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-faint);
+}
+
+.summary__swap-input {
+  flex: 1;
+  min-height: 34px;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.summary__swap-msg {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
 }
 
 .summary__print {

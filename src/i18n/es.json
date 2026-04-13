@@ -58,7 +58,12 @@
     "carbs": "Carbohidratos",
     "fat": "Grasa",
     "vegetables": "Verduras",
-    "generateWeek": "Generar semana"
+    "generateWeek": "Generar semana",
+    "swapPlaceholder": "ej. patata → boniato",
+    "swapBtn": "Cambiar",
+    "swapping": "Cambiando…",
+    "swapDone": "Cambiado en {count} plato | Cambiado en {count} platos",
+    "swapNone": "No hay platos con ese ingrediente"
   },
   "mealSlot": {
     "addDish": "Añadir plato",
@@ -305,6 +310,8 @@
     "empty": "Aún no hay lista. Genera un plan primero y aparecerá aquí.",
     "generatedAt": "Generada {when}",
     "itemsCount": "{count} elemento | {count} elementos",
+    "recalcList": "Recalcular desde platos",
+    "recalcDone": "Lista actualizada",
     "copyList": "Copiar como texto",
     "copied": "Copiado!",
     "hideChecked": "Ocultar marcados",
