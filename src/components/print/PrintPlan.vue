@@ -66,6 +66,7 @@ const shoppingGrouped = computed(() => {
       <p>{{ weekRange }}</p>
     </header>
 
+    <div class="pp-days">
     <section v-for="(day, idx) in week.days" :key="day.date" class="pp-day">
       <h2 class="pp-day-title">
         {{ t(`planner.weekday.${WEEKDAY_KEYS[idx]}`) }}
@@ -102,6 +103,8 @@ const shoppingGrouped = computed(() => {
       </div>
     </section>
 
+    </div>
+
     <section v-if="shoppingGrouped.length" class="pp-shopping">
       <h2 class="pp-shopping-title">{{ t('shopping.title') }}</h2>
       <div v-for="group in shoppingGrouped" :key="group.key" class="pp-shop-group">
@@ -133,58 +136,64 @@ const shoppingGrouped = computed(() => {
 
   .pp-header {
     text-align: center;
-    margin-bottom: 12pt;
-    padding-bottom: 8pt;
-    border-bottom: 2pt solid #7c9885;
+    margin-bottom: 6pt;
+    padding-bottom: 4pt;
+    border-bottom: 1.5pt solid #7c9885;
   }
 
   .pp-header h1 {
-    font-size: 14pt;
+    font-size: 11pt;
     font-weight: 700;
     margin: 0;
     color: #7c9885;
   }
 
   .pp-header p {
-    font-size: 10pt;
+    font-size: 8pt;
     color: #666;
-    margin: 2pt 0 0;
+    margin: 1pt 0 0;
+  }
+
+  /* Two-column layout: pack days side by side to cut page count */
+  .pp-days {
+    column-count: 2;
+    column-gap: 12pt;
   }
 
   .pp-day {
-    margin-bottom: 10pt;
-    page-break-inside: avoid;
+    margin-bottom: 6pt;
+    break-inside: avoid;
   }
 
   .pp-day-title {
-    font-size: 10pt;
+    font-size: 8pt;
     font-weight: 700;
     background: #f3f4f6;
-    padding: 3pt 6pt;
-    margin: 0 0 4pt;
-    border-left: 3pt solid #7c9885;
+    padding: 2pt 4pt;
+    margin: 0 0 2pt;
+    border-left: 2pt solid #7c9885;
     display: flex;
     align-items: baseline;
-    gap: 6pt;
+    gap: 4pt;
   }
 
   .pp-day-date {
-    font-size: 12pt;
+    font-size: 9pt;
   }
 
   .pp-day-totals {
     margin-left: auto;
-    font-size: 8pt;
+    font-size: 6.5pt;
     font-weight: 400;
     color: #666;
   }
 
   .pp-meal {
-    margin-bottom: 4pt;
+    margin-bottom: 1pt;
   }
 
   .pp-dish {
-    padding: 3pt 0 3pt 9pt;
+    padding: 1pt 0 1pt 6pt;
     border-bottom: 0.5pt solid #eee;
   }
 
@@ -195,35 +204,36 @@ const shoppingGrouped = computed(() => {
   .pp-dish-head {
     display: flex;
     align-items: baseline;
-    gap: 6pt;
+    gap: 4pt;
     flex-wrap: wrap;
   }
 
   .pp-meal-label {
-    font-size: 7pt;
+    font-size: 6pt;
     text-transform: uppercase;
-    letter-spacing: 0.5pt;
+    letter-spacing: 0.4pt;
     color: #999;
-    min-width: 60pt;
+    min-width: 40pt;
   }
 
   .pp-dish-name {
-    font-size: 9pt;
+    font-size: 7.5pt;
     font-weight: 600;
     flex: 1;
   }
 
   .pp-dish-macros {
-    font-size: 7pt;
+    font-size: 6pt;
     color: #888;
     white-space: nowrap;
   }
 
   .pp-ings {
-    font-size: 8pt;
+    font-size: 6.5pt;
     color: #444;
-    margin: 2pt 0;
-    padding-left: 60pt;
+    margin: 1pt 0;
+    padding-left: 40pt;
+    line-height: 1.3;
   }
 
   .pp-ing em {
@@ -232,47 +242,48 @@ const shoppingGrouped = computed(() => {
   }
 
   .pp-steps {
-    font-size: 8pt;
+    font-size: 6.5pt;
     color: #333;
-    margin: 2pt 0 0;
-    padding-left: 74pt;
+    margin: 1pt 0 0;
+    padding-left: 50pt;
+    line-height: 1.3;
   }
 
   .pp-steps li {
-    margin-bottom: 1pt;
+    margin-bottom: 0;
   }
 
   .pp-shopping {
-    page-break-before: always;
-    margin-top: 12pt;
+    margin-top: 8pt;
+    break-before: auto;
   }
 
   .pp-shopping-title {
-    font-size: 12pt;
+    font-size: 9pt;
     font-weight: 700;
     color: #7c9885;
     border-bottom: 1pt solid #7c9885;
-    padding-bottom: 4pt;
-    margin: 0 0 8pt;
+    padding-bottom: 2pt;
+    margin: 0 0 4pt;
   }
 
   .pp-shop-group {
-    margin-bottom: 6pt;
+    margin-bottom: 3pt;
   }
 
   .pp-shop-cat {
-    font-size: 8pt;
+    font-size: 6.5pt;
     text-transform: uppercase;
-    letter-spacing: 0.5pt;
+    letter-spacing: 0.4pt;
     color: #7c9885;
     font-weight: 700;
-    margin: 0 0 2pt;
+    margin: 0 0 1pt;
   }
 
   .pp-shop-items {
-    font-size: 8pt;
+    font-size: 7pt;
     color: #333;
-    line-height: 1.6;
+    line-height: 1.4;
   }
 
   .pp-shop-item em {
