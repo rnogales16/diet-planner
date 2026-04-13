@@ -159,6 +159,9 @@ function dislikeIngredient(name) {
           <Users :size="12" />
           {{ view.servings }} {{ t('common.servings') }}
         </span>
+        <span v-if="view.cookedWeight" class="pill tabular">
+          {{ view.cookedWeight }}
+        </span>
       </div>
 
       <div class="tabs">

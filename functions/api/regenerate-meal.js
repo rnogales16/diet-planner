@@ -62,6 +62,7 @@ JSON shape:
   "carbs": number,
   "fat": number,
   "vegetables": number,
+  "cookedWeight": "string — estimated total cooked weight after cooking, e.g. '380g'",
   "notes": "",
   "prepTime": number,
   "cookTime": number,

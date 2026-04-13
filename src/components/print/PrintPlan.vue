@@ -82,7 +82,7 @@ const shoppingGrouped = computed(() => {
               <div class="pp-dish-head">
                 <span class="pp-meal-label">{{ mealLabel(meal) }}</span>
                 <strong class="pp-dish-name">{{ loc(dish).name }}</strong>
-                <span class="pp-dish-macros">{{ dish.calories }} kcal · P{{ dish.protein }} C{{ dish.carbs }} F{{ dish.fat }}</span>
+                <span class="pp-dish-macros">{{ dish.calories }} kcal · P{{ dish.protein }} C{{ dish.carbs }} F{{ dish.fat }}<template v-if="dish.cookedWeight"> · {{ dish.cookedWeight }}</template></span>
               </div>
               <div v-if="loc(dish).ingredients?.length" class="pp-ings">
                 <span v-for="(ing, i) in loc(dish).ingredients" :key="i" class="pp-ing">{{ ing.name }} <em>{{ ing.amount }}</em><template v-if="i < loc(dish).ingredients.length - 1">, </template></span>
@@ -116,7 +116,7 @@ const shoppingGrouped = computed(() => {
               <div class="pp-dish-head">
                 <span class="pp-meal-label">{{ mealLabel(meal) }}</span>
                 <strong class="pp-dish-name">{{ loc(dish).name }}</strong>
-                <span class="pp-dish-macros">{{ dish.calories }} kcal · P{{ dish.protein }} C{{ dish.carbs }} F{{ dish.fat }}</span>
+                <span class="pp-dish-macros">{{ dish.calories }} kcal · P{{ dish.protein }} C{{ dish.carbs }} F{{ dish.fat }}<template v-if="dish.cookedWeight"> · {{ dish.cookedWeight }}</template></span>
               </div>
               <div v-if="loc(dish).ingredients?.length" class="pp-ings">
                 <span v-for="(ing, i) in loc(dish).ingredients" :key="i" class="pp-ing">{{ ing.name }} <em>{{ ing.amount }}</em><template v-if="i < loc(dish).ingredients.length - 1">, </template></span>

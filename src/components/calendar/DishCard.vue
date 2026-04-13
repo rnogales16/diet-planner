@@ -53,6 +53,10 @@ function toggleFavorite(e) {
       <span class="tabular">{{ dish.time }}</span>
       <span class="dot" aria-hidden="true">·</span>
       <span class="dish-card__kcal tabular">{{ dish.calories }} {{ t('common.kcal') }}</span>
+      <template v-if="view.cookedWeight">
+        <span class="dot" aria-hidden="true">·</span>
+        <span class="tabular">{{ view.cookedWeight }}</span>
+      </template>
     </div>
   </article>
 </template>

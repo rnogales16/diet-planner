@@ -40,6 +40,7 @@ function validateAndNormalize(raw, language = 'en', enabledMealTypes = null) {
           carbs: Math.round(Math.abs(Number(dish.carbs)) || 0),
           fat: Math.round(Math.abs(Number(dish.fat)) || 0),
           vegetables: Math.round(Math.abs(Number(dish.vegetables)) || 0),
+          cookedWeight: typeof dish.cookedWeight === 'string' ? dish.cookedWeight : '',
           notes: dish.notes || '',
           prepTime: Math.round(Math.abs(Number(dish.prepTime)) || 0),
           cookTime: Math.round(Math.abs(Number(dish.cookTime)) || 0),

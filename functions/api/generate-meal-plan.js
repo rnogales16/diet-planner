@@ -81,6 +81,13 @@ BREVITY RULES (IMPORTANT — output must fit in a single response):
 - Allergies and dietary restrictions are absolute. Never include a forbidden ingredient.
 - Disliked ingredients listed by the user are also absolute. Never include them, not even in trace amounts, not even in smoothies, dressings or garnishes. Treat them as if they were poisonous to the user. Check every ingredient name and dish name before finalising.
 
+COOKED WEIGHT ESTIMATE:
+- Each dish must include a "cookedWeight" string field estimating the total weight of the finished dish after cooking.
+- For 1 person: just the weight, e.g. "380g".
+- For multiple people: total + per-person split, e.g. "Total: 650g (Person 1: 380g, Person 2: 270g)".
+- This is an estimate based on typical water loss/gain during cooking. Pasta and rice gain weight, meat loses weight.
+- Write it in the user's language.
+
 RAW WEIGHTS (NON-NEGOTIABLE):
 - All ingredient weights and volumes MUST refer to the RAW, UNCOOKED form. 100g of pasta means 100g of dry uncooked pasta. 150g of rice means 150g of dry rice. 200g of chicken means 200g of raw chicken.
 - Do NOT use cooked or "as served" weights. The user needs to know how much to weigh BEFORE cooking.
@@ -136,6 +143,7 @@ Output JSON shape (exact field names, order does not matter):
             "carbs": number,
             "fat": number,
             "vegetables": number,
+            "cookedWeight": "string — estimated total cooked weight of the finished dish, e.g. '380g' for 1 person or 'Total: 650g (Person 1: 380g, Person 2: 270g)' for multiple",
             "notes": "string (may be empty)",
             "prepTime": number,
             "cookTime": number,
