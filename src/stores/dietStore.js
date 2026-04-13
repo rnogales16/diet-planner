@@ -22,6 +22,29 @@ function mergeAmounts(amounts) {
 
   return filtered.join(' + ')
 }
+
+// Best-effort category guess for ingredients that weren't in the original
+// AI-generated shopping list. Checks both Spanish and English keywords.
+function guessCategory(name) {
+  const l = (name || '').toLowerCase()
+  const rules = [
+    ['vegetables', 'lechuga tomate cebolla ajo pimiento zanahoria espinaca brócoli brocoli calabacín calabacin judía judia champiñón champinon berenjena pepino rúcula rucula acelga col patata boniato alcachofa guisante espárrago esparrago apio puerro nabo remolacha lettuce tomato onion garlic pepper carrot spinach broccoli zucchini mushroom eggplant cucumber potato asparagus celery leek pea'],
+    ['fruits', 'manzana plátano platano naranja fresa kiwi limón limon lima aguacate arándano arandano frambuesa melocotón melocoton pera uva mango piña pina apple banana orange strawberry lemon avocado blueberry raspberry peach pear grape pineapple'],
+    ['protein', 'pollo ternera cerdo pavo salmón salmon atún atun merluza bacalao huevo pechuga filete carne jamón jamon lomo muslo chorizo gambas langostino chicken beef pork turkey tuna cod egg meat fish shrimp ham'],
+    ['dairy', 'leche yogur queso nata mantequilla requesón requeson milk yogurt cheese cream butter cottage'],
+    ['grains_and_pasta', 'arroz pasta macarrón macarron espagueti pan avena quinoa cuscús cuscus harina tortilla rice oat bread flour spaghetti noodle couscous'],
+    ['legumes', 'lenteja garbanzo judión judion alubia frijol soja lentil chickpea bean'],
+    ['nuts_and_seeds', 'nuez almendra avellana pistacho cacahuete semilla chía chia sésamo sesamo lino walnut almond hazelnut pistachio peanut seed flax'],
+    ['oils_and_condiments', 'aceite vinagre salsa mostaza mayonesa oil vinegar sauce mustard soy'],
+    ['herbs_and_spices', 'orégano oregano tomillo romero albahaca perejil comino pimentón pimenton canela jengibre cúrcuma curcuma laurel cilantro oregano thyme rosemary basil parsley cumin paprika cinnamon ginger turmeric'],
+    ['bakery', 'tostada magdalena galleta toast cracker muffin'],
+    ['beverages', 'bebida zumo café cafe té juice coffee tea'],
+  ]
+  for (const [cat, words] of rules) {
+    if (words.split(' ').some((w) => l.includes(w))) return cat
+  }
+  return 'other'
+}
 import { getWeekKey, getWeekDates } from '@/utils/dateHelpers'
 import { DEFAULT_MEAL_TYPES, createEmptyWeek, generateId } from '@/utils/defaults'
 
@@ -507,14 +530,21 @@ export const useDietStore = defineStore('diet', {
     },
 
     // Rebuild the shopping list from the current dishes in the week.
-    // Groups by ingredient name (case-insensitive), sums amounts when
-    // they share the same unit, otherwise concatenates.
+    // Preserves categories from the old AI-generated list when possible,
+    // falls back to keyword matching for new ingredients.
     rebuildShoppingList(weekKey) {
       const week = this.weeks[weekKey]
       if (!week) return
 
-      const map = new Map() // lowercase name → { name, amounts: Map<unit, number>, raw: string[] }
+      // Save old categories before we overwrite
+      const oldCats = new Map()
+      if (week.shoppingList?.items) {
+        for (const item of week.shoppingList.items) {
+          oldCats.set(item.name.toLowerCase().trim(), item.category)
+        }
+      }
 
+      const map = new Map()
       for (const day of week.days) {
         for (const meal of day.meals) {
           for (const dish of meal.dishes) {
@@ -530,11 +560,11 @@ export const useDietStore = defineStore('diet', {
         }
       }
 
-      // Try to merge amounts: parse "150g" + "200g" → "350g"
       const items = []
-      for (const [, entry] of map) {
+      for (const [key, entry] of map) {
         const merged = mergeAmounts(entry.raw)
-        items.push({ name: entry.name, amount: merged, category: 'other' })
+        const category = oldCats.get(key) || guessCategory(entry.name)
+        items.push({ name: entry.name, amount: merged, category })
       }
 
       week.shoppingList = {
