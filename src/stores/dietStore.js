@@ -563,7 +563,10 @@ export const useDietStore = defineStore('diet', {
       const items = []
       for (const [key, entry] of map) {
         const merged = mergeAmounts(entry.raw)
-        const category = oldCats.get(key) || guessCategory(entry.name)
+        const oldCat = oldCats.get(key)
+        // Don't reuse 'other' — that's the fallback, not a real category.
+        // Let guessCategory try to do better.
+        const category = (oldCat && oldCat !== 'other') ? oldCat : guessCategory(entry.name)
         items.push({ name: entry.name, amount: merged, category })
       }
 
