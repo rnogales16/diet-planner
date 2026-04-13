@@ -61,61 +61,91 @@ const shoppingGrouped = computed(() => {
 
 <template>
   <div v-if="week" class="print-plan">
-    <header class="pp-header">
-      <h1>Diet Planner</h1>
-      <p>{{ weekRange }}</p>
-    </header>
-
-    <div class="pp-days">
-    <section v-for="(day, idx) in week.days" :key="day.date" class="pp-day">
-      <h2 class="pp-day-title">
-        {{ t(`planner.weekday.${WEEKDAY_KEYS[idx]}`) }}
-        <span class="pp-day-date">{{ new Date(day.date).getDate() }}</span>
-        <span class="pp-day-totals">
-          {{ dayTotals(day).calories }} kcal ·
-          P{{ dayTotals(day).protein }} C{{ dayTotals(day).carbs }} F{{ dayTotals(day).fat }}
-        </span>
-      </h2>
-
-      <div v-for="meal in dayMeals(day)" :key="meal.type" class="pp-meal">
-        <div v-for="dish in meal.dishes" :key="dish.id" class="pp-dish">
-          <div class="pp-dish-head">
-            <span class="pp-meal-label">{{ mealLabel(meal) }}</span>
-            <strong class="pp-dish-name">{{ loc(dish).name }}</strong>
-            <span class="pp-dish-macros">
-              {{ dish.calories }} kcal · P{{ dish.protein }} C{{ dish.carbs }} F{{ dish.fat }}
-              <template v-if="dish.vegetables"> · V{{ dish.vegetables }}g</template>
+    <!-- PAGE 1: Mon–Thu (read left-to-right, top-to-bottom via grid) -->
+    <div class="pp-page">
+      <header class="pp-header">
+        <h1>Diet Planner</h1>
+        <p>{{ weekRange }}</p>
+      </header>
+      <div class="pp-days">
+        <section v-for="idx in [0, 1, 2, 3]" :key="week.days[idx].date" class="pp-day">
+          <h2 class="pp-day-title">
+            {{ t(`planner.weekday.${WEEKDAY_KEYS[idx]}`) }}
+            <span class="pp-day-date">{{ new Date(week.days[idx].date).getDate() }}</span>
+            <span class="pp-day-totals">
+              {{ dayTotals(week.days[idx]).calories }} kcal ·
+              P{{ dayTotals(week.days[idx]).protein }} C{{ dayTotals(week.days[idx]).carbs }} F{{ dayTotals(week.days[idx]).fat }}
             </span>
-          </div>
-
-          <div v-if="loc(dish).ingredients?.length" class="pp-section">
-            <div class="pp-ings">
-              <span v-for="(ing, i) in loc(dish).ingredients" :key="i" class="pp-ing">
-                {{ ing.name }} <em>{{ ing.amount }}</em><template v-if="i < loc(dish).ingredients.length - 1">, </template>
-              </span>
+          </h2>
+          <div v-for="meal in dayMeals(week.days[idx])" :key="meal.type" class="pp-meal">
+            <div v-for="dish in meal.dishes" :key="dish.id" class="pp-dish">
+              <div class="pp-dish-head">
+                <span class="pp-meal-label">{{ mealLabel(meal) }}</span>
+                <strong class="pp-dish-name">{{ loc(dish).name }}</strong>
+                <span class="pp-dish-macros">{{ dish.calories }} kcal · P{{ dish.protein }} C{{ dish.carbs }} F{{ dish.fat }}</span>
+              </div>
+              <div v-if="loc(dish).ingredients?.length" class="pp-ings">
+                <span v-for="(ing, i) in loc(dish).ingredients" :key="i" class="pp-ing">{{ ing.name }} <em>{{ ing.amount }}</em><template v-if="i < loc(dish).ingredients.length - 1">, </template></span>
+              </div>
+              <ol v-if="loc(dish).instructions?.length" class="pp-steps">
+                <li v-for="(step, i) in loc(dish).instructions" :key="i">{{ step }}</li>
+              </ol>
             </div>
           </div>
-
-          <ol v-if="loc(dish).instructions?.length" class="pp-steps">
-            <li v-for="(step, i) in loc(dish).instructions" :key="i">{{ step }}</li>
-          </ol>
-        </div>
+        </section>
       </div>
-    </section>
-
     </div>
 
-    <section v-if="shoppingGrouped.length" class="pp-shopping">
-      <h2 class="pp-shopping-title">{{ t('shopping.title') }}</h2>
-      <div v-for="group in shoppingGrouped" :key="group.key" class="pp-shop-group">
-        <h3 class="pp-shop-cat">{{ t(`shopping.categories.${group.key}`) }}</h3>
-        <div class="pp-shop-items">
-          <span v-for="(item, i) in group.items" :key="i" class="pp-shop-item">
-            ☐ {{ item.name }} <em>{{ item.amount }}</em><template v-if="i < group.items.length - 1">&nbsp; · &nbsp;</template>
-          </span>
-        </div>
+    <!-- PAGE 2: Fri–Sun -->
+    <div class="pp-page">
+      <header class="pp-header pp-header--cont">
+        <p>{{ weekRange }} — {{ t('common.continued') || 'cont.' }}</p>
+      </header>
+      <div class="pp-days">
+        <section v-for="idx in [4, 5, 6]" :key="week.days[idx].date" class="pp-day">
+          <h2 class="pp-day-title">
+            {{ t(`planner.weekday.${WEEKDAY_KEYS[idx]}`) }}
+            <span class="pp-day-date">{{ new Date(week.days[idx].date).getDate() }}</span>
+            <span class="pp-day-totals">
+              {{ dayTotals(week.days[idx]).calories }} kcal ·
+              P{{ dayTotals(week.days[idx]).protein }} C{{ dayTotals(week.days[idx]).carbs }} F{{ dayTotals(week.days[idx]).fat }}
+            </span>
+          </h2>
+          <div v-for="meal in dayMeals(week.days[idx])" :key="meal.type" class="pp-meal">
+            <div v-for="dish in meal.dishes" :key="dish.id" class="pp-dish">
+              <div class="pp-dish-head">
+                <span class="pp-meal-label">{{ mealLabel(meal) }}</span>
+                <strong class="pp-dish-name">{{ loc(dish).name }}</strong>
+                <span class="pp-dish-macros">{{ dish.calories }} kcal · P{{ dish.protein }} C{{ dish.carbs }} F{{ dish.fat }}</span>
+              </div>
+              <div v-if="loc(dish).ingredients?.length" class="pp-ings">
+                <span v-for="(ing, i) in loc(dish).ingredients" :key="i" class="pp-ing">{{ ing.name }} <em>{{ ing.amount }}</em><template v-if="i < loc(dish).ingredients.length - 1">, </template></span>
+              </div>
+              <ol v-if="loc(dish).instructions?.length" class="pp-steps">
+                <li v-for="(step, i) in loc(dish).instructions" :key="i">{{ step }}</li>
+              </ol>
+            </div>
+          </div>
+        </section>
       </div>
-    </section>
+    </div>
+
+    <!-- PAGE 3: Shopping list -->
+    <div v-if="shoppingGrouped.length" class="pp-page">
+      <section class="pp-shopping">
+        <h2 class="pp-shopping-title">{{ t('shopping.title') }} — {{ weekRange }}</h2>
+        <div class="pp-shop-grid">
+          <div v-for="group in shoppingGrouped" :key="group.key" class="pp-shop-group">
+            <h3 class="pp-shop-cat">{{ t(`shopping.categories.${group.key}`) }}</h3>
+            <div class="pp-shop-items">
+              <div v-for="(item, i) in group.items" :key="i" class="pp-shop-item">
+                ☐ {{ item.name }} <em>{{ item.amount }}</em>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -154,14 +184,24 @@ const shoppingGrouped = computed(() => {
     margin: 1pt 0 0;
   }
 
-  /* Two-column layout: pack days side by side to cut page count */
+  .pp-page {
+    page-break-after: always;
+  }
+
+  .pp-page:last-child {
+    page-break-after: auto;
+  }
+
+  /* Grid reads left-to-right: Mon Tue on the first row, Wed Thu on
+     the second. NOT top-to-bottom like CSS columns would do. */
   .pp-days {
-    column-count: 2;
-    column-gap: 12pt;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6pt 12pt;
   }
 
   .pp-day {
-    margin-bottom: 6pt;
+    margin-bottom: 0;
     break-inside: avoid;
   }
 
@@ -253,9 +293,23 @@ const shoppingGrouped = computed(() => {
     margin-bottom: 0;
   }
 
+  .pp-header--cont {
+    border-bottom-width: 1pt;
+    margin-bottom: 4pt;
+  }
+
+  .pp-header--cont h1 {
+    display: none;
+  }
+
   .pp-shopping {
-    margin-top: 8pt;
-    break-before: auto;
+    margin-top: 0;
+  }
+
+  .pp-shop-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4pt 14pt;
   }
 
   .pp-shopping-title {
@@ -283,7 +337,11 @@ const shoppingGrouped = computed(() => {
   .pp-shop-items {
     font-size: 7pt;
     color: #333;
-    line-height: 1.4;
+    line-height: 1.5;
+  }
+
+  .pp-shop-item {
+    display: block;
   }
 
   .pp-shop-item em {
