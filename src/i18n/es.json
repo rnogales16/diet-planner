@@ -59,6 +59,12 @@
     "fat": "Grasa",
     "vegetables": "Verduras",
     "generateWeek": "Generar semana",
+    "batchCooking": "Consejos batch cooking",
+    "batchLoading": "Analizando…",
+    "batchEmpty": "No se encontraron oportunidades de batch cooking.",
+    "shareWeek": "Compartir semana",
+    "sharing": "Creando enlace…",
+    "shareCopied": "Enlace copiado!",
     "swapPlaceholder": "ej. patata → boniato",
     "swapBtn": "Cambiar",
     "swapping": "Cambiando…",
@@ -67,6 +73,9 @@
   },
   "mealSlot": {
     "addDish": "Añadir plato",
+    "importUrl": "Importar desde URL",
+    "importPlaceholder": "Pega la URL de una receta…",
+    "importing": "Importando…",
     "regenerate": "Regenerar",
     "regenerating": "Generando…"
   },
@@ -301,6 +310,12 @@
     "title": "Eliminar plato",
     "body": "¿Eliminar {name}? Esto no se puede deshacer.",
     "thisDish": "este plato"
+  },
+  "search": {
+    "title": "Buscar",
+    "placeholder": "Buscar por nombre o ingrediente…",
+    "noResults": "No se encontraron platos.",
+    "inWeek": "en"
   },
   "history": {
     "title": "Historial",

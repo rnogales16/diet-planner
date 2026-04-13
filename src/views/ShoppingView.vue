@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { ShoppingCart, ClipboardList } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
+import { estimateWeeklyCost } from '@/utils/mercadonaPrices'
 import WeekNavigator from '@/components/calendar/WeekNavigator.vue'
 
 const { t, locale } = useI18n()
@@ -83,6 +84,11 @@ const grouped = computed(() => {
     .map((c) => ({ key: c, items: map.get(c) }))
 })
 
+const estimatedCost = computed(() => {
+  if (items.value.length === 0) return null
+  return estimateWeeklyCost(items.value)
+})
+
 const generatedAtLabel = computed(() => {
   if (!shoppingList.value?.generatedAt) return ''
   const date = new Date(shoppingList.value.generatedAt)
@@ -119,6 +125,7 @@ const generatedAtLabel = computed(() => {
     <div v-else class="shopping__toolbar">
       <div class="shopping__meta">
         <span>{{ t('shopping.itemsCount', items.length, { count: items.length }) }}</span>
+        <span v-if="estimatedCost !== null" class="shopping__cost">~{{ estimatedCost.toFixed(2) }}€</span>
         <span v-if="generatedAtLabel">{{ generatedAtLabel }}</span>
       </div>
       <div class="shopping__actions">
@@ -226,6 +233,12 @@ const generatedAtLabel = computed(() => {
   gap: 12px;
   font-size: 12px;
   color: var(--text-faint);
+}
+
+.shopping__cost {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 14px;
 }
 
 .shopping__actions {

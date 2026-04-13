@@ -59,6 +59,12 @@
     "fat": "Fat",
     "vegetables": "Vegetables",
     "generateWeek": "Generate week",
+    "batchCooking": "Batch cooking tips",
+    "batchLoading": "Analyzing…",
+    "batchEmpty": "No batch cooking opportunities found.",
+    "shareWeek": "Share week",
+    "sharing": "Creating link…",
+    "shareCopied": "Link copied!",
     "swapPlaceholder": "e.g. potato → sweet potato",
     "swapBtn": "Swap",
     "swapping": "Swapping…",
@@ -67,6 +73,9 @@
   },
   "mealSlot": {
     "addDish": "Add dish",
+    "importUrl": "Import from URL",
+    "importPlaceholder": "Paste a recipe URL…",
+    "importing": "Importing…",
     "regenerate": "Regenerate",
     "regenerating": "Generating…"
   },
@@ -301,6 +310,12 @@
     "title": "Delete dish",
     "body": "Delete {name}? This cannot be undone.",
     "thisDish": "this dish"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search by dish name or ingredient…",
+    "noResults": "No dishes found.",
+    "inWeek": "in"
   },
   "history": {
     "title": "History",

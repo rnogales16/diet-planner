@@ -6,6 +6,10 @@ const THEMES = ['sage', 'warm', 'dark']
 function readInitial() {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (THEMES.includes(stored)) return stored
+  // First visit: pick theme based on OS preference
+  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+    return 'dark'
+  }
   return 'sage'
 }
 

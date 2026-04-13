@@ -1,11 +1,12 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sparkles, Printer, ArrowRightLeft } from 'lucide-vue-next'
+import { Sparkles, Printer, ArrowRightLeft, Share2, Link } from 'lucide-vue-next'
 import { sumDays } from '@/utils/nutritionHelpers'
 import { useDietStore } from '@/stores/dietStore'
 import { chatAboutDish } from '@/services/dishChat'
 import { localizedDish } from '@/utils/dishLocale'
+import { localizedMealLabel } from '@/utils/mealLocale'
 
 const { t, locale } = useI18n()
 const store = useDietStore()
@@ -18,6 +19,65 @@ defineEmits(['generate'])
 
 function printPlan() {
   window.print()
+}
+
+// Share week
+const shareMsg = ref('')
+const shareLoading = ref(false)
+
+async function shareWeek() {
+  if (!props.week || shareLoading.value) return
+  shareLoading.value = true
+  shareMsg.value = ''
+  try {
+    const res = await fetch('/api/share', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ week: props.week, weekRange: '' }),
+      credentials: 'include',
+    })
+    const data = await res.json()
+    if (data.success && data.id) {
+      const link = `${location.origin}/api/shared/${data.id}`
+      await navigator.clipboard.writeText(link)
+      shareMsg.value = t('summary.shareCopied')
+    }
+  } catch { /* silent */ }
+  shareLoading.value = false
+  setTimeout(() => (shareMsg.value = ''), 3000)
+}
+
+// Batch cooking
+const batchTips = ref([])
+const batchLoading = ref(false)
+
+async function loadBatchTips() {
+  if (!props.week) return
+  batchLoading.value = true
+  batchTips.value = []
+
+  const dishes = []
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  for (let i = 0; i < props.week.days.length; i++) {
+    for (const meal of props.week.days[i].meals) {
+      for (const dish of meal.dishes) {
+        const view = localizedDish(dish, locale.value)
+        dishes.push({ day: dayNames[i], name: view.name, ingredients: view.ingredients })
+      }
+    }
+  }
+
+  try {
+    const res = await fetch('/api/batch-cooking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dishes, language: store.language || 'en' }),
+      credentials: 'include',
+    })
+    const data = await res.json()
+    if (data.success) batchTips.value = data.suggestions || []
+  } catch { /* silent */ }
+  batchLoading.value = false
 }
 
 // Bulk ingredient swap
@@ -151,6 +211,17 @@ const macros = computed(() => [
       <Sparkles :size="14" />
       {{ t('summary.generateWeek') }}
     </button>
+    <button type="button" class="app-btn app-btn--ghost summary__batch-btn" :disabled="batchLoading" @click="loadBatchTips">
+      {{ batchLoading ? t('summary.batchLoading') : t('summary.batchCooking') }}
+    </button>
+
+    <div v-if="batchTips.length" class="summary__batch-tips">
+      <div v-for="(tip, i) in batchTips" :key="i" class="batch-tip">
+        <strong class="batch-tip__ing">{{ tip.ingredient }}</strong>
+        <p class="batch-tip__text">{{ tip.suggestion }}</p>
+      </div>
+    </div>
+
     <div class="summary__swap">
       <div class="summary__swap-row">
         <ArrowRightLeft :size="12" />
@@ -173,9 +244,15 @@ const macros = computed(() => [
       <p v-if="swapMsg" class="summary__swap-msg">{{ swapMsg }}</p>
     </div>
 
-    <button type="button" class="app-btn app-btn--ghost summary__print" @click="printPlan">
-      <Printer :size="14" />
-    </button>
+    <div class="summary__bottom-btns">
+      <button type="button" class="app-btn app-btn--ghost" @click="shareWeek" :disabled="shareLoading">
+        <Share2 :size="14" />
+        {{ shareMsg || t('summary.shareWeek') }}
+      </button>
+      <button type="button" class="app-btn app-btn--ghost" @click="printPlan">
+        <Printer :size="14" />
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -291,6 +368,36 @@ const macros = computed(() => [
   margin-top: 4px;
 }
 
+.summary__batch-btn {
+  width: 100%;
+}
+
+.summary__batch-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.batch-tip {
+  padding: 8px 10px;
+  background-color: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent);
+}
+
+.batch-tip__ing {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.batch-tip__text {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
 .summary__swap {
   display: flex;
   flex-direction: column;
@@ -317,9 +424,17 @@ const macros = computed(() => [
   color: var(--accent);
 }
 
-.summary__print {
-  width: 100%;
-  margin-top: -4px;
+.summary__bottom-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.summary__bottom-btns .app-btn {
+  flex: 1;
+}
+
+.summary__bottom-btns .app-btn:last-child {
+  flex: 0;
 }
 
 @media (max-width: 768px) {
