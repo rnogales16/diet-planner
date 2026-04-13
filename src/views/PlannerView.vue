@@ -85,6 +85,16 @@ function handleDetailDelete(dish) {
   })
 }
 
+function handleDetailCopy({ dish, toDayIndex, toMealType }) {
+  store.copyDishTo(weekKey.value, detailDayIndex.value, detailMealType.value, dish.id, toDayIndex, toMealType)
+  showDishDetail.value = false
+}
+
+function handleDetailMove({ dish, toDayIndex, toMealType }) {
+  store.moveDishTo(weekKey.value, detailDayIndex.value, detailMealType.value, dish.id, toDayIndex, toMealType)
+  showDishDetail.value = false
+}
+
 function handleSaveDish(formData) {
   if (isEditing.value) {
     store.updateDish(weekKey.value, currentDayIndex.value, currentMealType.value, currentDish.value.id, formData)
@@ -192,6 +202,8 @@ async function handleRegenerateMeal({ dayIndex, mealType }) {
       @close="showDishDetail = false"
       @edit="handleDetailEdit"
       @delete="handleDetailDelete"
+      @copy="handleDetailCopy"
+      @move="handleDetailMove"
     />
 
     <DeleteConfirmModal

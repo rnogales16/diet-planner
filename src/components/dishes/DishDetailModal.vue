@@ -1,9 +1,10 @@
 <script setup>
 import { computed, ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Clock, Flame, Users, Pencil, Trash2, Send, Sparkles, Loader2, MessageCircle, Check, Ban } from 'lucide-vue-next'
+import { Clock, Flame, Users, Pencil, Trash2, Send, Sparkles, Loader2, MessageCircle, Check, Ban, Copy, MoveRight } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { localizedDish } from '@/utils/dishLocale'
+import { localizedMealLabel } from '@/utils/mealLocale'
 import { useDietStore } from '@/stores/dietStore'
 import { chatAboutDish } from '@/services/dishChat'
 
@@ -15,7 +16,7 @@ const props = defineProps({
   dish: { type: Object, default: null },
 })
 
-defineEmits(['close', 'edit', 'delete'])
+const emit = defineEmits(['close', 'edit', 'delete', 'copy', 'move'])
 
 const view = computed(() => (props.dish ? localizedDish(props.dish, locale.value) : null))
 
@@ -112,6 +113,27 @@ function onInputKeydown(e) {
 }
 
 const justDisliked = ref(new Set())
+
+// Copy/Move destination picker
+const showPicker = ref(false) // 'copy' | 'move' | false
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+const enabledMeals = computed(() =>
+  store.mealTypes.filter((mt) => mt.enabled !== false),
+)
+
+function startCopy() { showPicker.value = 'copy' }
+function startMove() { showPicker.value = 'move' }
+
+function pickDestination(dayIdx, mealType) {
+  const mode = showPicker.value
+  showPicker.value = false
+  if (mode === 'copy') {
+    emit('copy', { dish: props.dish, toDayIndex: dayIdx, toMealType: mealType })
+  } else if (mode === 'move') {
+    emit('move', { dish: props.dish, toDayIndex: dayIdx, toMealType: mealType })
+  }
+}
 
 function dislikeIngredient(name) {
   if (!name) return
@@ -263,9 +285,35 @@ function dislikeIngredient(name) {
         </div>
       </div>
 
-      <footer class="detail__footer">
+      <!-- Destination picker overlay -->
+      <div v-if="showPicker" class="dest-picker">
+        <p class="dest-picker__title">{{ t('copyMove.title') }}</p>
+        <div class="dest-picker__grid">
+          <div v-for="(dayKey, dayIdx) in WEEKDAY_KEYS" :key="dayKey" class="dest-picker__day">
+            <span class="dest-picker__day-label">{{ t(`planner.weekday.${dayKey}`) }}</span>
+            <button
+              v-for="meal in enabledMeals"
+              :key="meal.type"
+              type="button"
+              class="dest-picker__btn"
+              @click="pickDestination(dayIdx, meal.type)"
+            >
+              {{ localizedMealLabel(meal, t) }}
+            </button>
+          </div>
+        </div>
+        <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="showPicker = false">{{ t('common.cancel') }}</button>
+      </div>
+
+      <footer v-else class="detail__footer">
         <button type="button" class="app-btn app-btn--ghost" @click="$emit('delete', dish)">
           <Trash2 :size="14" /> {{ t('common.delete') }}
+        </button>
+        <button type="button" class="app-btn app-btn--ghost" @click="startCopy">
+          <Copy :size="14" /> {{ t('dishCard.copyTo') }}
+        </button>
+        <button type="button" class="app-btn app-btn--ghost" @click="startMove">
+          <MoveRight :size="14" /> {{ t('dishCard.moveTo') }}
         </button>
         <button type="button" class="app-btn app-btn--primary" @click="$emit('edit', dish)">
           <Pencil :size="14" /> {{ t('common.edit') }}
@@ -525,9 +573,73 @@ function dislikeIngredient(name) {
 .detail__footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.dest-picker {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dest-picker__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dest-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.dest-picker__day {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dest-picker__day-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.dest-picker__btn {
+  padding: 6px 2px;
+  font-size: 9px;
+  font-weight: 500;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dest-picker__btn:hover {
+  background-color: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .dest-picker__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 /* Chat tab */
