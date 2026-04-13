@@ -196,7 +196,42 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
   if (p.carbsTarget) targets.push(`${p.carbsTarget}g carbs`)
   if (p.fatTarget) targets.push(`${p.fatTarget}g fat`)
   if (p.vegetableTarget) targets.push(`${p.vegetableTarget}g vegetables`)
-  if (targets.length) {
+  // Build the people list: primary user + any additional people
+  const allPeople = [{ name: 'Person 1', calorieTarget: p.calorieTarget, proteinTarget: p.proteinTarget, carbsTarget: p.carbsTarget, fatTarget: p.fatTarget, vegetableTarget: p.vegetableTarget }]
+  if (Array.isArray(p.people)) {
+    for (const person of p.people) {
+      if (person.name || person.calorieTarget) {
+        allPeople.push(person)
+      }
+    }
+  }
+
+  if (allPeople.length > 1) {
+    lines.push('')
+    lines.push(`### COOKING FOR ${allPeople.length} PEOPLE — each person has different targets`)
+    lines.push('The dishes must use TOTAL ingredient amounts for all people combined. In the "notes" field of each dish, write the portion split (e.g., "Person 1: 60%, Person 2: 40%" or specific gram amounts per person).')
+    lines.push('')
+    let combinedKcal = 0
+    let combinedP = 0
+    let combinedC = 0
+    let combinedF = 0
+    let combinedV = 0
+    for (let i = 0; i < allPeople.length; i++) {
+      const person = allPeople[i]
+      const name = person.name || `Person ${i + 1}`
+      const personTargets = []
+      if (person.calorieTarget) { personTargets.push(`${person.calorieTarget} kcal`); combinedKcal += person.calorieTarget }
+      if (person.proteinTarget) { personTargets.push(`${person.proteinTarget}g P`); combinedP += person.proteinTarget }
+      if (person.carbsTarget) { personTargets.push(`${person.carbsTarget}g C`); combinedC += person.carbsTarget }
+      if (person.fatTarget) { personTargets.push(`${person.fatTarget}g F`); combinedF += person.fatTarget }
+      if (person.vegetableTarget) { personTargets.push(`${person.vegetableTarget}g V`); combinedV += person.vegetableTarget }
+      lines.push(`- ${name}: ${personTargets.join(' · ')}`)
+    }
+    lines.push('')
+    lines.push(`COMBINED DAILY TARGETS for the dish totals: ${combinedKcal} kcal · ${combinedP}g P · ${combinedC}g C · ${combinedF}g F · ${combinedV}g V`)
+    lines.push('The dish macros (calories, protein, carbs, fat, vegetables) must reflect the COMBINED total for all people.')
+    lines.push('Do NOT normalize these toward typical ratios. Each person picked their targets on purpose.')
+  } else if (targets.length) {
     lines.push('')
     lines.push(`### MANDATORY DAILY TARGETS — must be met within ±10% every day`)
     lines.push(`${targets.join(' · ')}`)
@@ -204,23 +239,15 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
       const macroKcal = p.proteinTarget * 4 + p.carbsTarget * 4 + p.fatTarget * 9
       const gap = Math.abs(macroKcal - p.calorieTarget)
       if (gap > p.calorieTarget * 0.05) {
-        // Macro grams don't add up to the calorie target. Tell the model
-        // to follow the CALORIE target as primary and scale macros up/down.
         const scale = p.calorieTarget / macroKcal
         const adjP = Math.round(p.proteinTarget * scale)
         const adjC = Math.round(p.carbsTarget * scale)
         const adjF = Math.round(p.fatTarget * scale)
         lines.push('')
-        lines.push(`IMPORTANT: the stated macros (${p.proteinTarget}P + ${p.carbsTarget}C + ${p.fatTarget}F) add up to ~${macroKcal} kcal, but the calorie target is ${p.calorieTarget} kcal. THE CALORIE TARGET IS PRIMARY. Scale all ingredient quantities so that each day totals ${p.calorieTarget} kcal ±10%. Use these adjusted macro targets instead: ~${adjP}g protein, ~${adjC}g carbs, ~${adjF}g fat. These adjusted values add up to ~${p.calorieTarget} kcal.`)
-      } else {
-        lines.push(`(For reference, ${p.proteinTarget}P + ${p.carbsTarget}C + ${p.fatTarget}F adds up to about ${macroKcal} kcal — make sure your dish quantities respect this.)`)
+        lines.push(`IMPORTANT: the stated macros add up to ~${macroKcal} kcal, but the target is ${p.calorieTarget} kcal. THE CALORIE TARGET IS PRIMARY. Use adjusted macros: ~${adjP}g P, ~${adjC}g C, ~${adjF}g F.`)
       }
     }
     lines.push('Do NOT normalize these toward typical ratios. The user picked these targets on purpose.')
-  }
-
-  if (p.servings && p.servings > 1) {
-    lines.push(`- Cooking for ${p.servings} people (servings should reflect this)`)
   }
   if (p.maxCookTime) {
     lines.push(`- Max time per meal (prep + cook combined): ${p.maxCookTime} minutes`)

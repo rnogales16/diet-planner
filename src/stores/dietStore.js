@@ -268,10 +268,14 @@ const DEFAULT_PROFILE = {
   carbsTarget: null,
   fatTarget: null,
   vegetableTarget: null,   // grams of vegetables per day
-  servings: 1,             // people to cook for
+  servings: 1,             // auto-computed from people array length
   maxCookTime: null,       // minutes per meal, null means no limit
   notes: '',               // free text catch-all
   dislikedIngredients: [], // ingredients the user wants the AI to never use
+  // Each person eating from this plan. The first entry is the primary user
+  // (whose targets are also in the top-level fields for backwards compat).
+  // Additional entries are other household members with their own targets.
+  people: [],
 }
 
 export const useDietStore = defineStore('diet', {

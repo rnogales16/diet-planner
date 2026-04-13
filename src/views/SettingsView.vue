@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref, toRaw, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check, Languages, X } from 'lucide-vue-next'
+import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check, Languages, X, Plus } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { translateDishes } from '@/services/translate'
 import { localizedMealLabel } from '@/utils/mealLocale'
@@ -27,7 +27,10 @@ watch(
 )
 
 function saveProfile() {
-  store.updateProfile(clone(toRaw(profile)))
+  const data = clone(toRaw(profile))
+  // Auto-compute servings from the number of people
+  data.servings = 1 + (Array.isArray(data.people) ? data.people.filter((p) => p.name || p.calorieTarget).length : 0)
+  store.updateProfile(data)
   profileSaved.value = true
   setTimeout(() => (profileSaved.value = false), 2000)
 }
@@ -151,6 +154,15 @@ async function handleImportFile(event) {
   }
 }
 
+function addPerson() {
+  if (!Array.isArray(profile.people)) profile.people = []
+  profile.people.push({ name: '', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null, vegetableTarget: null })
+}
+
+function removePerson(idx) {
+  profile.people.splice(idx, 1)
+}
+
 function clearAllData() {
   if (!confirm(t('settings.data.clearConfirm'))) return
   localStorage.removeItem('diet')
@@ -247,60 +259,52 @@ async function handleTranslateAll() {
         <input v-model="profile.cuisines" class="app-input" :placeholder="t('settings.profile.cuisinesPlaceholder')" />
       </label>
 
-      <div class="profile-grid profile-grid--5">
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.calories') }}</span>
-          <span class="field__control">
-            <input v-model.number="profile.calorieTarget" type="number" min="0" placeholder="2000" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">{{ t('common.kcal') }}</span>
-          </span>
-        </label>
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.protein') }}</span>
-          <span class="field__control">
-            <input v-model.number="profile.proteinTarget" type="number" min="0" placeholder="150" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">{{ t('common.g') }}</span>
-          </span>
-        </label>
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.carbs') }}</span>
-          <span class="field__control">
-            <input v-model.number="profile.carbsTarget" type="number" min="0" placeholder="220" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">{{ t('common.g') }}</span>
-          </span>
-        </label>
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.fat') }}</span>
-          <span class="field__control">
-            <input v-model.number="profile.fatTarget" type="number" min="0" placeholder="70" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">{{ t('common.g') }}</span>
-          </span>
-        </label>
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.vegetables') }}</span>
-          <span class="field__control">
-            <input v-model.number="profile.vegetableTarget" type="number" min="0" placeholder="400" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">{{ t('common.g') }}</span>
-          </span>
-        </label>
+      <!-- People eating from this plan -->
+      <div class="people-section">
+        <div class="people-section__head">
+          <span class="field__label">{{ t('settings.profile.cookingFor') }}</span>
+          <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="addPerson">
+            <Plus :size="12" /> {{ t('settings.profile.addPerson') }}
+          </button>
+        </div>
+
+        <!-- Primary user (you) -->
+        <div class="person-card">
+          <span class="person-card__name">{{ t('settings.profile.you') }}</span>
+          <div class="person-card__macros">
+            <label class="field"><span class="field__label">{{ t('common.kcal') }}</span><input v-model.number="profile.calorieTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">P</span><input v-model.number="profile.proteinTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">C</span><input v-model.number="profile.carbsTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">F</span><input v-model.number="profile.fatTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">V</span><input v-model.number="profile.vegetableTarget" type="number" min="0" class="app-input" /></label>
+          </div>
+        </div>
+
+        <!-- Additional people -->
+        <div v-for="(person, idx) in profile.people" :key="idx" class="person-card">
+          <div class="person-card__head">
+            <input v-model="profile.people[idx].name" class="app-input person-card__name-input" :placeholder="t('settings.profile.personNamePlaceholder')" />
+            <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="removePerson(idx)">
+              <X :size="12" /> {{ t('settings.profile.removePerson') }}
+            </button>
+          </div>
+          <div class="person-card__macros">
+            <label class="field"><span class="field__label">{{ t('common.kcal') }}</span><input v-model.number="profile.people[idx].calorieTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">P</span><input v-model.number="profile.people[idx].proteinTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">C</span><input v-model.number="profile.people[idx].carbsTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">F</span><input v-model.number="profile.people[idx].fatTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">V</span><input v-model.number="profile.people[idx].vegetableTarget" type="number" min="0" class="app-input" /></label>
+          </div>
+        </div>
       </div>
 
-      <div class="profile-grid">
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.cookingFor') }}</span>
-          <span class="field__control">
-            <input v-model.number="profile.servings" type="number" min="1" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">{{ t('common.people') }}</span>
-          </span>
-        </label>
-        <label class="field">
-          <span class="field__label">{{ t('settings.profile.maxTime') }}</span>
-          <span class="field__control">
-            <input v-model.number="profile.maxCookTime" type="number" min="0" :placeholder="t('settings.profile.anyTime')" class="app-input app-input--with-suffix" />
-            <span class="field__suffix">{{ t('common.min') }}</span>
-          </span>
-        </label>
-      </div>
+      <label class="field">
+        <span class="field__label">{{ t('settings.profile.maxTime') }}</span>
+        <span class="field__control">
+          <input v-model.number="profile.maxCookTime" type="number" min="0" :placeholder="t('settings.profile.anyTime')" class="app-input app-input--with-suffix" />
+          <span class="field__suffix">{{ t('common.min') }}</span>
+        </span>
+      </label>
 
       <label class="field">
         <span class="field__label">{{ t('settings.profile.notes') }}</span>
@@ -658,6 +662,68 @@ async function handleTranslateAll() {
   font-size: 11px;
   color: var(--text-faint);
   margin-top: 4px;
+}
+
+.people-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.people-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.person-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.person-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.person-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.person-card__name-input {
+  flex: 1;
+  max-width: 200px;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.person-card__macros {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.person-card__macros .app-input {
+  min-height: 32px;
+  font-size: 12px;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .person-card__macros {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .dislike-block {
