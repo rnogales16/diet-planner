@@ -272,11 +272,11 @@ async function handleTranslateAll() {
         <div class="person-card">
           <span class="person-card__name">{{ t('settings.profile.you') }}</span>
           <div class="person-card__macros">
-            <label class="field"><span class="field__label">{{ t('common.kcal') }}</span><input v-model.number="profile.calorieTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">P</span><input v-model.number="profile.proteinTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">C</span><input v-model.number="profile.carbsTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">F</span><input v-model.number="profile.fatTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">V</span><input v-model.number="profile.vegetableTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.calories') }}</span><input v-model.number="profile.calorieTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.protein') }}</span><input v-model.number="profile.proteinTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.carbs') }}</span><input v-model.number="profile.carbsTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.fat') }}</span><input v-model.number="profile.fatTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.vegetables') }}</span><input v-model.number="profile.vegetableTarget" type="number" min="0" class="app-input" /></label>
           </div>
         </div>
 
@@ -289,11 +289,11 @@ async function handleTranslateAll() {
             </button>
           </div>
           <div class="person-card__macros">
-            <label class="field"><span class="field__label">{{ t('common.kcal') }}</span><input v-model.number="profile.people[idx].calorieTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">P</span><input v-model.number="profile.people[idx].proteinTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">C</span><input v-model.number="profile.people[idx].carbsTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">F</span><input v-model.number="profile.people[idx].fatTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">V</span><input v-model.number="profile.people[idx].vegetableTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.calories') }}</span><input v-model.number="profile.people[idx].calorieTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.protein') }}</span><input v-model.number="profile.people[idx].proteinTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.carbs') }}</span><input v-model.number="profile.people[idx].carbsTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.fat') }}</span><input v-model.number="profile.people[idx].fatTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.vegetables') }}</span><input v-model.number="profile.people[idx].vegetableTarget" type="number" min="0" class="app-input" /></label>
           </div>
         </div>
       </div>
