@@ -260,72 +260,27 @@ textarea.app-input {
   }
 }
 
-/* Print stylesheet — clean output for sticking on the fridge */
+/* Print stylesheet — the PrintPlan component renders a detailed,
+   multi-page view with full recipes and shopping list. Everything
+   else is hidden so only the expanded plan gets printed. */
 @media print {
   body {
     background: white !important;
     color: black !important;
-    font-size: 11px;
   }
 
   .app-header,
   .mobile-nav,
   .gen-banner,
-  .summary__cta,
-  .meal-slot__add,
-  .meal-slot__regen,
-  .dish-card__actions,
-  .modal-backdrop {
+  .modal-backdrop,
+  .planner__top,
+  .planner__layout {
     display: none !important;
   }
 
   .app-main {
     padding: 0 !important;
     max-width: none !important;
-  }
-
-  .planner__layout {
-    display: block !important;
-  }
-
-  .weekly-grid {
-    display: grid !important;
-    grid-template-columns: repeat(7, 1fr) !important;
-    gap: 4px !important;
-  }
-
-  .day-col {
-    border: 1px solid #ddd !important;
-    border-radius: 4px !important;
-    padding: 6px !important;
-    page-break-inside: avoid;
-    box-shadow: none !important;
-  }
-
-  .day-col__date {
-    font-size: 16px !important;
-  }
-
-  .dish-card {
-    box-shadow: none !important;
-    border: 1px solid #eee !important;
-    padding: 4px 6px !important;
-  }
-
-  .app-card {
-    box-shadow: none !important;
-    border: 1px solid #ddd !important;
-  }
-
-  .week-nav {
-    box-shadow: none !important;
-    border: none !important;
-    justify-content: center !important;
-  }
-
-  .week-nav__chev,
-  .week-nav__today {
-    display: none !important;
   }
 }
 

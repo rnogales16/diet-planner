@@ -1,0 +1,283 @@
+<script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useDietStore } from '@/stores/dietStore'
+import { localizedDish } from '@/utils/dishLocale'
+import { localizedMealLabel } from '@/utils/mealLocale'
+import { sumMeals } from '@/utils/nutritionHelpers'
+
+const { t, locale } = useI18n()
+const store = useDietStore()
+
+const props = defineProps({
+  week: { type: Object, default: null },
+  weekRange: { type: String, default: '' },
+})
+
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+const enabledTypes = computed(() => {
+  const set = new Set()
+  for (const mt of store.mealTypes) {
+    if (mt.enabled !== false) set.add(mt.type)
+  }
+  return set
+})
+
+function dayMeals(day) {
+  return day.meals.filter((m) => enabledTypes.value.has(m.type) && m.dishes.length > 0)
+}
+
+function loc(dish) {
+  return localizedDish(dish, locale.value)
+}
+
+function mealLabel(meal) {
+  return localizedMealLabel(meal, t)
+}
+
+function dayTotals(day) {
+  return sumMeals(day.meals.filter((m) => enabledTypes.value.has(m.type)))
+}
+
+const shoppingItems = computed(() => props.week?.shoppingList?.items || [])
+
+const CATEGORY_ORDER = [
+  'vegetables', 'fruits', 'protein', 'dairy', 'grains_and_pasta',
+  'legumes', 'nuts_and_seeds', 'pantry', 'herbs_and_spices',
+  'oils_and_condiments', 'frozen', 'beverages', 'bakery', 'other',
+]
+
+const shoppingGrouped = computed(() => {
+  const map = new Map()
+  for (const item of shoppingItems.value) {
+    const cat = CATEGORY_ORDER.includes(item.category) ? item.category : 'other'
+    if (!map.has(cat)) map.set(cat, [])
+    map.get(cat).push(item)
+  }
+  return CATEGORY_ORDER.filter((c) => map.has(c)).map((c) => ({ key: c, items: map.get(c) }))
+})
+</script>
+
+<template>
+  <div v-if="week" class="print-plan">
+    <header class="pp-header">
+      <h1>Diet Planner</h1>
+      <p>{{ weekRange }}</p>
+    </header>
+
+    <section v-for="(day, idx) in week.days" :key="day.date" class="pp-day">
+      <h2 class="pp-day-title">
+        {{ t(`planner.weekday.${WEEKDAY_KEYS[idx]}`) }}
+        <span class="pp-day-date">{{ new Date(day.date).getDate() }}</span>
+        <span class="pp-day-totals">
+          {{ dayTotals(day).calories }} kcal ·
+          P{{ dayTotals(day).protein }} C{{ dayTotals(day).carbs }} F{{ dayTotals(day).fat }}
+        </span>
+      </h2>
+
+      <div v-for="meal in dayMeals(day)" :key="meal.type" class="pp-meal">
+        <div v-for="dish in meal.dishes" :key="dish.id" class="pp-dish">
+          <div class="pp-dish-head">
+            <span class="pp-meal-label">{{ mealLabel(meal) }}</span>
+            <strong class="pp-dish-name">{{ loc(dish).name }}</strong>
+            <span class="pp-dish-macros">
+              {{ dish.calories }} kcal · P{{ dish.protein }} C{{ dish.carbs }} F{{ dish.fat }}
+              <template v-if="dish.vegetables"> · V{{ dish.vegetables }}g</template>
+            </span>
+          </div>
+
+          <div v-if="loc(dish).ingredients?.length" class="pp-section">
+            <div class="pp-ings">
+              <span v-for="(ing, i) in loc(dish).ingredients" :key="i" class="pp-ing">
+                {{ ing.name }} <em>{{ ing.amount }}</em><template v-if="i < loc(dish).ingredients.length - 1">, </template>
+              </span>
+            </div>
+          </div>
+
+          <ol v-if="loc(dish).instructions?.length" class="pp-steps">
+            <li v-for="(step, i) in loc(dish).instructions" :key="i">{{ step }}</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="shoppingGrouped.length" class="pp-shopping">
+      <h2 class="pp-shopping-title">{{ t('shopping.title') }}</h2>
+      <div v-for="group in shoppingGrouped" :key="group.key" class="pp-shop-group">
+        <h3 class="pp-shop-cat">{{ t(`shopping.categories.${group.key}`) }}</h3>
+        <div class="pp-shop-items">
+          <span v-for="(item, i) in group.items" :key="i" class="pp-shop-item">
+            ☐ {{ item.name }} <em>{{ item.amount }}</em><template v-if="i < group.items.length - 1">&nbsp; · &nbsp;</template>
+          </span>
+        </div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+/* Only visible when printing */
+.print-plan {
+  display: none;
+}
+
+@media print {
+  .print-plan {
+    display: block;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 9pt;
+    color: #111;
+    line-height: 1.4;
+  }
+
+  .pp-header {
+    text-align: center;
+    margin-bottom: 12pt;
+    padding-bottom: 8pt;
+    border-bottom: 2pt solid #7c9885;
+  }
+
+  .pp-header h1 {
+    font-size: 14pt;
+    font-weight: 700;
+    margin: 0;
+    color: #7c9885;
+  }
+
+  .pp-header p {
+    font-size: 10pt;
+    color: #666;
+    margin: 2pt 0 0;
+  }
+
+  .pp-day {
+    margin-bottom: 10pt;
+    page-break-inside: avoid;
+  }
+
+  .pp-day-title {
+    font-size: 10pt;
+    font-weight: 700;
+    background: #f3f4f6;
+    padding: 3pt 6pt;
+    margin: 0 0 4pt;
+    border-left: 3pt solid #7c9885;
+    display: flex;
+    align-items: baseline;
+    gap: 6pt;
+  }
+
+  .pp-day-date {
+    font-size: 12pt;
+  }
+
+  .pp-day-totals {
+    margin-left: auto;
+    font-size: 8pt;
+    font-weight: 400;
+    color: #666;
+  }
+
+  .pp-meal {
+    margin-bottom: 4pt;
+  }
+
+  .pp-dish {
+    padding: 3pt 0 3pt 9pt;
+    border-bottom: 0.5pt solid #eee;
+  }
+
+  .pp-dish:last-child {
+    border-bottom: none;
+  }
+
+  .pp-dish-head {
+    display: flex;
+    align-items: baseline;
+    gap: 6pt;
+    flex-wrap: wrap;
+  }
+
+  .pp-meal-label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    color: #999;
+    min-width: 60pt;
+  }
+
+  .pp-dish-name {
+    font-size: 9pt;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .pp-dish-macros {
+    font-size: 7pt;
+    color: #888;
+    white-space: nowrap;
+  }
+
+  .pp-ings {
+    font-size: 8pt;
+    color: #444;
+    margin: 2pt 0;
+    padding-left: 60pt;
+  }
+
+  .pp-ing em {
+    color: #888;
+    font-style: normal;
+  }
+
+  .pp-steps {
+    font-size: 8pt;
+    color: #333;
+    margin: 2pt 0 0;
+    padding-left: 74pt;
+  }
+
+  .pp-steps li {
+    margin-bottom: 1pt;
+  }
+
+  .pp-shopping {
+    page-break-before: always;
+    margin-top: 12pt;
+  }
+
+  .pp-shopping-title {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #7c9885;
+    border-bottom: 1pt solid #7c9885;
+    padding-bottom: 4pt;
+    margin: 0 0 8pt;
+  }
+
+  .pp-shop-group {
+    margin-bottom: 6pt;
+  }
+
+  .pp-shop-cat {
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    color: #7c9885;
+    font-weight: 700;
+    margin: 0 0 2pt;
+  }
+
+  .pp-shop-items {
+    font-size: 8pt;
+    color: #333;
+    line-height: 1.6;
+  }
+
+  .pp-shop-item em {
+    color: #888;
+    font-style: normal;
+  }
+}
+</style>

@@ -8,6 +8,7 @@ import { regenerateSingleMeal } from '@/services/regenerateMeal'
 import WeekNavigator from '@/components/calendar/WeekNavigator.vue'
 import WeeklyCalendar from '@/components/calendar/WeeklyCalendar.vue'
 import WeeklySummary from '@/components/summary/WeeklySummary.vue'
+import PrintPlan from '@/components/print/PrintPlan.vue'
 import DishFormModal from '@/components/dishes/DishFormModal.vue'
 import DishDetailModal from '@/components/dishes/DishDetailModal.vue'
 import DeleteConfirmModal from '@/components/dishes/DeleteConfirmModal.vue'
@@ -199,6 +200,9 @@ async function handleRegenerateMeal({ dayIndex, mealType }) {
       @close="showDeleteConfirm = false"
       @confirm="confirmDelete"
     />
+
+    <!-- Full expanded plan for printing — hidden on screen -->
+    <PrintPlan :week="store.currentWeek" :weekRange="weekRange" />
   </div>
 </template>
 
@@ -231,12 +235,18 @@ async function handleRegenerateMeal({ dayIndex, mealType }) {
   }
 }
 
+@media (max-width: 1100px) {
+  .planner__layout {
+    gap: 28px;
+  }
+}
+
 @media (max-width: 768px) {
   .planner {
     gap: 16px;
   }
   .planner__layout {
-    gap: 16px;
+    gap: 24px;
   }
 }
 </style>
