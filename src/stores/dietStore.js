@@ -30,15 +30,16 @@ function guessCategory(name) {
   const rules = [
     ['vegetables', 'lechuga tomate cebolla ajo pimiento zanahoria espinaca brócoli brocoli calabacín calabacin judía judia champiñón champinon berenjena pepino rúcula rucula acelga col patata boniato alcachofa guisante espárrago esparrago apio puerro nabo remolacha lettuce tomato onion garlic pepper carrot spinach broccoli zucchini mushroom eggplant cucumber potato asparagus celery leek pea'],
     ['fruits', 'manzana plátano platano naranja fresa kiwi limón limon lima aguacate arándano arandano frambuesa melocotón melocoton pera uva mango piña pina apple banana orange strawberry lemon avocado blueberry raspberry peach pear grape pineapple'],
-    ['protein', 'pollo ternera cerdo pavo salmón salmon atún atun merluza bacalao huevo pechuga filete carne jamón jamon lomo muslo chorizo gambas langostino chicken beef pork turkey tuna cod egg meat fish shrimp ham'],
-    ['dairy', 'leche yogur queso nata mantequilla requesón requeson milk yogurt cheese cream butter cottage'],
-    ['grains_and_pasta', 'arroz pasta macarrón macarron espagueti pan avena quinoa cuscús cuscus harina tortilla rice oat bread flour spaghetti noodle couscous'],
+    ['protein', 'pollo ternera cerdo pavo salmón salmon atún atun merluza bacalao huevo pechuga filete carne jamón jamon lomo muslo chorizo gambas langostino dorada lubina rape sepia calamar pulpo sardina anchoa proteína proteina caseína caseina whey chicken beef pork turkey tuna cod egg meat fish shrimp ham trout bass'],
+    ['dairy', 'leche yogur queso nata mantequilla requesón requeson cuajada milk yogurt cheese cream butter cottage'],
+    ['grains_and_pasta', 'arroz pasta macarrón macarron espagueti pan avena quinoa cuscús cuscus harina tortilla granola cereales copos rice oat bread flour spaghetti noodle couscous granola cereal'],
     ['legumes', 'lenteja garbanzo judión judion alubia frijol soja lentil chickpea bean'],
-    ['nuts_and_seeds', 'nuez almendra avellana pistacho cacahuete semilla chía chia sésamo sesamo lino walnut almond hazelnut pistachio peanut seed flax'],
+    ['nuts_and_seeds', 'nuez nueces almendra avellana pistacho cacahuete semilla chía chia sésamo sesamo lino anacardo piñón pinon walnut almond hazelnut pistachio peanut seed flax cashew pine'],
     ['oils_and_condiments', 'aceite vinagre salsa mostaza mayonesa oil vinegar sauce mustard soy'],
-    ['herbs_and_spices', 'orégano oregano tomillo romero albahaca perejil comino pimentón pimenton canela jengibre cúrcuma curcuma laurel cilantro oregano thyme rosemary basil parsley cumin paprika cinnamon ginger turmeric'],
+    ['herbs_and_spices', 'orégano oregano tomillo romero albahaca perejil comino pimentón pimenton canela jengibre cúrcuma curcuma laurel cilantro curry pimienta oregano thyme rosemary basil parsley cumin paprika cinnamon ginger turmeric curry'],
+    ['pantry', 'miel azúcar azucar cacao chocolate levadura maicena harina panko pan rallado honey sugar cocoa chocolate yeast cornstarch'],
     ['bakery', 'tostada magdalena galleta toast cracker muffin'],
-    ['beverages', 'bebida zumo café cafe té juice coffee tea'],
+    ['beverages', 'bebida zumo café cafe té vino cerveza juice coffee tea wine beer'],
   ]
   for (const [cat, words] of rules) {
     if (words.split(' ').some((w) => l.includes(w))) return cat
