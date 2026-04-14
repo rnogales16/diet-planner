@@ -23,7 +23,7 @@ const links = [
       active-class="is-active"
       :exact-active-class="link.exact ? 'is-active' : undefined"
     >
-      <component :is="link.icon" :size="18" />
+      <component :is="link.icon" :size="20" />
       <span class="mobile-nav__label">{{ t(`header.${link.key}`) }}</span>
     </RouterLink>
   </nav>
@@ -44,22 +44,24 @@ const links = [
     z-index: 40;
     background-color: var(--surface);
     border-top: 1px solid var(--border);
-    padding: 2px 8px;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Fixed padding — NO env(safe-area-inset-bottom). Chrome on iOS
+       already handles the home indicator, and the extra 34px of safe
+       area padding was creating a visible gap when Chrome hid its
+       toolbar. The ::after covers the home indicator for PWA mode. */
+    padding: 6px 8px;
     justify-content: space-around;
     gap: 4px;
   }
 
-  /* A thin extension below the nav covers any sub-pixel gap between the
-     safe-area bottom and the physical screen edge. Keep it small (20px)
-     so it doesn't create visible padding when Chrome hides its bar. */
+  /* Background extension for PWA / Safari where there's no Chrome bar
+     to cover the home indicator. Covers the physical bottom. */
   .mobile-nav::after {
     content: '';
     position: absolute;
     left: 0;
     right: 0;
-    bottom: -20px;
-    height: 20px;
+    top: 100%;
+    height: 40px;
     background-color: var(--surface);
     pointer-events: none;
   }
@@ -69,13 +71,13 @@ const links = [
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    padding: 4px 8px;
+    padding: 5px 10px;
     border-radius: var(--radius-sm);
     color: var(--text-faint);
     text-decoration: none;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
-    min-width: 48px;
+    min-width: 52px;
     transition: color 0.15s ease;
   }
 
