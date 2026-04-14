@@ -1,14 +1,12 @@
-// Basic service worker for offline shell caching.
-// We cache the app shell (HTML, CSS, JS) so the app loads instantly on
-// repeat visits. API calls still go to the network (meal plans, sync, etc).
+// Service worker for PWA support.
+//
+// IMPORTANT: navigation requests (HTML pages) always go to the network
+// so Cloudflare Access can intercept and enforce authentication. Only
+// static assets (JS, CSS, images, fonts) are cached for offline speed.
 
-const CACHE_NAME = 'diet-planner-v1'
-const SHELL_ASSETS = ['/', '/index.html']
+const CACHE_NAME = 'diet-planner-v2'
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS))
-  )
+self.addEventListener('install', () => {
   self.skipWaiting()
 })
 
@@ -24,21 +22,31 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url)
 
-  // Never cache API calls, D1 sync, or auth flows
+  // Never cache API calls, auth flows, or Access endpoints
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/cdn-cgi/')) {
     return
   }
 
+  // Navigation requests (HTML pages) MUST go to network so Access can
+  // enforce login. If the network fails, fall back to cache.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match('/index.html'))
+    )
+    return
+  }
+
+  // Static assets (JS, CSS, images): cache-first for speed
   e.respondWith(
     caches.match(e.request).then((cached) => {
-      const fetched = fetch(e.request).then((response) => {
-        if (response.ok) {
+      if (cached) return cached
+      return fetch(e.request).then((response) => {
+        if (response.ok && response.status === 200) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone))
         }
         return response
-      }).catch(() => cached)
-      return cached || fetched
+      })
     })
   )
 })
