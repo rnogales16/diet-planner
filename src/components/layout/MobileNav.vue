@@ -23,7 +23,7 @@ const links = [
       active-class="is-active"
       :exact-active-class="link.exact ? 'is-active' : undefined"
     >
-      <component :is="link.icon" :size="20" />
+      <component :is="link.icon" :size="18" />
       <span class="mobile-nav__label">{{ t(`header.${link.key}`) }}</span>
     </RouterLink>
   </nav>
@@ -44,7 +44,7 @@ const links = [
     z-index: 40;
     background-color: var(--surface);
     border-top: 1px solid var(--border);
-    padding: 4px 8px;
+    padding: 2px 8px;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     justify-content: space-around;
     gap: 4px;
@@ -68,14 +68,14 @@ const links = [
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-    padding: 6px 12px;
+    gap: 2px;
+    padding: 4px 8px;
     border-radius: var(--radius-sm);
     color: var(--text-faint);
     text-decoration: none;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
-    min-width: 56px;
+    min-width: 48px;
     transition: color 0.15s ease;
   }
 
