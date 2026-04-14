@@ -1,21 +1,14 @@
 // Reads/writes the per-user blob in D1.
-// Cloudflare Access sits in front of this and injects the verified email
-// header, so we don't need to authenticate or trust user-supplied data.
 
-const MAX_BODY_BYTES = 256 * 1024 // 256 KB is plenty for one user's diet
+import { emailFromRequest } from './_auth.js'
+
+const MAX_BODY_BYTES = 256 * 1024
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   })
-}
-
-function emailFromRequest(request) {
-  const direct = request.headers.get('Cf-Access-Authenticated-User-Email')
-  if (direct) return direct.toLowerCase()
-  // Fallback for local dev where Access is not in front
-  return null
 }
 
 export async function onRequestGet({ request, env }) {
