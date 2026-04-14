@@ -156,7 +156,20 @@ async function handleImportFile(event) {
 
 function addPerson() {
   if (!Array.isArray(profile.people)) profile.people = []
-  profile.people.push({ name: '', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null, vegetableTarget: null })
+  // Default: eats all currently enabled meals
+  const allEnabled = store.mealTypes.filter((mt) => mt.enabled !== false).map((mt) => mt.type)
+  profile.people.push({ name: '', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null, vegetableTarget: null, enabledMeals: [...allEnabled] })
+}
+
+function togglePersonMeal(personIdx, mealType) {
+  const person = profile.people[personIdx]
+  if (!person) return
+  if (!Array.isArray(person.enabledMeals)) {
+    person.enabledMeals = store.mealTypes.filter((mt) => mt.enabled !== false).map((mt) => mt.type)
+  }
+  const idx = person.enabledMeals.indexOf(mealType)
+  if (idx === -1) person.enabledMeals.push(mealType)
+  else person.enabledMeals.splice(idx, 1)
 }
 
 function removePerson(idx) {
@@ -294,6 +307,21 @@ async function handleTranslateAll() {
             <label class="field"><span class="field__label">{{ t('settings.profile.carbs') }}</span><input v-model.number="profile.people[idx].carbsTarget" type="number" min="0" class="app-input" /></label>
             <label class="field"><span class="field__label">{{ t('settings.profile.fat') }}</span><input v-model.number="profile.people[idx].fatTarget" type="number" min="0" class="app-input" /></label>
             <label class="field"><span class="field__label">{{ t('settings.profile.vegetables') }}</span><input v-model.number="profile.people[idx].vegetableTarget" type="number" min="0" class="app-input" /></label>
+          </div>
+          <div class="person-card__meals">
+            <span class="person-card__meals-label">{{ t('settings.profile.personMeals') }}</span>
+            <div class="person-card__meal-chips">
+              <button
+                v-for="mt in store.mealTypes.filter((m) => m.enabled !== false)"
+                :key="mt.type"
+                type="button"
+                class="person-meal-chip"
+                :class="{ 'is-active': (person.enabledMeals || []).includes(mt.type) }"
+                @click="togglePersonMeal(idx, mt.type)"
+              >
+                {{ localizedMealLabel(mt, t) }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -724,6 +752,48 @@ async function handleTranslateAll() {
   .person-card__macros {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+.person-card__meals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.person-card__meals-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.person-card__meal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.person-meal-chip {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.person-meal-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.person-meal-chip.is-active {
+  background-color: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .dislike-block {
