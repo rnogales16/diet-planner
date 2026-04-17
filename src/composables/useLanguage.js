@@ -1,5 +1,6 @@
 import { watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useDietStore } from '@/stores/dietStore'
 import { SUPPORTED_LOCALES } from '@/i18n'
 
@@ -13,6 +14,8 @@ export function useLanguage() {
 
   // First time anyone calls this, sync localStorage <-> i18n.locale and
   // start watching for changes so we persist to both localStorage and the store.
+  const router = useRouter()
+
   if (!bootstrapped) {
     bootstrapped = true
 
@@ -33,6 +36,13 @@ export function useLanguage() {
       (lang) => {
         localStorage.setItem(STORAGE_KEY, lang)
         document.documentElement.setAttribute('lang', lang)
+        // Update document title for current route in the new language
+        const currentRoute = router.currentRoute.value
+        const metaTitle = currentRoute?.meta?.title
+        if (metaTitle) {
+          const pageTitle = metaTitle[lang] || metaTitle.en || ''
+          document.title = pageTitle ? `${pageTitle} | Nutriplania` : 'Nutriplania'
+        }
         if (store.hydrated && store.language !== lang) {
           store.setLanguage(lang)
         }

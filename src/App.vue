@@ -10,7 +10,7 @@ useTheme()
 <template>
   <div class="app-shell">
     <AppHeader />
-    <main class="app-main">
+    <main class="app-main" role="main">
       <RouterView />
     </main>
     <MobileNav />

@@ -14,7 +14,7 @@ const links = [
 </script>
 
 <template>
-  <nav class="mobile-nav">
+  <nav class="mobile-nav" aria-label="Mobile navigation">
     <RouterLink
       v-for="link in links"
       :key="link.key"

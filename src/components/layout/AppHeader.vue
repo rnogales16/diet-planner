@@ -14,12 +14,12 @@ const { t } = useI18n()
 <template>
   <header class="app-header">
     <div class="app-header__inner">
-      <RouterLink to="/" class="brand">
+      <RouterLink to="/" class="brand" :aria-label="t('header.brand') + ' — ' + t('header.planner')">
         <AppLogo :size="26" />
         <span class="brand__name font-display">{{ t('header.brand') }}</span>
       </RouterLink>
 
-      <nav class="app-nav">
+      <nav class="app-nav" :aria-label="t('header.planner')">
         <RouterLink to="/" class="app-nav__link" active-class="is-active" exact-active-class="is-active">{{ t('header.planner') }}</RouterLink>
         <RouterLink to="/generate" class="app-nav__link" active-class="is-active">{{ t('header.generate') }}</RouterLink>
         <RouterLink to="/shopping" class="app-nav__link" active-class="is-active">{{ t('header.shopping') }}</RouterLink>

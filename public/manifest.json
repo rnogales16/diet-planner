@@ -1,12 +1,14 @@
 {
-  "name": "Diet Planner",
-  "short_name": "Diet",
-  "description": "AI-powered weekly meal planner",
+  "name": "Nutriplania — Planificador de comidas con IA",
+  "short_name": "Nutriplania",
+  "description": "Planificador de comidas semanal con inteligencia artificial. Genera dietas personalizadas, listas de compra automáticas y organiza tu nutrición. AI-powered weekly meal planner.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8f9fa",
   "theme_color": "#7c9885",
   "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["health", "food", "lifestyle"],
   "icons": [
     {
       "src": "/logo.svg",
