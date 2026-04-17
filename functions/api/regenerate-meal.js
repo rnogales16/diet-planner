@@ -1,10 +1,10 @@
-// Regenerates a single meal (one dish) using Claude, respecting the user's
+// Regenerates a single meal (one dish) using the primary LLM, respecting the user's
 // full profile. Much faster and cheaper than regenerating the whole week.
 
-import { callClaude } from './_anthropic.js'
+import { callPrimaryLLM } from './_llm.js'
 import { callGeminiWithFallback } from './_gemini.js'
 
-const CLAUDE_MODEL = 'claude-sonnet-4-6'
+const PRIMARY_MODEL = 'claude-sonnet-4-6'
 const GEMINI_FALLBACK = ['gemini-2.5-pro']
 
 const LANGUAGE_NAMES = { en: 'English', es: 'Spanish (español)' }
@@ -80,9 +80,9 @@ JSON shape:
 
   const userPrompt = `Generate one ${mealType} dish. ${targets.length ? 'Daily targets: ' + targets.join(', ') + '.' : ''} ${profile.favourites ? 'Favourite foods: ' + profile.favourites + '.' : ''} ${profile.cuisines ? 'Preferred cuisines: ' + profile.cuisines + '.' : ''}`
 
-  let result = await callClaude({
+  let result = await callPrimaryLLM({
     env,
-    model: CLAUDE_MODEL,
+    model: PRIMARY_MODEL,
     systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
     temperature: 0.8,

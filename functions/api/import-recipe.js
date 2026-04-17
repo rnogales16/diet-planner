@@ -1,8 +1,10 @@
-// Fetches a recipe URL, extracts the HTML, and asks Claude to parse it
+// Fetches a recipe URL, extracts the HTML, and asks the LLM to parse it
 // into our dish format.
 
-import { callClaude } from './_anthropic.js'
+import { callPrimaryLLM } from './_llm.js'
 import { callGeminiWithFallback } from './_gemini.js'
+
+const PRIMARY_MODEL = 'claude-sonnet-4-6'
 
 const LANGUAGE_NAMES = { en: 'English', es: 'Spanish (español)' }
 const SUPPORTED_LANGS = new Set(['en', 'es'])
@@ -71,9 +73,9 @@ Rules:
 - All text in ${langName}.
 - Output ONLY the JSON, no markdown.`
 
-  let result = await callClaude({
+  let result = await callPrimaryLLM({
     env,
-    model: 'claude-sonnet-4-6',
+    model: PRIMARY_MODEL,
     systemPrompt,
     messages: [{ role: 'user', content: `Extract the recipe from this page:\n\n${trimmed}` }],
     temperature: 0.3,

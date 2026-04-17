@@ -1,7 +1,9 @@
 // Analyzes a week's dishes and suggests batch cooking opportunities.
 
-import { callClaude } from './_anthropic.js'
+import { callPrimaryLLM } from './_llm.js'
 import { callGeminiWithFallback } from './_gemini.js'
+
+const PRIMARY_MODEL = 'claude-sonnet-4-6'
 
 const LANGUAGE_NAMES = { en: 'English', es: 'Spanish (español)' }
 const SUPPORTED_LANGS = new Set(['en', 'es'])
@@ -44,9 +46,9 @@ Rules:
 
   const dishSummary = dishes.map((d) => `${d.day}: ${d.name} (${(d.ingredients || []).map((i) => i.name).join(', ')})`).join('\n')
 
-  let result = await callClaude({
+  let result = await callPrimaryLLM({
     env,
-    model: 'claude-sonnet-4-6',
+    model: PRIMARY_MODEL,
     systemPrompt,
     messages: [{ role: 'user', content: `Analyze these dishes:\n${dishSummary}` }],
     temperature: 0.4,

@@ -1,27 +1,27 @@
-// Caller for Anthropic's Messages API (Claude), using the native streaming
-// protocol. We always request stream=true so that:
+// Primary LLM provider caller with native streaming support.
+
 //
-//  1. The HTTP request resolves as soon as Anthropic sends the first token,
+//  The HTTP request resolves as soon as the provider sends the first token,
 //     which means Cloudflare's subrequest timeout can't fire on us while
-//     Claude is still thinking about a long plan.
+//  the model is still generating about a long plan.
 //  2. As long as tokens keep arriving we are actively reading and the
-//     worker stays alive. The effective upper bound is how long Claude
+//  how long the model
 //     takes to finish, not some fixed 45/70/80s number.
 //
 // We accumulate every text delta into a single string and return it the
 // same way the non-streaming version did, so callers don't need to care.
 
 const ENDPOINT = 'https://api.anthropic.com/v1/messages'
-const ANTHROPIC_VERSION = '2023-06-01'
+const API_VERSION = '2023-06-01'
 
 // Absolute safety cap in case the stream hangs. Ten minutes is generous
 // enough to never fire in practice but prevents leaks.
 const ABSOLUTE_TIMEOUT_MS = 10 * 60 * 1000
 // Inter-chunk safety cap. If we go this long without receiving a single
-// new byte from Anthropic, something is wrong and we bail out.
+// new byte from the provider, something is wrong and we bail out.
 const IDLE_TIMEOUT_MS = 60 * 1000
 
-async function streamClaude(model, apiKey, { systemPrompt, messages, temperature, maxTokens }) {
+async function streamLLM(model, apiKey, { systemPrompt, messages, temperature, maxTokens }) {
   const controller = new AbortController()
   const absoluteTimer = setTimeout(() => controller.abort(), ABSOLUTE_TIMEOUT_MS)
 
@@ -31,7 +31,7 @@ async function streamClaude(model, apiKey, { systemPrompt, messages, temperature
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
-        'anthropic-version': ANTHROPIC_VERSION,
+        'anthropic-version': API_VERSION,
         'content-type': 'application/json',
         accept: 'text/event-stream',
       },
@@ -61,10 +61,10 @@ async function streamClaude(model, apiKey, { systemPrompt, messages, temperature
 
   if (!response.body) {
     clearTimeout(absoluteTimer)
-    return { ok: false, status: 461, error: 'No response body from Anthropic stream' }
+    return { ok: false, status: 461, error: 'No response body from LLM stream' }
   }
 
-  // Parse the SSE stream into a single text buffer. Anthropic sends events
+  // Parse the SSE stream. The provider sends events
   // separated by blank lines; each `data: ...` line carries a JSON payload.
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
@@ -112,11 +112,11 @@ async function streamClaude(model, apiKey, { systemPrompt, messages, temperature
         } else if (parsed.type === 'message_delta' && parsed.delta?.stop_reason) {
           stopReason = parsed.delta.stop_reason
         } else if (parsed.type === 'error') {
-          // Anthropic signalled an error mid-stream.
+          // Provider signalled an error mid-stream.
           return {
             ok: false,
             status: 500,
-            error: `Anthropic stream error: ${JSON.stringify(parsed.error || parsed).slice(0, 400)}`,
+            error: `LLM stream error: ${JSON.stringify(parsed.error || parsed).slice(0, 400)}`,
           }
         }
       }
@@ -135,9 +135,9 @@ async function streamClaude(model, apiKey, { systemPrompt, messages, temperature
   return { ok: true, content: fullText, model, stopReason }
 }
 
-export async function callClaude({ env, model, systemPrompt, messages, temperature, maxTokens }) {
+export async function callPrimaryLLM({ env, model, systemPrompt, messages, temperature, maxTokens }) {
   if (!env.ANTHROPIC_API_KEY) {
-    return { ok: false, status: 500, error: 'Claude is not configured (no ANTHROPIC_API_KEY).' }
+    return { ok: false, status: 500, error: 'Primary LLM not configured (missing API key).' }
   }
-  return streamClaude(model, env.ANTHROPIC_API_KEY, { systemPrompt, messages, temperature, maxTokens })
+  return streamLLM(model, env.ANTHROPIC_API_KEY, { systemPrompt, messages, temperature, maxTokens })
 }

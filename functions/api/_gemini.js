@@ -11,7 +11,7 @@ const DEFAULT_TIMEOUT_MS = 45000
 
 function getKeys(env, { freeOnly = false } = {}) {
   if (freeOnly) {
-    // Only the primary (free-tier) key. Useful when Claude has just failed
+    // Only the primary (free-tier) key for fallback attempts
     // and we do NOT want to burn money on the billed backup key.
     return [env.GEMINI_API_KEY].filter(Boolean)
   }

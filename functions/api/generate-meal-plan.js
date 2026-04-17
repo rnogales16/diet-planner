@@ -1,14 +1,14 @@
 // Generates a 7-day meal plan.
 //
-// Claude Sonnet 4.6 is the primary model (best at negative constraints).
-// If Claude fails we fall back to Gemini 2.5 Pro on the FREE-tier key only
+// Primary model for meal plan generation with fallback to Gemini.
+// If the primary fails we fall back to Gemini on the free-tier key.
 // — never the billed key — so failed attempts never cost money. The
 // billed Gemini key is reserved for the chat and translate endpoints.
 
 import { callGeminiWithFallback } from './_gemini.js'
-import { callClaude } from './_anthropic.js'
+import { callPrimaryLLM } from './_llm.js'
 
-const CLAUDE_MODEL = 'claude-sonnet-4-6'
+const PRIMARY_MODEL = 'claude-sonnet-4-6'
 const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro']
 
 const GOAL_LABELS = {
@@ -456,15 +456,15 @@ export async function onRequestPost({ request, env }) {
 
   const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes })
 
-  // --- Primary: Claude Sonnet 4.5 --------------------------------------
-  // Single-turn attempt first. If Claude also leaks forbidden ingredients we
-  // do a multi-turn retry with the bad response visible. If Claude fails
-  // completely (down, rate limited, key exhausted) we fall back to Gemini.
+  // --- Primary LLM attempt ---
+  // Single-turn attempt. If forbidden ingredients leak through,
+  // the user clicks Regenerate manually. If the primary fails
+  
 
-  async function claudeFirstAttempt() {
-    return callClaude({
+  async function primaryFirstAttempt() {
+    return callPrimaryLLM({
       env,
-      model: CLAUDE_MODEL,
+      model: PRIMARY_MODEL,
       systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
       temperature: 0.7,
@@ -478,7 +478,7 @@ export async function onRequestPost({ request, env }) {
       env,
       models: GEMINI_FALLBACK_MODELS,
       freeOnly: true, // never touch the billed backup key here
-      timeoutMs: 18000, // fallback must be fast, budget is tight after Claude
+      timeoutMs: 18000, // fallback must be fast
       payload: {
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
@@ -498,19 +498,19 @@ export async function onRequestPost({ request, env }) {
   const allAttempts = []
   const providerErrors = []
 
-  const claudeResult = await claudeFirstAttempt()
+  const primaryResult = await primaryFirstAttempt()
   allAttempts.push({
-    model: CLAUDE_MODEL,
+    model: PRIMARY_MODEL,
     keyIndex: 0,
-    status: claudeResult.ok ? 200 : claudeResult.status,
-    error: claudeResult.error || null,
+    status: primaryResult.ok ? 200 : primaryResult.status,
+    error: primaryResult.error || null,
   })
-  if (!claudeResult.ok) {
-    providerErrors.push(`CLAUDE ERROR → status=${claudeResult.status} body=${claudeResult.error || 'unknown'}`)
+  if (!primaryResult.ok) {
+    providerErrors.push(`PRIMARY LLM ERROR → status=${primaryResult.status} body=${primaryResult.error || 'unknown'}`)
   }
 
-  let result = claudeResult
-  let usedProvider = 'claude'
+  let result = primaryResult
+  let usedProvider = 'primary'
 
   if (!result.ok) {
     result = await geminiFirstAttempt()
