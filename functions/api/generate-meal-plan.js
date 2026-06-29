@@ -228,7 +228,14 @@ function computePerMealTargets(allPeople, enabledMealTypes) {
       const allEats = Array.from(new Set([...inPlan, ...outside]))
       const shareTable = shareTableFor(person.trainingMode)
       const totalShare = allEats.reduce((s, m) => s + (shareTable[m] || 0), 0)
-      const personShare = (shareTable[type] || 0) / totalShare
+      // Edge case: none of the meals this person eats has a share in their
+      // training-mode table (totalShare === 0). This can happen when the
+      // enabledMeals/outsideMeals combination leaves a subset with no mapped
+      // shares. Dividing by zero would yield NaN and poison the kcal targets,
+      // so fall back to an even split (1/n) across the meals they actually eat.
+      const personShare = totalShare > 0
+        ? (shareTable[type] || 0) / totalShare
+        : 1 / allEats.length
       const personKcal = Math.round((person.calorieTarget || 0) * personShare)
       kcal += personKcal
       parts.push(`${person.name || 'Person'} ${personKcal}`)
