@@ -2,7 +2,16 @@
 
 import { emailFromRequest } from './_auth.js'
 
-const MAX_BODY_BYTES = 256 * 1024
+const MAX_BODY_BYTES = 2 * 1024 * 1024  // 2 MB — fits ~50+ weeks of plans with macroBreakdown
+
+// Safety net against accidental data loss. Before overwriting a user's blob
+// we snapshot the previous one into user_data_backups when either:
+//   - the new payload is meaningfully smaller (a likely data-loss event), or
+//   - the last snapshot is older than BACKUP_MIN_INTERVAL_MS (periodic history).
+// We keep the most recent BACKUP_KEEP snapshots per user and prune the rest.
+const SHRINK_RATIO = 0.7                       // back up if new < 70% of old
+const BACKUP_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000  // …or every 6h regardless
+const BACKUP_KEEP = 20
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -59,6 +68,10 @@ export async function onRequestPut({ request, env }) {
   const now = Date.now()
   const serialised = JSON.stringify(payload)
 
+  // Snapshot the previous version before overwriting, so any future bug or
+  // bad write is recoverable without resorting to D1 Time Travel.
+  await maybeBackup(env, email, serialised.length, now)
+
   await env.DB
     .prepare(`
       INSERT INTO user_data (email, data, updated_at)
@@ -69,4 +82,44 @@ export async function onRequestPut({ request, env }) {
     .run()
 
   return json({ success: true, updatedAt: now })
+}
+
+async function maybeBackup(env, email, newLen, now) {
+  try {
+    const existing = await env.DB
+      .prepare('SELECT data, updated_at FROM user_data WHERE email = ?')
+      .bind(email)
+      .first()
+    if (!existing) return  // nothing to back up yet
+
+    const oldLen = existing.data.length
+    const isShrink = newLen < oldLen * SHRINK_RATIO
+
+    const last = await env.DB
+      .prepare('SELECT backed_up_at FROM user_data_backups WHERE email = ? ORDER BY backed_up_at DESC LIMIT 1')
+      .bind(email)
+      .first()
+    const isStale = !last || (now - last.backed_up_at) > BACKUP_MIN_INTERVAL_MS
+
+    if (!isShrink && !isStale) return
+
+    await env.DB
+      .prepare('INSERT INTO user_data_backups (email, data, updated_at, backed_up_at, reason) VALUES (?, ?, ?, ?, ?)')
+      .bind(email, existing.data, existing.updated_at, now, isShrink ? 'shrink' : 'periodic')
+      .run()
+
+    // Keep only the most recent BACKUP_KEEP snapshots per user.
+    await env.DB
+      .prepare(`
+        DELETE FROM user_data_backups
+        WHERE email = ? AND id NOT IN (
+          SELECT id FROM user_data_backups WHERE email = ? ORDER BY backed_up_at DESC LIMIT ?
+        )
+      `)
+      .bind(email, email, BACKUP_KEEP)
+      .run()
+  } catch {
+    // Backups are best-effort: never block a legitimate save because the
+    // safety net hiccupped.
+  }
 }

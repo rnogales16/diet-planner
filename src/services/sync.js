@@ -14,6 +14,15 @@ let debounceTimer = null
 let inFlight = null
 let pending = null
 
+// Saves are blocked until the initial load has succeeded (or we knowingly
+// migrate legacy data). This prevents a failed/empty load from overwriting
+// the user's real server data with an empty default state.
+let savingEnabled = false
+
+export function enableSaving() {
+  savingEnabled = true
+}
+
 export async function loadFromServer() {
   syncStatus.value = 'loading'
   syncError.value = ''
@@ -58,6 +67,10 @@ async function pushNow(state) {
 }
 
 export function scheduleSave(getState) {
+  // Guard: never push to the server before a successful load. Otherwise a
+  // transient load failure would silently overwrite real data with the
+  // empty/default state the store falls back to.
+  if (!savingEnabled) return
   pending = getState
   if (debounceTimer) clearTimeout(debounceTimer)
   debounceTimer = setTimeout(async () => {
