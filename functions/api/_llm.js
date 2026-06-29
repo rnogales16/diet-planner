@@ -21,9 +21,15 @@ const ABSOLUTE_TIMEOUT_MS = 10 * 60 * 1000
 // new byte from the provider, something is wrong and we bail out.
 const IDLE_TIMEOUT_MS = 60 * 1000
 
-async function streamLLM(model, apiKey, { systemPrompt, messages, temperature, maxTokens }) {
+async function streamLLM(model, apiKey, { systemPrompt, messages, temperature, maxTokens, cacheSystem }) {
   const controller = new AbortController()
   const absoluteTimer = setTimeout(() => controller.abort(), ABSOLUTE_TIMEOUT_MS)
+
+  // When cacheSystem is true, send the system prompt as a single cache_control
+  // block so Anthropic re-uses the prefix across calls within the 5min TTL.
+  const system = cacheSystem
+    ? [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }]
+    : systemPrompt
 
   let response
   try {
@@ -39,7 +45,7 @@ async function streamLLM(model, apiKey, { systemPrompt, messages, temperature, m
         model,
         max_tokens: maxTokens,
         temperature,
-        system: systemPrompt,
+        system,
         messages,
         stream: true,
       }),
@@ -135,9 +141,9 @@ async function streamLLM(model, apiKey, { systemPrompt, messages, temperature, m
   return { ok: true, content: fullText, model, stopReason }
 }
 
-export async function callPrimaryLLM({ env, model, systemPrompt, messages, temperature, maxTokens }) {
+export async function callPrimaryLLM({ env, model, systemPrompt, messages, temperature, maxTokens, cacheSystem }) {
   if (!env.ANTHROPIC_API_KEY) {
     return { ok: false, status: 500, error: 'Primary LLM not configured (missing API key).' }
   }
-  return streamLLM(model, env.ANTHROPIC_API_KEY, { systemPrompt, messages, temperature, maxTokens })
+  return streamLLM(model, env.ANTHROPIC_API_KEY, { systemPrompt, messages, temperature, maxTokens, cacheSystem })
 }

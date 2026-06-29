@@ -51,6 +51,16 @@ function validateAndNormalize(raw, language = 'en', enabledMealTypes = null) {
                 amount: String(ing.amount || ''),
               })).filter((ing) => ing.name)
             : [],
+          macroBreakdown: Array.isArray(dish.macroBreakdown)
+            ? dish.macroBreakdown.map((b) => ({
+                ingredient: String(b.i ?? b.ingredient ?? b.name ?? ''),
+                grams: Math.round(Math.abs(Number(b.g ?? b.grams)) || 0),
+                kcal: Math.round(Math.abs(Number(b.k ?? b.kcal)) || 0),
+                protein: Math.round((Math.abs(Number(b.p ?? b.protein)) || 0) * 10) / 10,
+                carbs: Math.round((Math.abs(Number(b.c ?? b.carbs)) || 0) * 10) / 10,
+                fat: Math.round((Math.abs(Number(b.f ?? b.fat)) || 0) * 10) / 10,
+              })).filter((b) => b.ingredient)
+            : [],
           instructions: Array.isArray(dish.instructions)
             ? dish.instructions.map((s) => String(s)).filter(Boolean)
             : [],
@@ -108,7 +118,7 @@ function extractJson(text) {
 export async function generateMealPlan(formData, signal) {
   const store = useDietStore()
   const language = store.language || 'en'
-  const enabledMealTypes = store.mealTypes.filter((mt) => mt.enabled !== false).map((mt) => mt.type)
+  const enabledMealTypes = store.enabledMealTypes
   const body = {
     fridgeContents: formData.fridgeContents || '',
     weeklyExtras: formData.weeklyExtras || '',
@@ -132,23 +142,45 @@ export async function generateMealPlan(formData, signal) {
     return { success: false, error: `Network error: ${err.message}` }
   }
 
-  // If the Access session expired we get a redirect to the login page.
   if (response.status === 401 || response.status === 302) {
     return { success: false, error: 'Your session has expired. Please refresh the page to log in again.' }
   }
 
-  // Read the body as text first so we can diagnose non-JSON responses
-  // (Cloudflare error pages, HTML, truncated bodies, ...).
-  const rawText = await response.text()
+  // The server now returns SSE (text/event-stream) with keepalive comments
+  // and a single "data:" event containing the JSON result.
+  // Fall back to plain JSON parsing if the content-type isn't SSE.
+  const contentType = response.headers.get('content-type') || ''
   let payload
-  try {
-    payload = JSON.parse(rawText)
-  } catch {
-    const snippet = rawText.slice(0, 300).replace(/\s+/g, ' ')
-    return { success: false, error: `Invalid response from server (status ${response.status}): ${snippet || '(empty body)'}` }
+
+  if (contentType.includes('text/event-stream')) {
+    const rawText = await response.text()
+    // Extract the last "data:" line (skip keepalive comments)
+    let dataLine = null
+    for (const line of rawText.split('\n')) {
+      if (line.startsWith('data:')) {
+        dataLine = line.slice(5).trim()
+      }
+    }
+    if (!dataLine) {
+      return { success: false, error: 'Server returned empty SSE stream.' }
+    }
+    try {
+      payload = JSON.parse(dataLine)
+    } catch {
+      const snippet = dataLine.slice(0, 300).replace(/\s+/g, ' ')
+      return { success: false, error: `Invalid SSE data: ${snippet}` }
+    }
+  } else {
+    const rawText = await response.text()
+    try {
+      payload = JSON.parse(rawText)
+    } catch {
+      const snippet = rawText.slice(0, 300).replace(/\s+/g, ' ')
+      return { success: false, error: `Invalid response from server (status ${response.status}): ${snippet || '(empty body)'}` }
+    }
   }
 
-  if (!response.ok || !payload.success) {
+  if (!payload.success) {
     return { success: false, error: payload.error || `Server error (${response.status}).` }
   }
 

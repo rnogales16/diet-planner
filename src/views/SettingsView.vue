@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref, toRaw, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sun, Coffee, Utensils, Apple, Moon, User, Download, Upload, Trash2, Check, Languages, X, Plus } from 'lucide-vue-next'
+import { User, Download, Upload, Trash2, Check, Languages, X, Plus } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { translateDishes } from '@/services/translate'
 import { localizedMealLabel } from '@/utils/mealLocale'
@@ -11,7 +11,6 @@ const { t, locale } = useI18n()
 const clone = (obj) => JSON.parse(JSON.stringify(obj))
 
 const store = useDietStore()
-const saved = ref(false)
 const profileSaved = ref(false)
 
 // Diet profile (synced to D1 via the store)
@@ -71,44 +70,49 @@ function toggleGoal(value) {
   profile.goals = current
 }
 
-// Map the stored meal types to their localized label whenever the user
-// has not customized them. This way the editor reflects the current
-// language; if the user types something else it becomes their override.
-function localizeMealTypes(types) {
-  return clone(types).map((mt) => ({
-    ...mt,
-    label: localizedMealLabel(mt, t),
-  }))
+// All 5 meal types for per-person selection
+const ALL_MEAL_TYPES = ['breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner']
+
+function togglePrimaryMeal(mealType) {
+  if (!Array.isArray(profile.enabledMeals)) {
+    profile.enabledMeals = [...ALL_MEAL_TYPES]
+  }
+  const idx = profile.enabledMeals.indexOf(mealType)
+  if (idx === -1) profile.enabledMeals.push(mealType)
+  else profile.enabledMeals.splice(idx, 1)
 }
 
-const form = reactive({
-  mealTypes: localizeMealTypes(store.mealTypes),
+function togglePrimaryOutsideMeal(mealType) {
+  if (!Array.isArray(profile.outsideMeals)) profile.outsideMeals = []
+  const idx = profile.outsideMeals.indexOf(mealType)
+  if (idx === -1) profile.outsideMeals.push(mealType)
+  else profile.outsideMeals.splice(idx, 1)
+}
+
+function togglePersonOutsideMeal(personIdx, mealType) {
+  const person = profile.people[personIdx]
+  if (!person) return
+  if (!Array.isArray(person.outsideMeals)) person.outsideMeals = []
+  const idx = person.outsideMeals.indexOf(mealType)
+  if (idx === -1) person.outsideMeals.push(mealType)
+  else person.outsideMeals.splice(idx, 1)
+}
+
+const newFavourite = ref('')
+const favouriteFoods = computed(() => {
+  const raw = store.profile.favourites
+  return Array.isArray(raw) ? raw : []
 })
 
-watch(
-  () => [store.mealTypes, locale.value],
-  () => {
-    form.mealTypes = localizeMealTypes(store.mealTypes)
-  },
-  { deep: true },
-)
-
-const mealIcons = {
-  breakfast: Sun,
-  morning_snack: Coffee,
-  lunch: Utensils,
-  afternoon_snack: Apple,
-  dinner: Moon,
+function addFavourite() {
+  const value = newFavourite.value.trim()
+  if (!value) return
+  store.addFavouriteFood(value)
+  newFavourite.value = ''
 }
 
-function save() {
-  store.updateMealTypes(clone(toRaw(form.mealTypes)))
-  saved.value = true
-  setTimeout(() => (saved.value = false), 2000)
-}
-
-function reset() {
-  form.mealTypes = clone(store.mealTypes)
+function removeFavourite(name) {
+  store.removeFavouriteFood(name)
 }
 
 const importInput = ref(null)
@@ -156,16 +160,14 @@ async function handleImportFile(event) {
 
 function addPerson() {
   if (!Array.isArray(profile.people)) profile.people = []
-  // Default: eats all currently enabled meals
-  const allEnabled = store.mealTypes.filter((mt) => mt.enabled !== false).map((mt) => mt.type)
-  profile.people.push({ name: '', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null, vegetableTarget: null, enabledMeals: [...allEnabled] })
+  profile.people.push({ name: '', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null, vegetableTarget: null, enabledMeals: [...ALL_MEAL_TYPES], outsideMeals: [], trainingMode: 'general' })
 }
 
 function togglePersonMeal(personIdx, mealType) {
   const person = profile.people[personIdx]
   if (!person) return
   if (!Array.isArray(person.enabledMeals)) {
-    person.enabledMeals = store.mealTypes.filter((mt) => mt.enabled !== false).map((mt) => mt.type)
+    person.enabledMeals = [...ALL_MEAL_TYPES]
   }
   const idx = person.enabledMeals.indexOf(mealType)
   if (idx === -1) person.enabledMeals.push(mealType)
@@ -264,80 +266,31 @@ async function handleTranslateAll() {
         <input v-model="profile.allergiesAndIntolerances" class="app-input" :placeholder="t('settings.profile.allergiesAndIntolerancesPlaceholder')" />
       </label>
       <label class="field">
-        <span class="field__label">{{ t('settings.profile.favourites') }}</span>
-        <input v-model="profile.favourites" class="app-input" :placeholder="t('settings.profile.favouritesPlaceholder')" />
-      </label>
-      <label class="field">
         <span class="field__label">{{ t('settings.profile.cuisines') }}</span>
         <input v-model="profile.cuisines" class="app-input" :placeholder="t('settings.profile.cuisinesPlaceholder')" />
       </label>
 
-      <!-- People eating from this plan -->
-      <div class="people-section">
-        <div class="people-section__head">
-          <span class="field__label">{{ t('settings.profile.cookingFor') }}</span>
-          <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="addPerson">
-            <Plus :size="12" /> {{ t('settings.profile.addPerson') }}
-          </button>
+      <div class="fav-block">
+        <div class="fav-block__head">
+          <p class="fav-block__title">{{ t('settings.profile.favourites') }}</p>
+          <p class="fav-block__sub">{{ t('settings.profile.favouritesSub') }}</p>
         </div>
-
-        <!-- Primary user (you) -->
-        <div class="person-card">
-          <span class="person-card__name">{{ t('settings.profile.you') }}</span>
-          <div class="person-card__macros">
-            <label class="field"><span class="field__label">{{ t('settings.profile.calories') }}</span><input v-model.number="profile.calorieTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">{{ t('settings.profile.protein') }}</span><input v-model.number="profile.proteinTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">{{ t('settings.profile.carbs') }}</span><input v-model.number="profile.carbsTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">{{ t('settings.profile.fat') }}</span><input v-model.number="profile.fatTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">{{ t('settings.profile.vegetables') }}</span><input v-model.number="profile.vegetableTarget" type="number" min="0" class="app-input" /></label>
-          </div>
-        </div>
-
-        <!-- Additional people -->
-        <div v-for="(person, idx) in profile.people" :key="idx" class="person-card">
-          <div class="person-card__head">
-            <input v-model="profile.people[idx].name" class="app-input person-card__name-input" :placeholder="t('settings.profile.personNamePlaceholder')" />
-            <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="removePerson(idx)">
-              <X :size="12" /> {{ t('settings.profile.removePerson') }}
+        <div v-if="favouriteFoods.length" class="fav-chips">
+          <span v-for="food in favouriteFoods" :key="food" class="fav-chip">
+            {{ food }}
+            <button type="button" class="fav-chip__remove" @click="removeFavourite(food)">
+              <X :size="11" />
             </button>
-          </div>
-          <div class="person-card__macros">
-            <label class="field"><span class="field__label">{{ t('settings.profile.calories') }}</span><input v-model.number="profile.people[idx].calorieTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">{{ t('settings.profile.protein') }}</span><input v-model.number="profile.people[idx].proteinTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">{{ t('settings.profile.carbs') }}</span><input v-model.number="profile.people[idx].carbsTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">{{ t('settings.profile.fat') }}</span><input v-model.number="profile.people[idx].fatTarget" type="number" min="0" class="app-input" /></label>
-            <label class="field"><span class="field__label">{{ t('settings.profile.vegetables') }}</span><input v-model.number="profile.people[idx].vegetableTarget" type="number" min="0" class="app-input" /></label>
-          </div>
-          <div class="person-card__meals">
-            <span class="person-card__meals-label">{{ t('settings.profile.personMeals') }}</span>
-            <div class="person-card__meal-chips">
-              <button
-                v-for="mt in store.mealTypes.filter((m) => m.enabled !== false)"
-                :key="mt.type"
-                type="button"
-                class="person-meal-chip"
-                :class="{ 'is-active': (person.enabledMeals || []).includes(mt.type) }"
-                @click="togglePersonMeal(idx, mt.type)"
-              >
-                {{ localizedMealLabel(mt, t) }}
-              </button>
-            </div>
-          </div>
+          </span>
         </div>
+        <p v-else class="fav-empty">{{ t('settings.profile.favouritesEmpty') }}</p>
+        <input
+          v-model="newFavourite"
+          class="app-input"
+          :placeholder="t('settings.profile.favouritesAddPlaceholder')"
+          @keydown.enter.prevent="addFavourite"
+        />
       </div>
-
-      <label class="field">
-        <span class="field__label">{{ t('settings.profile.maxTime') }}</span>
-        <span class="field__control">
-          <input v-model.number="profile.maxCookTime" type="number" min="0" :placeholder="t('settings.profile.anyTime')" class="app-input app-input--with-suffix" />
-          <span class="field__suffix">{{ t('common.min') }}</span>
-        </span>
-      </label>
-
-      <label class="field">
-        <span class="field__label">{{ t('settings.profile.notes') }}</span>
-        <textarea v-model="profile.notes" class="app-input" rows="2" :placeholder="t('settings.profile.notesPlaceholder')" />
-      </label>
 
       <div class="dislike-block">
         <div class="dislike-block__head">
@@ -363,45 +316,138 @@ async function handleTranslateAll() {
         />
       </div>
 
+      <!-- People eating from this plan -->
+      <div class="people-section">
+        <div class="people-section__head">
+          <span class="field__label">{{ t('settings.profile.cookingFor') }}</span>
+          <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="addPerson">
+            <Plus :size="12" /> {{ t('settings.profile.addPerson') }}
+          </button>
+        </div>
+
+        <!-- Primary user (you) -->
+        <div class="person-card">
+          <span class="person-card__name">{{ t('settings.profile.you') }}</span>
+          <div class="person-card__macros">
+            <label class="field"><span class="field__label">{{ t('settings.profile.calories') }}</span><input v-model.number="profile.calorieTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.protein') }}</span><input v-model.number="profile.proteinTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.carbs') }}</span><input v-model.number="profile.carbsTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.fat') }}</span><input v-model.number="profile.fatTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.vegetables') }}</span><input v-model.number="profile.vegetableTarget" type="number" min="0" class="app-input" /></label>
+          </div>
+          <div class="person-card__meals">
+            <span class="person-card__meals-label">{{ t('settings.profile.yourMeals') }}</span>
+            <div class="person-card__meal-chips">
+              <button
+                v-for="mt in store.mealTypes"
+                :key="mt.type"
+                type="button"
+                class="person-meal-chip"
+                :class="{ 'is-active': (profile.enabledMeals || []).includes(mt.type) }"
+                @click="togglePrimaryMeal(mt.type)"
+              >
+                {{ localizedMealLabel(mt, t) }}
+              </button>
+            </div>
+          </div>
+          <div class="person-card__meals">
+            <span class="person-card__meals-label">{{ t('settings.profile.outsideMeals') }}</span>
+            <div class="person-card__meal-chips">
+              <button
+                v-for="mt in store.mealTypes"
+                :key="mt.type"
+                type="button"
+                class="person-meal-chip"
+                :class="{ 'is-active': (profile.outsideMeals || []).includes(mt.type) }"
+                @click="togglePrimaryOutsideMeal(mt.type)"
+              >
+                {{ localizedMealLabel(mt, t) }}
+              </button>
+            </div>
+          </div>
+          <label class="field">
+            <span class="field__label">{{ t('settings.profile.trainingMode') }}</span>
+            <select v-model="profile.trainingMode" class="app-input">
+              <option value="general">{{ t('settings.profile.trainingModeGeneral') }}</option>
+              <option value="endurance">{{ t('settings.profile.trainingModeEndurance') }}</option>
+              <option value="strength">{{ t('settings.profile.trainingModeStrength') }}</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Additional people -->
+        <div v-for="(person, idx) in profile.people" :key="idx" class="person-card">
+          <div class="person-card__head">
+            <input v-model="profile.people[idx].name" class="app-input person-card__name-input" :placeholder="t('settings.profile.personNamePlaceholder')" />
+            <button type="button" class="app-btn app-btn--ghost app-btn--sm" @click="removePerson(idx)">
+              <X :size="12" /> {{ t('settings.profile.removePerson') }}
+            </button>
+          </div>
+          <div class="person-card__macros">
+            <label class="field"><span class="field__label">{{ t('settings.profile.calories') }}</span><input v-model.number="profile.people[idx].calorieTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.protein') }}</span><input v-model.number="profile.people[idx].proteinTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.carbs') }}</span><input v-model.number="profile.people[idx].carbsTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.fat') }}</span><input v-model.number="profile.people[idx].fatTarget" type="number" min="0" class="app-input" /></label>
+            <label class="field"><span class="field__label">{{ t('settings.profile.vegetables') }}</span><input v-model.number="profile.people[idx].vegetableTarget" type="number" min="0" class="app-input" /></label>
+          </div>
+          <div class="person-card__meals">
+            <span class="person-card__meals-label">{{ t('settings.profile.personMeals') }}</span>
+            <div class="person-card__meal-chips">
+              <button
+                v-for="mt in store.mealTypes"
+                :key="mt.type"
+                type="button"
+                class="person-meal-chip"
+                :class="{ 'is-active': (person.enabledMeals || []).includes(mt.type) }"
+                @click="togglePersonMeal(idx, mt.type)"
+              >
+                {{ localizedMealLabel(mt, t) }}
+              </button>
+            </div>
+          </div>
+          <div class="person-card__meals">
+            <span class="person-card__meals-label">{{ t('settings.profile.outsideMeals') }}</span>
+            <div class="person-card__meal-chips">
+              <button
+                v-for="mt in store.mealTypes"
+                :key="mt.type"
+                type="button"
+                class="person-meal-chip"
+                :class="{ 'is-active': (person.outsideMeals || []).includes(mt.type) }"
+                @click="togglePersonOutsideMeal(idx, mt.type)"
+              >
+                {{ localizedMealLabel(mt, t) }}
+              </button>
+            </div>
+          </div>
+          <label class="field">
+            <span class="field__label">{{ t('settings.profile.trainingMode') }}</span>
+            <select v-model="profile.people[idx].trainingMode" class="app-input">
+              <option value="general">{{ t('settings.profile.trainingModeGeneral') }}</option>
+              <option value="endurance">{{ t('settings.profile.trainingModeEndurance') }}</option>
+              <option value="strength">{{ t('settings.profile.trainingModeStrength') }}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <label class="field">
+        <span class="field__label">{{ t('settings.profile.maxTime') }}</span>
+        <span class="field__control">
+          <input v-model.number="profile.maxCookTime" type="number" min="0" :placeholder="t('settings.profile.anyTime')" class="app-input app-input--with-suffix" />
+          <span class="field__suffix">{{ t('common.min') }}</span>
+        </span>
+      </label>
+
+      <label class="field">
+        <span class="field__label">{{ t('settings.profile.notes') }}</span>
+        <textarea v-model="profile.notes" class="app-input" rows="2" :placeholder="t('settings.profile.notesPlaceholder')" />
+      </label>
+
       <footer class="settings__card-footer">
         <button type="button" class="app-btn app-btn--primary" @click="saveProfile">{{ t('settings.profile.saveProfile') }}</button>
         <Transition name="fade">
           <span v-if="profileSaved" class="settings__saved">
-            <Check :size="14" /> {{ t('common.saved') }}
-          </span>
-        </Transition>
-      </footer>
-    </section>
-
-    <!-- Meal types -->
-    <section class="app-card settings__card">
-      <header class="settings__card-head">
-        <h2 class="settings__card-title font-display">{{ t('settings.mealTypes.title') }}</h2>
-        <p class="settings__card-sub">{{ t('settings.mealTypes.subtitle') }}</p>
-      </header>
-      <div class="settings__rows">
-        <div
-          v-for="(meal, idx) in form.mealTypes"
-          :key="meal.type"
-          class="meal-row"
-          :class="{ 'is-disabled': !form.mealTypes[idx].enabled }"
-        >
-          <span class="meal-row__icon">
-            <component :is="mealIcons[meal.type] || Utensils" :size="14" />
-          </span>
-          <input v-model="form.mealTypes[idx].label" class="app-input meal-row__label" :disabled="!form.mealTypes[idx].enabled" />
-          <input v-model="form.mealTypes[idx].defaultTime" type="time" class="app-input meal-row__time" :disabled="!form.mealTypes[idx].enabled" />
-          <label class="switch">
-            <input type="checkbox" v-model="form.mealTypes[idx].enabled" />
-            <span class="switch__track" />
-          </label>
-        </div>
-      </div>
-      <footer class="settings__card-footer">
-        <button type="button" class="app-btn app-btn--primary" @click="save">{{ t('common.saveChanges') }}</button>
-        <button type="button" class="app-btn app-btn--ghost" @click="reset">{{ t('common.reset') }}</button>
-        <Transition name="fade">
-          <span v-if="saved" class="settings__saved">
             <Check :size="14" /> {{ t('common.saved') }}
           </span>
         </Transition>
@@ -794,6 +840,71 @@ async function handleTranslateAll() {
   border-color: var(--accent);
   color: var(--accent);
   font-weight: 600;
+}
+
+.fav-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.fav-block__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.fav-block__sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.fav-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fav-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 10px;
+  background-color: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.fav-chip__remove {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.fav-chip__remove:hover {
+  background-color: var(--danger-tint);
+  color: var(--danger);
+}
+
+.fav-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-style: italic;
 }
 
 .dislike-block {

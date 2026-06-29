@@ -16,13 +16,7 @@ const props = defineProps({
 
 const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
-const enabledTypes = computed(() => {
-  const set = new Set()
-  for (const mt of store.mealTypes) {
-    if (mt.enabled !== false) set.add(mt.type)
-  }
-  return set
-})
+const enabledTypes = computed(() => new Set(store.enabledMealTypes))
 
 function dayMeals(day) {
   return day.meals.filter((m) => enabledTypes.value.has(m.type) && m.dishes.length > 0)

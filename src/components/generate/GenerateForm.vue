@@ -35,7 +35,11 @@ const profileChips = computed(() => {
   return chips
 })
 
-const profileEmpty = computed(() => profileChips.value.length === 0 && !profile.value.allergies && !profile.value.favourites && !profile.value.notes)
+const profileEmpty = computed(() => {
+  const p = profile.value
+  const hasFavs = Array.isArray(p.favourites) ? p.favourites.length > 0 : !!p.favourites
+  return profileChips.value.length === 0 && !p.allergies && !hasFavs && !p.notes
+})
 </script>
 
 <template>

@@ -51,6 +51,14 @@ const routes = [
     },
   },
   {
+    path: '/nutrition',
+    name: 'nutrition',
+    component: () => import('@/views/NutritionChatView.vue'),
+    meta: {
+      title: { es: 'Consulta nutricional', en: 'Nutrition Consultant' },
+    },
+  },
+  {
     path: '/settings',
     name: 'settings',
     component: () => import('@/views/SettingsView.vue'),

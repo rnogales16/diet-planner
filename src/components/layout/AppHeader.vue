@@ -24,6 +24,7 @@ const { t } = useI18n()
         <RouterLink to="/generate" class="app-nav__link" active-class="is-active">{{ t('header.generate') }}</RouterLink>
         <RouterLink to="/shopping" class="app-nav__link" active-class="is-active">{{ t('header.shopping') }}</RouterLink>
         <RouterLink to="/favorites" class="app-nav__link" active-class="is-active">{{ t('header.favorites') }}</RouterLink>
+        <RouterLink to="/nutrition" class="app-nav__link" active-class="is-active">{{ t('header.nutrition') }}</RouterLink>
         <RouterLink to="/settings" class="app-nav__link" active-class="is-active">{{ t('header.settings') }}</RouterLink>
       </nav>
 
@@ -48,7 +49,7 @@ const { t } = useI18n()
 }
 
 .app-header__inner {
-  max-width: 1480px;
+  max-width: 1920px;
   margin: 0 auto;
   padding: 0 24px;
   height: 60px;

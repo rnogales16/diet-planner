@@ -25,3 +25,13 @@ design/
 *.njsproj
 *.sln
 *.sw?
+
+# Local scraping artifacts & data dumps (large / regenerable / personal)
+scripts/mercadona_images/
+scripts/mercadona_products.json
+scripts/mercadona_catalog.json
+scripts/mercadona_progress.json
+scripts/my-state-full.json
+scripts/diet-*.json
+scripts/diet-*.txt
+scripts/prompt-*.txt

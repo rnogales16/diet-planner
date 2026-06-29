@@ -146,11 +146,13 @@ function toggleFavorite(e) {
 
 .dish-card__meta {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 3px 6px;
   margin-top: 4px;
   font-size: 11px;
   color: var(--text-faint);
+  min-width: 0;
 }
 
 .dish-card__kcal {

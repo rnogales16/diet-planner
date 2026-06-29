@@ -1,5 +1,6 @@
 {
   "common": {
+    "total": "Total",
     "save": "Save",
     "saveChanges": "Save changes",
     "cancel": "Cancel",
@@ -23,6 +24,7 @@
     "generate": "Generate",
     "shopping": "Shopping",
     "favorites": "Favorites",
+    "nutrition": "Nutrition",
     "settings": "Settings"
   },
   "theme": {
@@ -159,8 +161,10 @@
       "dietaryStyle": "Dietary style",
       "allergiesAndIntolerances": "Allergies and intolerances",
       "allergiesAndIntolerancesPlaceholder": "e.g. peanuts, shellfish, lactose intolerant, celiac",
-      "favourites": "Favourite foods",
-      "favouritesPlaceholder": "e.g. salmon, avocado, sweet potato",
+      "favourites": "Favourite ingredients",
+      "favouritesSub": "The AI will use these ingredients more often in your plans.",
+      "favouritesAddPlaceholder": "Add an ingredient and press Enter",
+      "favouritesEmpty": "No favourite ingredients yet.",
       "cuisines": "Preferred cuisines",
       "cuisinesPlaceholder": "e.g. Mediterranean, Japanese, Mexican",
       "calories": "Calories",
@@ -175,7 +179,13 @@
       "personNamePlaceholder": "e.g. Partner",
       "personMeals": "Eats with you at",
       "allMeals": "all meals",
-      "you": "You (all meals)",
+      "you": "You",
+      "yourMeals": "Your meals",
+      "outsideMeals": "Meals eaten outside this plan (count toward target, not planned)",
+      "trainingMode": "Training mode",
+      "trainingModeGeneral": "General (lighter dinner)",
+      "trainingModeEndurance": "Endurance (carb-load dinner)",
+      "trainingModeStrength": "Strength (protein-spread)",
       "maxTime": "Max time per meal",
       "anyTime": "any",
       "notes": "Notes for the AI",
@@ -245,6 +255,29 @@
     "copy": "Copy here",
     "move": "Move here"
   },
+  "nutritionChat": {
+    "title": "Nutrition Consultant",
+    "subtitle": "Chat with AI to calculate your ideal macros",
+    "emptyTitle": "Your personal nutritionist",
+    "emptySubtitle": "Tell me about yourself (age, weight, height, activity, goals) and I'll calculate the calories and macros you need.",
+    "placeholder": "Type your message...",
+    "protein": "Protein",
+    "carbs": "Carbs",
+    "fat": "Fat",
+    "vegetables": "Vegs",
+    "templateLabel": "Copy this template, fill in your details and paste it in the chat:",
+    "copyTemplate": "Copy template",
+    "applyToProfile": "Apply to my profile",
+    "applied": "Applied",
+    "appliedTo": "Applied to {name}",
+    "pickPerson": "Apply to whom?",
+    "you": "You (main profile)",
+    "unnamed": "Unnamed",
+    "newPerson": "Create new person",
+    "newPersonPlaceholder": "Person's name",
+    "create": "Create",
+    "error": "Error communicating with AI. Please try again."
+  },
   "favorites": {
     "title": "Favorite dishes",
     "subtitle": "Dishes you've saved for reuse",
@@ -260,7 +293,9 @@
     "tabDetails": "Recipe",
     "tabChat": "Ask AI",
     "dislikeIngredient": "Don't use this ingredient again",
-    "ingredientDisliked": "Added to your dislikes"
+    "ingredientDisliked": "Added to your dislikes",
+    "macroBreakdown": "Per-ingredient macro breakdown",
+    "ingredient": "Ingredient"
   },
   "dishChat": {
     "intro": "Ask anything about this dish or request a change. The AI knows the recipe and your diet profile.",
@@ -353,6 +388,10 @@
       "beverages": "Beverages",
       "bakery": "Bakery",
       "other": "Other"
+    },
+    "freezer": {
+      "title": "Put in the freezer",
+      "subtitle": "These ingredients aren't used until mid or late week. Freeze them when you get home so they don't go bad."
     }
   },
   "errors": {

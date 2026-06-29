@@ -7,6 +7,8 @@
 
 import { callGeminiWithFallback } from './_gemini.js'
 import { callPrimaryLLM } from './_llm.js'
+import { MERCADONA_MENU } from './_mercadona-menu.js'
+import { recalculatePlan } from './_recalculate.js'
 
 const PRIMARY_MODEL = 'claude-sonnet-4-6'
 const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro']
@@ -75,7 +77,7 @@ BREVITY RULES (IMPORTANT — output must fit in a single response):
 - Dish names: max 6 words. No marketing adjectives.
 - Ingredient names: the common cooking name only (e.g. "chicken breast", not "organic boneless skinless chicken breast"). Max 4 words.
 - Instructions: 3 to 5 short steps per dish, each step max 18 words. No introductions, no "enjoy", no "tips".
-- Notes field: leave empty unless strictly necessary (allergy warning, storage tip). Max 10 words.
+- Notes field: for single-person meals leave empty unless strictly necessary. For multi-person meals, use the notes field for per-person macro breakdown (see MULTI-PERSON rules below).
 - Shopping list entries: name max 3 words, amount compact ("350g", "2 units", "500ml").
 - No duplicate dish names across the week. Vary cuisines, cooking methods and main proteins.
 - Allergies and dietary restrictions are absolute. Never include a forbidden ingredient.
@@ -88,27 +90,46 @@ COOKED WEIGHT ESTIMATE:
 - This is an estimate based on typical water loss/gain during cooking. Pasta and rice gain weight, meat loses weight.
 - Write it in the user's language.
 
-RAW WEIGHTS (NON-NEGOTIABLE):
-- All ingredient weights and volumes MUST refer to the RAW, UNCOOKED form. 100g of pasta means 100g of dry uncooked pasta. 150g of rice means 150g of dry rice. 200g of chicken means 200g of raw chicken.
-- Do NOT use cooked or "as served" weights. The user needs to know how much to weigh BEFORE cooking.
-- This applies to every ingredient: pasta, rice, beans, lentils, meats, fish, vegetables, etc.
-- Calculate calories and macros based on the RAW values too (uncooked pasta has different kcal per gram than cooked pasta).
+MULTI-PERSON INGREDIENT & MACRO BREAKDOWN:
+When a meal is eaten by more than one person:
+- Each ingredient's "amount" field MUST show the total followed by the per-person split in parentheses. Format: "250g (150g + 100g)" where the first number is Person 1's share and the second is Person 2's share, in the same order as the people are listed. This lets each person know exactly how much to eat if they end up eating separately.
+- The dish's top-level macro fields (calories, protein, carbs, fat, vegetables) are the TOTAL for all people combined.
+- The "notes" field MUST contain a per-person macro summary, e.g.: "Person 1: 480 kcal, 35g P, 50g C, 15g F | Julia: 320 kcal, 25g P, 35g C, 10g F". Keep it on one line, compact.
+- The "cookedWeight" field shows total + per-person split as described above.
+- For single-person meals, do NOT add any of this — just use normal amounts.
+
+CATALOG WEIGHTS — "AS SOLD":
+- The catalog macros are for the product AS SOLD. Use them directly without any cooked/raw conversion.
+- Most products are sold raw/dry: pasta (361 kcal/100g dry), rice (352 kcal/100g dry), fresh chicken breast (108 kcal/100g raw), etc. For these, the ingredient weight you write is the weight BEFORE cooking.
+- A few products are sold pre-cooked and have lower kcal: e.g. "Garbanzo cocido Hacendado" (90 kcal/100g, ready to eat from the can) vs "Garbanzo Hacendado" (348 kcal/100g, dry — needs soaking + cooking). Same for "Lenteja cocida" vs "Lenteja", "Patatas cocidas", "Huevos cocidos". Pick the form that matches your recipe and weigh AS SOLD.
+- Do NOT use cooked weights for products that are sold raw/dry — write 100g of dry pasta if the recipe uses 100g pasta, never 250g of "cooked pasta".
+- Do NOT mentally drain canned fish in oil: if the catalog says 363 kcal/100g for "Atún en aceite de oliva", that is the macros INCLUDING the oil; don't subtract it. If you want a leaner protein, use "Atún claro al natural" or "Salmón al natural" instead.
 
 ## Macro targets (CRITICAL)
 
 The user provides daily targets for calories, protein, carbs, fat AND vegetables. These are HARD CONSTRAINTS.
 
-- The total of the ${enabledMealTypes.length} meal(s) each day MUST land within ±10% of every provided target — calories, protein, carbs, fat AND vegetables. All five, every day.
+- TIGHT TOLERANCES — both must be satisfied:
+  * Each individual dish: stated calories MUST equal the sum of ingredient contributions within ±10% (i.e. the macroBreakdown you write must add up to the dish's calories field within 10%).
+  * Each day's total (sum of all dish calories): MUST land within ±5% of the user's combined daily target — for calories, protein, carbs, fat AND vegetables.
+  * If any constraint is violated, FIX the quantities before outputting. Do not output a plan that fails these.
 - Do NOT normalize the user's macro split toward a "typical" distribution. If the user asks for a high-carb low-fat plan, deliver exactly that. If they ask for keto, deliver that. The targets always win over your defaults.
-- Distribute the daily totals across the meals following this hierarchy:
-  * LUNCH is always the biggest meal of the day (~30-35% of daily kcal). It should have the most calories.
-  * BREAKFAST is the second biggest (~22-25%).
-  * DINNER must be LIGHTER than lunch (~20-25%). Never make dinner the heaviest meal — heavier dinners hurt sleep and insulin sensitivity.
-  * SNACKS (morning_snack, afternoon_snack) are small (~8-12% each).
-  * When the user has disabled snacks, redistribute their share to lunch and breakfast — NOT to dinner.
-  * This hierarchy applies to all macros, not just calories.
-- Ingredient quantities MUST genuinely add up to the dish's stated macros. A dish that says 600 kcal / 40g protein / 80g vegetables must have ingredients whose real-world values total ~600 kcal / ~40g protein and contain ~80g of vegetables. Use accurate per-ingredient values from common nutrition tables.
-- Before finalizing each day, mentally sum the 5 dishes' calories, protein, carbs, fat and vegetables. If any total drifts more than 10% from the daily target, adjust ingredient quantities (typically the staple carb, protein source, or veg portion) to bring it in line. Iterate until all five totals fit.
+- Per-meal distribution: the user prompt provides exact per-meal kcal targets if available. Use those as primary guide. Otherwise default hierarchy:
+  * LUNCH biggest (~30-35% of daily kcal), BREAKFAST second (~22-25%), DINNER lighter than lunch (~20-25%), SNACKS small (~8-12% each). When snacks disabled, redistribute their share to lunch and breakfast — NOT to dinner.
+- INGREDIENT SOURCING — MERCADONA ONLY:
+  * The user shops exclusively at Mercadona (Spanish supermarket). You will receive a catalog of available products at the end of this prompt.
+  * Every single ingredient you use MUST come from that catalog. Do NOT invent ingredients, do NOT use brands or products not listed.
+  * Each ingredient's "name" field must match the product name from the catalog as closely as possible (you may shorten it for readability — e.g. "Pechuga de pollo Hacendado" → "Pechuga de pollo" — but never invent products that aren't there).
+  * If a desired ingredient (e.g. a specific spice or sauce) isn't in the catalog, pick the closest equivalent that IS in the catalog. Never use a placeholder.
+- FORBIDDEN INGREDIENTS — DERIVATIVES INCLUDED:
+  * If the user lists "lentejas" as forbidden, ALSO exclude derivatives: pasta de lentejas, harina de lentejas, hummus de lentejas, etc.
+  * If "coliflor" is forbidden, exclude products that contain coliflor in their composition (e.g. "Migas de coliflor"). Skip the entire product, do not try to reuse it.
+  * Apply this expansion to every forbidden item: prohibition covers the ingredient, its derivatives (flours, pastas, milks), and any catalog product whose name or composition includes it.
+- MACRO MATH — USE THE CATALOG VALUES + WRITE THE BREAKDOWN:
+  * The catalog gives macros per 100g (or per 100ml for liquids) for each product. Multiply each ingredient's weight × the per-100g value to get its contribution. Sum to get the dish total.
+  * For every dish you MUST output a "macroBreakdown" array with one entry per ingredient using COMPACT KEYS to save tokens: { "i": ingredient_name, "g": grams, "k": kcal, "p": protein, "c": carbs, "f": fat }. The "g" field is the AS-SOLD weight (matches the "amount" field). The k/p/c/f are this ingredient's contribution to the dish total. Writing this is non-negotiable — it forces explicit math.
+  * Verify after each dish: sum of macroBreakdown[*].k must equal dish.calories within ±10%. If not, fix the quantities and rewrite the breakdown.
+  * Common mistake: 100g dry pasta ≈ 350 kcal, NOT 150 kcal. Use the catalog's per-100g value, never your memory.
 
 VEGETABLES FIELD:
 - Each dish has a numeric "vegetables" field representing the total grams of vegetables (raw weight) inside that dish.
@@ -149,6 +170,9 @@ Output JSON shape (exact field names, order does not matter):
             "cookTime": number,
             "servings": number,
             "ingredients": [{ "name": "string", "amount": "string" }],
+            "macroBreakdown": [
+              { "i": "string (matches an ingredient name)", "g": number, "k": number, "p": number, "c": number, "f": number }
+            ],
             "instructions": ["string", "..."]
           }
         }
@@ -158,7 +182,66 @@ Output JSON shape (exact field names, order does not matter):
   "shoppingList": [
     { "name": "string", "amount": "string", "category": "vegetables" }
   ]
-}`
+}
+
+---
+
+${MERCADONA_MENU}
+
+---
+
+REMINDER: every ingredient you use across all 7 days must come from the Mercadona catalog above. Use the per-100g macro values printed there to compute each dish's calories, protein, carbs and fat — do not estimate from memory. The shopping list at the end of your response must aggregate items using names that map back to catalog products.`
+}
+
+// Per-meal calorie share by training mode. Each table sums to 100 across
+// the standard 5 meal slots; values get renormalised to whatever subset
+// of meals the person actually eats.
+//   general   — balanced, lunch-heaviest, lighter dinner (insulin/sleep)
+//   endurance — carb-loaded dinner for next-day morning training
+//   strength  — protein-spread, snacks slightly bigger
+const MEAL_SHARE_BY_MODE = {
+  general:   { breakfast: 25, morning_snack: 10, lunch: 33, afternoon_snack: 10, dinner: 22 },
+  endurance: { breakfast: 22, morning_snack: 10, lunch: 25, afternoon_snack: 10, dinner: 33 },
+  strength:  { breakfast: 22, morning_snack: 12, lunch: 28, afternoon_snack: 12, dinner: 26 },
+}
+
+function shareTableFor(mode) {
+  return MEAL_SHARE_BY_MODE[mode] || MEAL_SHARE_BY_MODE.general
+}
+
+function computePerMealTargets(allPeople, enabledMealTypes) {
+  // For each meal type, sum the calorie portion from each person who eats it,
+  // using THAT person's training-mode share table.
+  //
+  // A person's daily target distributes across ALL meals they actually eat
+  // (in-plan + outside-plan). Meals they eat outside this app subtract their
+  // share from the in-plan totals — so e.g. Julia 1250 kcal eating breakfast
+  // outside doesn't dump 1250 into just lunch+dinner.
+  const result = []
+  for (const type of enabledMealTypes) {
+    let kcal = 0
+    const parts = []
+    for (const person of allPeople) {
+      const inPlan = (person.enabledMeals && person.enabledMeals.length) ? person.enabledMeals : enabledMealTypes
+      if (!inPlan.includes(type)) continue
+      const outside = Array.isArray(person.outsideMeals) ? person.outsideMeals : []
+      const allEats = Array.from(new Set([...inPlan, ...outside]))
+      const shareTable = shareTableFor(person.trainingMode)
+      const totalShare = allEats.reduce((s, m) => s + (shareTable[m] || 0), 0)
+      const personShare = (shareTable[type] || 0) / totalShare
+      const personKcal = Math.round((person.calorieTarget || 0) * personShare)
+      kcal += personKcal
+      parts.push(`${person.name || 'Person'} ${personKcal}`)
+    }
+    if (kcal > 0) {
+      result.push({
+        type,
+        kcal,
+        breakdown: parts.length > 1 ? parts.join(' + ') : parts[0] || `${kcal}`,
+      })
+    }
+  }
+  return result
 }
 
 function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, correctiveNote }) {
@@ -205,11 +288,28 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
   if (p.fatTarget) targets.push(`${p.fatTarget}g fat`)
   if (p.vegetableTarget) targets.push(`${p.vegetableTarget}g vegetables`)
   // Build the people list: primary user + any additional people
-  const allPeople = [{ name: 'Person 1', calorieTarget: p.calorieTarget, proteinTarget: p.proteinTarget, carbsTarget: p.carbsTarget, fatTarget: p.fatTarget, vegetableTarget: p.vegetableTarget }]
+  const primaryMeals = Array.isArray(p.enabledMeals) && p.enabledMeals.length > 0
+    ? p.enabledMeals
+    : enabledMealTypes
+  const allPeople = [{
+    name: 'Person 1',
+    calorieTarget: p.calorieTarget,
+    proteinTarget: p.proteinTarget,
+    carbsTarget: p.carbsTarget,
+    fatTarget: p.fatTarget,
+    vegetableTarget: p.vegetableTarget,
+    enabledMeals: primaryMeals,
+    outsideMeals: Array.isArray(p.outsideMeals) ? p.outsideMeals : [],
+    trainingMode: p.trainingMode || 'general',
+  }]
   if (Array.isArray(p.people)) {
     for (const person of p.people) {
       if (person.name || person.calorieTarget) {
-        allPeople.push(person)
+        allPeople.push({
+          ...person,
+          outsideMeals: Array.isArray(person.outsideMeals) ? person.outsideMeals : [],
+          trainingMode: person.trainingMode || 'general',
+        })
       }
     }
   }
@@ -219,7 +319,7 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
     lines.push(`### COOKING FOR ${allPeople.length} PEOPLE — each person has different targets AND may not eat every meal`)
     lines.push('')
 
-    // List each person with their targets
+    // List each person with their targets and meals
     for (let i = 0; i < allPeople.length; i++) {
       const person = allPeople[i]
       const name = person.name || `Person ${i + 1}`
@@ -230,14 +330,13 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
       if (person.fatTarget) personTargets.push(`${person.fatTarget}g F`)
       if (person.vegetableTarget) personTargets.push(`${person.vegetableTarget}g V`)
 
-      if (i === 0) {
-        lines.push(`- ${name}: ${personTargets.join(' · ')} — eats ALL meals`)
-      } else {
-        const meals = Array.isArray(person.enabledMeals) && person.enabledMeals.length > 0
-          ? person.enabledMeals.join(', ')
-          : 'all meals'
-        lines.push(`- ${name}: ${personTargets.join(' · ')} — eats ONLY: ${meals}`)
-      }
+      const meals = Array.isArray(person.enabledMeals) && person.enabledMeals.length > 0
+        ? person.enabledMeals.join(', ')
+        : 'all meals'
+      const modeNote = person.trainingMode && person.trainingMode !== 'general'
+        ? ` — training mode: ${person.trainingMode} (carb-loading evening for endurance / spread protein for strength)`
+        : ''
+      lines.push(`- ${name}: ${personTargets.join(' · ')} — eats: ${meals}${modeNote}`)
     }
 
     // Per-meal breakdown: who eats what
@@ -248,18 +347,15 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
       for (let i = 0; i < allPeople.length; i++) {
         const person = allPeople[i]
         const name = person.name || `Person ${i + 1}`
-        if (i === 0) {
-          // Primary user always eats all enabled meals
-          eaters.push(name)
-        } else {
-          const personMeals = Array.isArray(person.enabledMeals) ? person.enabledMeals : enabledMealTypes
-          if (personMeals.includes(mealType)) eaters.push(name)
-        }
+        const personMeals = Array.isArray(person.enabledMeals) ? person.enabledMeals : enabledMealTypes
+        if (personMeals.includes(mealType)) eaters.push(name)
       }
-      if (eaters.length === 1) {
+      if (eaters.length === 0) {
+        lines.push(`- ${mealType}: no one eats this — skip it.`)
+      } else if (eaters.length === 1) {
         lines.push(`- ${mealType}: only ${eaters[0]} eats this. Size the dish for 1 person only.`)
       } else {
-        lines.push(`- ${mealType}: ${eaters.join(' + ')} eat this. Size the dish for ${eaters.length} people combined. In the "notes" field, write the portion per person (e.g., "${eaters[0]}: Xg, ${eaters[1]}: Yg").`)
+        lines.push(`- ${mealType}: ${eaters.join(' + ')} eat this. Size the dish for ${eaters.length} people combined. Each ingredient amount must show total + per-person split, e.g. "250g (150g + 100g)". Notes must contain per-person macro summary.`)
       }
     }
 
@@ -267,6 +363,18 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
     lines.push('The dish macros must reflect the TOTAL for everyone eating that specific meal.')
     lines.push('The cookedWeight must also show per-person amounts for multi-person meals.')
     lines.push('Do NOT normalize these toward typical ratios. Each person picked their targets on purpose.')
+
+    // Per-meal exact kcal targets — sum across all people that eat each meal.
+    const mealTargets = computePerMealTargets(allPeople, enabledMealTypes)
+    const dayTotal = mealTargets.reduce((s, m) => s + m.kcal, 0)
+    if (dayTotal > 0) {
+      lines.push('')
+      lines.push('### EXACT PER-MEAL KCAL TARGETS — dish.calories MUST hit these (±10% per dish, ±5% on day total)')
+      for (const m of mealTargets) {
+        lines.push(`- ${m.type}: ${m.kcal} kcal  (${m.breakdown})`)
+      }
+      lines.push(`- DAY TOTAL: ${dayTotal} kcal  (must be within ±5%)`)
+    }
   } else if (targets.length) {
     lines.push('')
     lines.push(`### MANDATORY DAILY TARGETS — must be met within ±10% every day`)
@@ -284,6 +392,19 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
       }
     }
     lines.push('Do NOT normalize these toward typical ratios. The user picked these targets on purpose.')
+
+    // Per-meal exact kcal targets for the single-person case.
+    const onlyPerson = [{ name: 'Person 1', calorieTarget: p.calorieTarget, enabledMeals: primaryMeals, outsideMeals: Array.isArray(p.outsideMeals) ? p.outsideMeals : [], trainingMode: p.trainingMode || 'general' }]
+    const mealTargets = computePerMealTargets(onlyPerson, enabledMealTypes)
+    const dayTotal = mealTargets.reduce((s, m) => s + m.kcal, 0)
+    if (dayTotal > 0) {
+      lines.push('')
+      lines.push('### EXACT PER-MEAL KCAL TARGETS — dish.calories MUST hit these (±10% per dish, ±5% on day total)')
+      for (const m of mealTargets) {
+        lines.push(`- ${m.type}: ${m.kcal} kcal  (${m.breakdown})`)
+      }
+      lines.push(`- DAY TOTAL: ${dayTotal} kcal  (must be within ±5%)`)
+    }
   }
   if (p.maxCookTime) {
     lines.push(`- Max time per meal (prep + cook combined): ${p.maxCookTime} minutes`)
@@ -313,6 +434,26 @@ function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTyp
 }
 
 const VALID_GOALS = new Set(['lose_weight', 'gain_muscle', 'maintain', 'health'])
+const VALID_TRAINING_MODES = new Set(['general', 'endurance', 'strength'])
+
+function sanitizeTrainingMode(raw) {
+  return VALID_TRAINING_MODES.has(raw) ? raw : 'general'
+}
+
+function sanitizePerson(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  return {
+    name: trim(raw.name, 60),
+    calorieTarget: num(raw.calorieTarget),
+    proteinTarget: num(raw.proteinTarget),
+    carbsTarget: num(raw.carbsTarget),
+    fatTarget: num(raw.fatTarget),
+    vegetableTarget: num(raw.vegetableTarget),
+    enabledMeals: Array.isArray(raw.enabledMeals) ? raw.enabledMeals.filter((m) => typeof m === 'string') : null,
+    outsideMeals: Array.isArray(raw.outsideMeals) ? raw.outsideMeals.filter((m) => typeof m === 'string') : [],
+    trainingMode: sanitizeTrainingMode(raw.trainingMode),
+  }
+}
 
 function sanitizeGoals(raw) {
   if (Array.isArray(raw)) {
@@ -321,6 +462,61 @@ function sanitizeGoals(raw) {
   // Legacy single-string goal
   if (typeof raw === 'string' && VALID_GOALS.has(raw)) return [raw]
   return []
+}
+
+// Validate that each dish's macroBreakdown sums to its stated calories
+// within ±10%. Returns a list of violations to feed back to the LLM.
+function validateMacroBreakdown(plan) {
+  const violations = []
+  if (!plan || !Array.isArray(plan.days)) return violations
+  for (const day of plan.days) {
+    if (!Array.isArray(day.meals)) continue
+    for (const meal of day.meals) {
+      const dish = meal?.dish
+      if (!dish) continue
+      const stated = Number(dish.calories) || 0
+      if (stated < 50) continue  // skip negligible dishes
+      if (!Array.isArray(dish.macroBreakdown) || dish.macroBreakdown.length === 0) {
+        violations.push({
+          dayIndex: day.dayIndex,
+          mealType: meal.type,
+          dishName: dish.name || '(unnamed)',
+          reason: 'macroBreakdown is missing or empty',
+        })
+        continue
+      }
+      const sumKcal = dish.macroBreakdown.reduce((s, b) => s + (Number(b.k ?? b.kcal) || 0), 0)
+      const drift = Math.abs(sumKcal - stated) / stated
+      if (drift > 0.10) {
+        violations.push({
+          dayIndex: day.dayIndex,
+          mealType: meal.type,
+          dishName: dish.name || '(unnamed)',
+          stated,
+          breakdownSum: Math.round(sumKcal),
+          driftPct: Math.round((sumKcal - stated) / stated * 100),
+        })
+      }
+    }
+  }
+  return violations
+}
+
+function buildBreakdownCorrectiveNote(violations) {
+  const lines = [
+    'Your previous response had macroBreakdown values that did not match the dish calories. Fix every violation listed below and re-output the entire plan.',
+    'For each dish: sum(macroBreakdown[*].kcal) MUST equal dish.calories within ±10%. Either adjust the breakdown numbers (if the calories are correct) or adjust the ingredient quantities (if the breakdown is correct). Then keep both consistent.',
+    '',
+  ]
+  for (const v of violations.slice(0, 15)) {
+    if (v.reason) {
+      lines.push(`- Day ${v.dayIndex} ${v.mealType} "${v.dishName}": ${v.reason}`)
+    } else {
+      lines.push(`- Day ${v.dayIndex} ${v.mealType} "${v.dishName}": dish.calories=${v.stated} but macroBreakdown sums to ${v.breakdownSum} (drift ${v.driftPct >= 0 ? '+' : ''}${v.driftPct}%)`)
+    }
+  }
+  if (violations.length > 15) lines.push(`- (and ${violations.length - 15} more — fix all of them)`)
+  return lines.join('\n')
 }
 
 function extractJsonLoose(text) {
@@ -334,7 +530,54 @@ function extractJsonLoose(text) {
   if (a !== -1 && b > a) {
     try { return JSON.parse(text.slice(a, b + 1)) } catch { /* */ }
   }
-  return null
+  // Last resort: the response was truncated mid-stream. Try to repair by
+  // dropping the trailing incomplete fragment and closing open brackets.
+  // Strip a leading ```json fence (with or without closing) and salvage
+  // everything from the first '{' to the last balanced position.
+  let body = text.replace(/^[\s\S]*?```(?:json)?\s*/, '').replace(/```[\s\S]*$/, '')
+  const start = body.indexOf('{')
+  if (start === -1) return null
+  body = body.slice(start)
+  // Walk the string, tracking nesting; cut at the last position where the
+  // structure was syntactically valid (after a complete value).
+  let depth = 0
+  let inStr = false
+  let esc = false
+  let lastSafe = -1
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]
+    if (esc) { esc = false; continue }
+    if (ch === '\\') { esc = true; continue }
+    if (ch === '"') { inStr = !inStr; continue }
+    if (inStr) continue
+    if (ch === '{' || ch === '[') depth++
+    else if (ch === '}' || ch === ']') {
+      depth--
+      if (depth === 0) lastSafe = i
+    }
+    // After a comma at depth 1+, the previous element was complete — safe to cut.
+    else if (ch === ',' && depth > 0) lastSafe = i - 1
+  }
+  if (lastSafe < 0) return null
+  // Try increasing-precision repair: cut at lastSafe and append closing brackets.
+  let candidate = body.slice(0, lastSafe + 1)
+  // Re-count nesting to know how many brackets to close.
+  let d = 0
+  let stack = []
+  inStr = false; esc = false
+  for (const ch of candidate) {
+    if (esc) { esc = false; continue }
+    if (ch === '\\') { esc = true; continue }
+    if (ch === '"') { inStr = !inStr; continue }
+    if (inStr) continue
+    if (ch === '{') stack.push('}')
+    else if (ch === '[') stack.push(']')
+    else if (ch === '}' || ch === ']') stack.pop()
+  }
+  // Trim a trailing comma if present, then close all open brackets.
+  candidate = candidate.replace(/,\s*$/, '')
+  while (stack.length) candidate += stack.pop()
+  try { return JSON.parse(candidate) } catch { return null }
 }
 
 // Normalise for matching: lowercase, strip diacritics, collapse whitespace.
@@ -401,17 +644,26 @@ function scanForForbidden(plan, forbiddenList) {
 
 function sanitizeProfile(raw) {
   if (!raw || typeof raw !== 'object') return {}
+  // favourites: accept both string (legacy) and array
+  let favourites = ''
+  if (Array.isArray(raw.favourites)) {
+    favourites = raw.favourites.map((s) => trim(s, 100)).filter(Boolean).join(', ')
+  } else {
+    favourites = trim(raw.favourites, 500)
+  }
   return {
     goals: sanitizeGoals(raw.goals ?? raw.goal),
     dietaryStyle: trim(raw.dietaryStyle, 40),
     allergiesAndIntolerances: trim(raw.allergiesAndIntolerances || raw.allergies || '', 500),
-    favourites: trim(raw.favourites, 500),
+    favourites,
     cuisines: trim(raw.cuisines, 500),
     calorieTarget: num(raw.calorieTarget),
     proteinTarget: num(raw.proteinTarget),
     carbsTarget: num(raw.carbsTarget),
     fatTarget: num(raw.fatTarget),
     vegetableTarget: num(raw.vegetableTarget),
+    enabledMeals: Array.isArray(raw.enabledMeals) ? raw.enabledMeals.filter((m) => typeof m === 'string') : null,
+    outsideMeals: Array.isArray(raw.outsideMeals) ? raw.outsideMeals.filter((m) => typeof m === 'string') : [],
     servings: num(raw.servings) || 1,
     maxCookTime: num(raw.maxCookTime),
     notes: trim(raw.notes, 1000),
@@ -420,6 +672,10 @@ function sanitizeProfile(raw) {
           .map((s) => trim(s, 100))
           .filter(Boolean)
           .slice(0, 100)
+      : [],
+    trainingMode: sanitizeTrainingMode(raw.trainingMode),
+    people: Array.isArray(raw.people)
+      ? raw.people.map(sanitizePerson).filter(Boolean)
       : [],
   }
 }
@@ -442,12 +698,10 @@ export async function onRequestPost({ request, env }) {
     ? body.enabledMealTypes.filter((t) => VALID_MEAL_TYPES.includes(t))
     : VALID_MEAL_TYPES
   if (enabledMealTypes.length === 0) enabledMealTypes = VALID_MEAL_TYPES
-  // Keep the canonical order
   enabledMealTypes = VALID_MEAL_TYPES.filter((t) => enabledMealTypes.includes(t))
 
   const systemPrompt = buildSystemPrompt(language, enabledMealTypes)
 
-  // Collect the full list of forbidden items so we can also check server-side.
   const allergyList = (profile.allergiesAndIntolerances || profile.allergies || '')
     .split(/[,;]/)
     .map((s) => s.trim())
@@ -456,121 +710,171 @@ export async function onRequestPost({ request, env }) {
 
   const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes })
 
-  // --- Primary LLM attempt ---
-  // Single-turn attempt. If forbidden ingredients leak through,
-  // the user clicks Regenerate manually. If the primary fails
-  
+  // --- SSE streaming response ---
+  // Return headers immediately so Cloudflare's 100s proxy timeout never fires.
+  // Send keepalive comments every 10s while the LLM generates, then send the
+  // final result as a single SSE "data" event.
 
-  async function primaryFirstAttempt() {
-    return callPrimaryLLM({
-      env,
-      model: PRIMARY_MODEL,
-      systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-      temperature: 0.7,
-      maxTokens: 20000,
-    })
-  }
+  const { readable, writable } = new TransformStream()
+  const writer = writable.getWriter()
+  const encoder = new TextEncoder()
 
+  const write = (str) => writer.write(encoder.encode(str))
 
-  async function geminiFirstAttempt() {
-    return callGeminiWithFallback({
-      env,
-      models: GEMINI_FALLBACK_MODELS,
-      freeOnly: true, // never touch the billed backup key here
-      timeoutMs: 18000, // fallback must be fast
-      payload: {
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.9,
-          responseMimeType: 'application/json',
-          maxOutputTokens: 16384,
-        },
-      },
-    })
-  }
+  // Start the keepalive + LLM work in the background
+  const keepaliveInterval = setInterval(() => {
+    write(': keepalive\n\n').catch(() => {})
+  }, 10000)
 
-  // Track every attempt so we can surface the whole trace if everything fails
-  // AND so we can tell the user which providers failed even when a later one
-  // succeeded.
-  const allAttempts = []
-  const providerErrors = []
+  // Run the LLM calls and write the final result
+  ;(async () => {
+    try {
+      const allAttempts = []
+      const providerErrors = []
 
-  const primaryResult = await primaryFirstAttempt()
-  allAttempts.push({
-    model: PRIMARY_MODEL,
-    keyIndex: 0,
-    status: primaryResult.ok ? 200 : primaryResult.status,
-    error: primaryResult.error || null,
-  })
-  if (!primaryResult.ok) {
-    providerErrors.push(`PRIMARY LLM ERROR → status=${primaryResult.status} body=${primaryResult.error || 'unknown'}`)
-  }
+      const primaryResult = await callPrimaryLLM({
+        env,
+        model: PRIMARY_MODEL,
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        temperature: 0.7,
+        maxTokens: 32000,
+        cacheSystem: true,
+      })
+      allAttempts.push({
+        model: PRIMARY_MODEL,
+        keyIndex: 0,
+        status: primaryResult.ok ? 200 : primaryResult.status,
+        error: primaryResult.error || null,
+      })
+      if (!primaryResult.ok) {
+        providerErrors.push(`PRIMARY LLM ERROR → status=${primaryResult.status} body=${primaryResult.error || 'unknown'}`)
+      }
 
-  let result = primaryResult
-  let usedProvider = 'primary'
+      let result = primaryResult
+      let usedProvider = 'primary'
 
-  if (!result.ok) {
-    result = await geminiFirstAttempt()
-    usedProvider = 'gemini'
-    if (result.attempts) {
-      allAttempts.push(...result.attempts)
-      for (const a of result.attempts) {
-        if (a.status >= 400) {
-          providerErrors.push(`${a.model}/k${a.keyIndex}: ${a.status}`)
+      if (!result.ok) {
+        result = await callGeminiWithFallback({
+          env,
+          models: GEMINI_FALLBACK_MODELS,
+          freeOnly: true,
+          timeoutMs: 18000,
+          payload: {
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              topP: 0.9,
+              responseMimeType: 'application/json',
+              maxOutputTokens: 16384,
+            },
+          },
+        })
+        usedProvider = 'gemini'
+        if (result.attempts) {
+          allAttempts.push(...result.attempts)
+          for (const a of result.attempts) {
+            if (a.status >= 400) {
+              providerErrors.push(`${a.model}/k${a.keyIndex}: ${a.status}`)
+            }
+          }
         }
       }
+
+      let payload
+
+      if (!result.ok) {
+        const summary = allAttempts.map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
+        const lastError = result.error || 'unknown'
+        const detailLines = providerErrors.length > 0
+          ? ` | Details: ${providerErrors.join(' || ')}`
+          : ''
+        payload = { success: false, error: `Upstream error: ${lastError} [${summary}]${detailLines}`, attempts: allAttempts, providerErrors }
+      } else {
+        let warnings = []
+        let content = result.content
+        let macroAudit = null
+        let breakdownRetry = null
+
+        let plan = extractJsonLoose(result.content)
+
+        // Validate macroBreakdown coherence for telemetry only. The recalculator
+        // + day-level scaling below already correct any LLM macro drift, so a
+        // second LLM call would double the wall time without improving
+        // accuracy — it was causing browser/proxy timeouts.
+        if (plan) {
+          const violations = validateMacroBreakdown(plan)
+          breakdownRetry = { initial: violations.length }
+        }
+
+        if (plan) {
+          if (forbiddenList.length > 0) {
+            const hits = scanForForbidden(plan, forbiddenList)
+            if (hits.length > 0) {
+              warnings = hits.map((h) =>
+                `Dish "${h.dish}" contains forbidden term "${h.term}" (in ${h.where}). Click Regenerate to try again.`
+              )
+            }
+          }
+
+          // Recompute every dish's kcal/P/C/F from the Mercadona catalog so
+          // the LLM's drift gets corrected. Strip per-dish audit blobs from
+          // the plan we send to the client (keep only the summary).
+          try {
+            const { plan: corrected, summary } = recalculatePlan(plan, {
+              profile,
+              enabledMealTypes,
+              scaleToTarget: true,
+            })
+            for (const day of corrected.days || []) {
+              for (const meal of day.meals || []) {
+                if (Array.isArray(meal.dishes)) {
+                  for (const dish of meal.dishes) delete dish._macroAudit
+                }
+                if (meal.dish && typeof meal.dish === 'object') {
+                  delete meal.dish._macroAudit
+                }
+              }
+            }
+            content = JSON.stringify(corrected)
+            macroAudit = summary
+          } catch (e) {
+            // If recalculation fails for any reason, fall back to the raw
+            // LLM output rather than breaking the response.
+            macroAudit = { error: String(e?.message || e) }
+          }
+        }
+
+        payload = {
+          success: true,
+          content,
+          model: result.model,
+          provider: usedProvider,
+          warnings,
+          attempts: allAttempts,
+          providerErrors,
+          macroAudit,
+          breakdownRetry,
+        }
+      }
+
+      await write(`data: ${JSON.stringify(payload)}\n\n`)
+    } catch (err) {
+      const errPayload = { success: false, error: `Internal error: ${err.message}` }
+      await write(`data: ${JSON.stringify(errPayload)}\n\n`).catch(() => {})
+    } finally {
+      clearInterval(keepaliveInterval)
+      await writer.close().catch(() => {})
     }
-  }
+  })()
 
-  if (!result.ok) {
-    const summary = allAttempts.map((a) => `${a.model}/k${a.keyIndex}=${a.status}`).join(' ')
-    const lastError = result.error || 'unknown'
-    const detailLines = providerErrors.length > 0
-      ? ` | Details: ${providerErrors.join(' || ')}`
-      : ''
-    if (result.status === 429) {
-      return json({ success: false, error: `All AI quotas exhausted. [${summary}] Last: ${lastError}${detailLines}`, attempts: allAttempts, providerErrors }, 429)
-    }
-    if (result.status === 503 || result.status === 500 || result.status === 502 || result.status === 504) {
-      return json({ success: false, error: `AI provider temporarily overloaded. [${summary}] Last: ${lastError}${detailLines}`, attempts: allAttempts, providerErrors }, 503)
-    }
-    return json({ success: false, error: `Upstream error: ${lastError} [${summary}]${detailLines}`, attempts: allAttempts, providerErrors }, 502)
-  }
-
-  // --- Forbidden-ingredient enforcement ---------------------------------
-  //
-  // Previously we did an automatic multi-turn retry when the response
-  // contained forbidden ingredients. That burned another 30-60s and another
-  // paid API call EVERY time the model misbehaved, with no guarantee it
-  // would succeed. Now we just surface the violations as warnings — the
-  // user can click "Regenerate" manually to try again.
-
-  let warnings = []
-  if (forbiddenList.length > 0) {
-    const plan = extractJsonLoose(result.content)
-    const hits = scanForForbidden(plan, forbiddenList)
-    if (hits.length > 0) {
-      warnings = hits.map((h) =>
-        `Dish "${h.dish}" contains forbidden term "${h.term}" (in ${h.where}). Click Regenerate to try again.`
-      )
-    }
-  }
-
-  // Provider errors are kept on the response metadata for debugging but we
-  // don't spam the user with them in the warnings banner — those are
-  // reserved for actionable issues (forbidden ingredients still present).
-
-  return json({
-    success: true,
-    content: result.content,
-    model: result.model,
-    provider: usedProvider,
-    warnings,
-    attempts: allAttempts,
-    providerErrors,
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
   })
 }
 

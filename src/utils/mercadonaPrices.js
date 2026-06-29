@@ -1,7 +1,8 @@
-// Reference prices per kg/L/unit from Mercadona (Spain, April 2026 approx).
-// Used for rough weekly cost estimates. Prices are indicative — Mercadona
-// updates them regularly. The key is a keyword that gets matched against
-// the ingredient name (case-insensitive, includes).
+// Cost estimation for shopping lists. Uses the real Mercadona catalog
+// (lazy-loaded via mercadonaCatalog.js) when a product matches; falls back
+// to the keyword table below for ingredients that don't match a product.
+
+import { getCatalog, findMercadonaProductSync } from './mercadonaCatalog'
 
 const PRICES = [
   // Protein (€/kg)
@@ -125,29 +126,49 @@ function parseAmount(amountStr) {
   return { grams: 100, ml: 0, units: 0 } // fallback: assume 100g
 }
 
+function costFromProduct(product, amount) {
+  const ppk = product.pricePerKg || 0
+  // pricePerKg in catalog is €/kg or €/L depending on size_format ("kg" or "l")
+  const isLiquid = (product.priceFormat || '').toLowerCase().includes('l')
+  if (isLiquid && amount.ml > 0) return (ppk / 1000) * amount.ml
+  if (amount.grams > 0) return (ppk / 1000) * amount.grams
+  if (amount.ml > 0) return (ppk / 1000) * amount.ml
+  if (amount.units > 0 && product.price > 0) return product.price * amount.units
+  return (ppk / 1000) * 100
+}
+
+function costFromKeyword(name, amount) {
+  const rule = PRICES.find((p) => name.includes(p.keyword))
+  if (!rule) {
+    return (DEFAULT_PRICE_PER_KG / 1000) * (amount.grams || 100)
+  }
+  if (rule.pricePerUnit && amount.units > 0) return rule.pricePerUnit * amount.units
+  if (rule.pricePerL && amount.ml > 0) return (rule.pricePerL / 1000) * amount.ml
+  if (rule.pricePerKg && amount.grams > 0) return (rule.pricePerKg / 1000) * amount.grams
+  if (rule.pricePerL && amount.grams > 0) return (rule.pricePerL / 1000) * amount.grams
+  if (rule.pricePerKg) return (rule.pricePerKg / 1000) * (amount.grams || 100)
+  return (DEFAULT_PRICE_PER_KG / 1000) * (amount.grams || 100)
+}
+
 export function estimateWeeklyCost(items) {
   let total = 0
+  let matched = 0
   for (const item of items) {
     const name = (item.name || '').toLowerCase()
     const amount = parseAmount(item.amount)
-    const rule = PRICES.find((p) => name.includes(p.keyword))
-
-    if (rule) {
-      if (rule.pricePerUnit && amount.units > 0) {
-        total += rule.pricePerUnit * amount.units
-      } else if (rule.pricePerL && amount.ml > 0) {
-        total += (rule.pricePerL / 1000) * amount.ml
-      } else if (rule.pricePerKg && amount.grams > 0) {
-        total += (rule.pricePerKg / 1000) * amount.grams
-      } else if (rule.pricePerL && amount.grams > 0) {
-        // Liquids listed in grams: treat as ml
-        total += (rule.pricePerL / 1000) * amount.grams
-      } else if (rule.pricePerKg) {
-        total += (rule.pricePerKg / 1000) * (amount.grams || 100)
-      }
+    const product = findMercadonaProductSync(name)
+    if (product && product.pricePerKg > 0) {
+      total += costFromProduct(product, amount)
+      matched++
     } else {
-      total += (DEFAULT_PRICE_PER_KG / 1000) * (amount.grams || 100)
+      total += costFromKeyword(name, amount)
     }
   }
   return Math.round(total * 100) / 100
+}
+
+// Kick off catalog load early so it's ready by the time the user opens
+// the shopping view. Safe to call from anywhere; idempotent.
+export function preloadCatalog() {
+  return getCatalog()
 }

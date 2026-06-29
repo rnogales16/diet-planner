@@ -1,17 +1,21 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ShoppingCart, ClipboardList } from 'lucide-vue-next'
+import { ShoppingCart, ClipboardList, Snowflake } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
-import { estimateWeeklyCost } from '@/utils/mercadonaPrices'
+import { estimateWeeklyCost, preloadCatalog } from '@/utils/mercadonaPrices'
 import WeekNavigator from '@/components/calendar/WeekNavigator.vue'
 
 const { t, locale } = useI18n()
 const store = useDietStore()
 const { weekRange, init, goToPrevWeek, goToNextWeek, goToToday } = useWeekNavigation()
 
-onMounted(init)
+const catalogReady = ref(false)
+onMounted(() => {
+  init()
+  preloadCatalog().then(() => { catalogReady.value = true })
+})
 
 const CATEGORY_ORDER = [
   'vegetables',
@@ -86,7 +90,73 @@ const grouped = computed(() => {
 
 const estimatedCost = computed(() => {
   if (items.value.length === 0) return null
+  // Touch catalogReady so the cost recomputes once the catalog finishes loading.
+  void catalogReady.value
   return estimateWeeklyCost(items.value)
+})
+
+// Fresh meat and fish that spoils within 1-2 days in the fridge.
+// Excludes cured/processed meats (jamón, chorizo, bacon) and dairy.
+const PERISHABLE_CATEGORIES = new Set()
+const PERISHABLE_KEYWORDS = [
+  // Aves frescas
+  'pollo', 'pavo', 'pechuga', 'muslo', 'contramuslo', 'alitas',
+  'chicken', 'turkey', 'breast', 'thigh',
+  // Carne roja fresca
+  'ternera', 'cerdo', 'cordero', 'lomo', 'solomillo', 'filete',
+  'carne picada', 'carne molida', 'entrecot', 'chuleta',
+  'beef', 'pork', 'lamb', 'steak', 'fillet', 'mince', 'ground',
+  // Pescado y marisco fresco
+  'salmón', 'salmon', 'atún', 'atun', 'merluza', 'bacalao fresco',
+  'dorada', 'lubina', 'rape', 'trucha', 'lenguado', 'mero', 'rodaballo',
+  'gambas', 'langostino', 'sepia', 'calamar', 'pulpo', 'sardina', 'anchoa',
+  'mejillones', 'almejas', 'berberechos',
+  'cod', 'tuna', 'trout', 'bass', 'hake', 'sole', 'bream',
+  'shrimp', 'prawn', 'squid', 'octopus', 'mussel', 'clam',
+]
+const FREEZER_THRESHOLD_DAYS = 3
+
+// Analyze which days each ingredient is first used
+const freezerItems = computed(() => {
+  if (!week.value || items.value.length === 0) return []
+
+  // Build a map: ingredient name (lowercase) → earliest dayIndex it appears
+  const firstUseDay = new Map()
+  for (const day of week.value.days) {
+    const dayIdx = week.value.days.indexOf(day)
+    for (const meal of day.meals) {
+      for (const dish of meal.dishes) {
+        for (const ing of (dish.ingredients || [])) {
+          if (!ing.name) continue
+          const key = ing.name.toLowerCase().trim()
+          if (!firstUseDay.has(key)) {
+            firstUseDay.set(key, dayIdx)
+          }
+        }
+      }
+    }
+  }
+
+  // Find shopping list items that are perishable AND first used on day 3+
+  const result = []
+  for (const item of items.value) {
+    const key = item.name.toLowerCase().trim()
+    const firstDay = firstUseDay.get(key)
+    if (firstDay === undefined || firstDay < FREEZER_THRESHOLD_DAYS) continue
+
+    const isPerishableCat = PERISHABLE_CATEGORIES.has(item.category)
+    const isPerishableKeyword = PERISHABLE_KEYWORDS.some((kw) => key.includes(kw))
+    if (!isPerishableCat && !isPerishableKeyword) continue
+
+    const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+    result.push({
+      ...item,
+      firstDayIndex: firstDay,
+      firstDayKey: WEEKDAY_KEYS[firstDay] || '',
+    })
+  }
+
+  return result.sort((a, b) => a.firstDayIndex - b.firstDayIndex)
 })
 
 const generatedAtLabel = computed(() => {
@@ -157,6 +227,26 @@ const generatedAtLabel = computed(() => {
           </span>
           <span class="shopping-item__name">{{ item.name }}</span>
           <span v-if="item.amount" class="shopping-item__amount tabular">{{ item.amount }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Freezer recommendations -->
+    <section v-if="freezerItems.length > 0" class="shopping__section shopping__freezer app-card">
+      <h2 class="shopping__section-title shopping__freezer-title">
+        <Snowflake :size="14" /> {{ t('shopping.freezer.title') }}
+      </h2>
+      <p class="shopping__freezer-sub">{{ t('shopping.freezer.subtitle') }}</p>
+      <ul class="shopping__items">
+        <li
+          v-for="(item, i) in freezerItems"
+          :key="`freezer-${i}-${item.name}`"
+          class="shopping-item shopping-item--freezer"
+        >
+          <Snowflake :size="14" class="shopping-item__frost" />
+          <span class="shopping-item__name">{{ item.name }}</span>
+          <span class="shopping-item__amount tabular">{{ item.amount }}</span>
+          <span class="shopping-item__day">{{ t(`planner.weekday.${item.firstDayKey}`) }}</span>
         </li>
       </ul>
     </section>
@@ -316,6 +406,44 @@ const generatedAtLabel = computed(() => {
 .shopping-item.is-checked .shopping-item__amount {
   text-decoration: line-through;
   color: var(--text-faint);
+}
+
+.shopping__freezer {
+  border-color: #a8d8ea;
+  background: linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, #a8d8ea 8%, var(--surface)) 100%);
+}
+
+.shopping__freezer-title {
+  color: #4a9ec5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shopping__freezer-sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.shopping-item--freezer {
+  cursor: default;
+}
+
+.shopping-item__frost {
+  color: #4a9ec5;
+  flex-shrink: 0;
+}
+
+.shopping-item__day {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a9ec5;
+  background-color: color-mix(in srgb, #a8d8ea 20%, transparent);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {

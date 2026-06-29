@@ -1,7 +1,7 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { CalendarDays, Sparkles, ShoppingCart, Settings } from 'lucide-vue-next'
+import { CalendarDays, Sparkles, ShoppingCart, MessageCircle, Settings } from 'lucide-vue-next'
 
 const { t } = useI18n()
 
@@ -9,6 +9,7 @@ const links = [
   { to: '/', icon: CalendarDays, key: 'planner', exact: true },
   { to: '/generate', icon: Sparkles, key: 'generate' },
   { to: '/shopping', icon: ShoppingCart, key: 'shopping' },
+  { to: '/nutrition', icon: MessageCircle, key: 'nutrition' },
   { to: '/settings', icon: Settings, key: 'settings' },
 ]
 </script>

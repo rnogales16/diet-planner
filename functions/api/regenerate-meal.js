@@ -78,7 +78,8 @@ JSON shape:
   if (profile.dietaryStyle) targets.push(`Style: ${profile.dietaryStyle}`)
   if (profile.maxCookTime) targets.push(`Max cook time: ${profile.maxCookTime} min`)
 
-  const userPrompt = `Generate one ${mealType} dish. ${targets.length ? 'Daily targets: ' + targets.join(', ') + '.' : ''} ${profile.favourites ? 'Favourite foods: ' + profile.favourites + '.' : ''} ${profile.cuisines ? 'Preferred cuisines: ' + profile.cuisines + '.' : ''}`
+  const favourites = Array.isArray(profile.favourites) ? profile.favourites.join(', ') : (profile.favourites || '')
+  const userPrompt = `Generate one ${mealType} dish. ${targets.length ? 'Daily targets: ' + targets.join(', ') + '.' : ''} ${favourites ? 'Favourite foods: ' + favourites + '.' : ''} ${profile.cuisines ? 'Preferred cuisines: ' + profile.cuisines + '.' : ''}`
 
   let result = await callPrimaryLLM({
     env,

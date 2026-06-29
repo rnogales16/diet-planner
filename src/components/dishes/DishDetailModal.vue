@@ -118,9 +118,10 @@ const justDisliked = ref(new Set())
 const showPicker = ref(false) // 'copy' | 'move' | false
 const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
-const enabledMeals = computed(() =>
-  store.mealTypes.filter((mt) => mt.enabled !== false),
-)
+const enabledMeals = computed(() => {
+  const set = new Set(store.enabledMealTypes)
+  return store.mealTypes.filter((mt) => set.has(mt.type))
+})
 
 function startCopy() { showPicker.value = 'copy' }
 function startMove() { showPicker.value = 'move' }
@@ -206,6 +207,44 @@ function dislikeIngredient(name) {
               </button>
             </li>
           </ul>
+        </div>
+
+        <div v-if="view.macroBreakdown?.length > 0" class="detail__section">
+          <details class="macro-breakdown">
+            <summary class="macro-breakdown__summary">{{ t('dishDetail.macroBreakdown') }}</summary>
+            <table class="macro-breakdown__table tabular">
+              <thead>
+                <tr>
+                  <th>{{ t('dishDetail.ingredient') }}</th>
+                  <th>g</th>
+                  <th>kcal</th>
+                  <th>P</th>
+                  <th>C</th>
+                  <th>F</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(b, i) in view.macroBreakdown" :key="i">
+                  <td>{{ b.ingredient }}</td>
+                  <td>{{ b.grams }}</td>
+                  <td>{{ b.kcal }}</td>
+                  <td>{{ b.protein }}</td>
+                  <td>{{ b.carbs }}</td>
+                  <td>{{ b.fat }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>{{ t('common.total') }}</td>
+                  <td>—</td>
+                  <td>{{ view.macroBreakdown.reduce((s, b) => s + (b.kcal || 0), 0) }}</td>
+                  <td>{{ Math.round(view.macroBreakdown.reduce((s, b) => s + (b.protein || 0), 0)) }}</td>
+                  <td>{{ Math.round(view.macroBreakdown.reduce((s, b) => s + (b.carbs || 0), 0)) }}</td>
+                  <td>{{ Math.round(view.macroBreakdown.reduce((s, b) => s + (b.fat || 0), 0)) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </details>
         </div>
 
         <div v-if="view.instructions?.length > 0" class="detail__section">
@@ -452,6 +491,45 @@ function dislikeIngredient(name) {
   letter-spacing: 0.06em;
   font-weight: 700;
   color: var(--text-faint);
+}
+
+.macro-breakdown {
+  font-size: 12px;
+}
+.macro-breakdown__summary {
+  cursor: pointer;
+  color: var(--text-faint);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  padding: 4px 0;
+}
+.macro-breakdown__table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+}
+.macro-breakdown__table th,
+.macro-breakdown__table td {
+  text-align: right;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-faint, #eee);
+}
+.macro-breakdown__table th:first-child,
+.macro-breakdown__table td:first-child {
+  text-align: left;
+}
+.macro-breakdown__table thead th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+.macro-breakdown__table tfoot td {
+  font-weight: 600;
+  border-bottom: none;
+  border-top: 2px solid var(--border-faint, #eee);
 }
 
 .ingredients {

@@ -1,5 +1,6 @@
 {
   "common": {
+    "total": "Total",
     "save": "Guardar",
     "saveChanges": "Guardar cambios",
     "cancel": "Cancelar",
@@ -23,6 +24,7 @@
     "generate": "Generar",
     "shopping": "Compra",
     "favorites": "Favoritos",
+    "nutrition": "Nutrición",
     "settings": "Ajustes"
   },
   "theme": {
@@ -159,8 +161,10 @@
       "dietaryStyle": "Estilo de alimentación",
       "allergiesAndIntolerances": "Alergias e intolerancias",
       "allergiesAndIntolerancesPlaceholder": "ej. cacahuetes, marisco, intolerancia a la lactosa, celíaco",
-      "favourites": "Comidas favoritas",
-      "favouritesPlaceholder": "ej. salmón, aguacate, boniato",
+      "favourites": "Ingredientes favoritos",
+      "favouritesSub": "La IA usará estos ingredientes con más frecuencia en tus dietas.",
+      "favouritesAddPlaceholder": "Añade un ingrediente y pulsa Enter",
+      "favouritesEmpty": "Aún no hay ingredientes favoritos.",
       "cuisines": "Cocinas preferidas",
       "cuisinesPlaceholder": "ej. mediterránea, japonesa, mexicana",
       "calories": "Calorías",
@@ -175,7 +179,13 @@
       "personNamePlaceholder": "ej. Pareja",
       "personMeals": "Come contigo en",
       "allMeals": "todas las comidas",
-      "you": "Tú (todas las comidas)",
+      "you": "Tú",
+      "yourMeals": "Tus comidas",
+      "outsideMeals": "Comidas fuera del plan (cuentan en target, no se planifican)",
+      "trainingMode": "Modo de entrenamiento",
+      "trainingModeGeneral": "General (cena ligera)",
+      "trainingModeEndurance": "Resistencia (carga HC en cena)",
+      "trainingModeStrength": "Fuerza (proteína repartida)",
       "maxTime": "Tiempo máximo por comida",
       "anyTime": "sin límite",
       "notes": "Notas para la IA",
@@ -245,6 +255,29 @@
     "copy": "Copiar aquí",
     "move": "Mover aquí"
   },
+  "nutritionChat": {
+    "title": "Consulta nutricional",
+    "subtitle": "Habla con la IA para calcular tus macros ideales",
+    "emptyTitle": "Tu nutricionista personal",
+    "emptySubtitle": "Cuéntame sobre ti (edad, peso, altura, actividad, objetivos) y te calcularé las calorías y macros que necesitas.",
+    "placeholder": "Escribe tu mensaje...",
+    "protein": "Proteína",
+    "carbs": "Carbos",
+    "fat": "Grasa",
+    "vegetables": "Verdura",
+    "templateLabel": "Copia esta plantilla, rellénala con tus datos y pégala en el chat:",
+    "copyTemplate": "Copiar plantilla",
+    "applyToProfile": "Aplicar a mi perfil",
+    "applied": "Aplicado",
+    "appliedTo": "Aplicado a {name}",
+    "pickPerson": "¿A quién aplicar?",
+    "you": "Tú (perfil principal)",
+    "unnamed": "Sin nombre",
+    "newPerson": "Crear nueva persona",
+    "newPersonPlaceholder": "Nombre de la persona",
+    "create": "Crear",
+    "error": "Error al comunicar con la IA. Inténtalo de nuevo."
+  },
   "favorites": {
     "title": "Platos favoritos",
     "subtitle": "Platos que has guardado para reutilizar",
@@ -260,7 +293,9 @@
     "tabDetails": "Receta",
     "tabChat": "Preguntar a la IA",
     "dislikeIngredient": "No usar este ingrediente nunca más",
-    "ingredientDisliked": "Añadido a tus exclusiones"
+    "ingredientDisliked": "Añadido a tus exclusiones",
+    "macroBreakdown": "Desglose de macros por ingrediente",
+    "ingredient": "Ingrediente"
   },
   "dishChat": {
     "intro": "Pregunta lo que quieras sobre este plato o pide un cambio. La IA conoce la receta y tu perfil de dieta.",
@@ -353,6 +388,10 @@
       "beverages": "Bebidas",
       "bakery": "Panadería",
       "other": "Otros"
+    },
+    "freezer": {
+      "title": "Meter en el congelador",
+      "subtitle": "Estos ingredientes no se usan hasta mediados o finales de semana. Congélalos al llegar a casa para que no se estropeen."
     }
   },
   "errors": {

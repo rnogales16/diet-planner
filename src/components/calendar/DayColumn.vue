@@ -27,13 +27,7 @@ const weekdayShort = computed(() => t(`planner.weekday.${WEEKDAY_KEYS[props.dayI
 // Only show meals whose type is currently enabled in the user's meal type
 // config. If a meal has no matching type in the config (e.g. legacy data),
 // we still show it so the user does not lose anything.
-const enabledTypes = computed(() => {
-  const set = new Set()
-  for (const mt of store.mealTypes) {
-    if (mt.enabled !== false) set.add(mt.type)
-  }
-  return set
-})
+const enabledTypes = computed(() => new Set(store.enabledMealTypes))
 
 const visibleMeals = computed(() =>
   props.day.meals.filter((m) => enabledTypes.value.has(m.type)),

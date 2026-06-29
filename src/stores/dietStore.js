@@ -257,21 +257,26 @@ const EXAMPLE_DISHES = [
   },
 ]
 
+const ALL_MEAL_TYPES = ['breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner']
+
 const DEFAULT_PROFILE = {
   goals: [],               // any combination of 'lose_weight' | 'gain_muscle' | 'maintain' | 'health'
   dietaryStyle: '',        // 'omnivore' | 'vegetarian' | 'vegan' | 'pescatarian' | 'mediterranean' | 'keto' | 'paleo' | 'other'
   allergiesAndIntolerances: '', // free text — allergies, intolerances, medical restrictions
-  favourites: '',          // free text (loved ingredients/cuisines)
+  favourites: [],          // chip-based list of favourite foods/ingredients
   cuisines: '',            // free text (preferred cuisines)
   calorieTarget: null,
   proteinTarget: null,
   carbsTarget: null,
   fatTarget: null,
   vegetableTarget: null,   // grams of vegetables per day
+  enabledMeals: [...ALL_MEAL_TYPES], // which meals the primary user eats — these get planned
+  outsideMeals: [],        // meals the primary user eats outside this app — count toward kcal target but not planned
   servings: 1,             // auto-computed from people array length
   maxCookTime: null,       // minutes per meal, null means no limit
   notes: '',               // free text catch-all
   dislikedIngredients: [], // ingredients the user wants the AI to never use
+  trainingMode: 'general', // 'general' | 'endurance' | 'strength' — shifts the per-meal kcal distribution
   // Each person eating from this plan. The first entry is the primary user
   // (whose targets are also in the top-level fields for backwards compat).
   // Additional entries are other household members with their own targets.
@@ -294,6 +299,20 @@ export const useDietStore = defineStore('diet', {
   getters: {
     currentWeek(state) {
       return state.weeks[state.currentWeekKey] || null
+    },
+    // Union of all people's enabled meals (primary + additional).
+    // This determines which meals are generated and displayed.
+    enabledMealTypes(state) {
+      const set = new Set(state.profile.enabledMeals || ALL_MEAL_TYPES)
+      if (Array.isArray(state.profile.people)) {
+        for (const person of state.profile.people) {
+          if (Array.isArray(person.enabledMeals)) {
+            for (const m of person.enabledMeals) set.add(m)
+          }
+        }
+      }
+      // Keep canonical order
+      return ALL_MEAL_TYPES.filter((t) => set.has(t))
     },
   },
 
@@ -460,11 +479,7 @@ export const useDietStore = defineStore('diet', {
           this.weeks = payload.weeks
         }
         if (Array.isArray(payload.mealTypes) && payload.mealTypes.length) {
-          // Old meal types did not have an enabled flag — default to true.
-          this.mealTypes = payload.mealTypes.map((mt) => ({
-            ...mt,
-            enabled: mt.enabled === undefined ? true : !!mt.enabled,
-          }))
+          this.mealTypes = payload.mealTypes
         }
         if (typeof payload.currentWeekKey === 'string') {
           this.currentWeekKey = payload.currentWeekKey
@@ -483,6 +498,23 @@ export const useDietStore = defineStore('diet', {
           }
           delete incoming.allergies
           delete incoming.restrictions
+          // Migrate enabledMeals from old mealTypes[].enabled system
+          if (!Array.isArray(incoming.enabledMeals)) {
+            if (Array.isArray(payload.mealTypes) && payload.mealTypes.length) {
+              incoming.enabledMeals = payload.mealTypes
+                .filter((mt) => mt.enabled !== false)
+                .map((mt) => mt.type)
+            } else {
+              incoming.enabledMeals = [...ALL_MEAL_TYPES]
+            }
+          }
+          // Migrate favourites from string to array
+          if (typeof incoming.favourites === 'string') {
+            incoming.favourites = incoming.favourites
+              .split(/[,;]/)
+              .map((s) => s.trim())
+              .filter(Boolean)
+          }
           this.profile = incoming
         }
         if (typeof payload.language === 'string') {
@@ -519,6 +551,25 @@ export const useDietStore = defineStore('diet', {
       if (list.some((i) => i.toLowerCase() === lower)) return false
       this.profile = { ...this.profile, dislikedIngredients: [...list, clean] }
       return true
+    },
+
+    addFavouriteFood(name) {
+      const clean = String(name || '').trim()
+      if (!clean) return false
+      const lower = clean.toLowerCase()
+      const list = Array.isArray(this.profile.favourites) ? this.profile.favourites : []
+      if (list.some((i) => i.toLowerCase() === lower)) return false
+      this.profile = { ...this.profile, favourites: [...list, clean] }
+      return true
+    },
+
+    removeFavouriteFood(name) {
+      const list = Array.isArray(this.profile.favourites) ? this.profile.favourites : []
+      const lower = String(name || '').trim().toLowerCase()
+      this.profile = {
+        ...this.profile,
+        favourites: list.filter((i) => i.toLowerCase() !== lower),
+      }
     },
 
     removeDislikedIngredient(name) {
