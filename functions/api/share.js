@@ -32,7 +32,7 @@ function randomId(len = 10) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const email = emailFromRequest(request)
+  const email = await emailFromRequest(request, env)
   if (!email) return json({ success: false, error: 'Not authenticated.' }, 401)
 
   const text = await request.text()

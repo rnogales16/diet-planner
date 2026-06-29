@@ -21,7 +21,7 @@ function json(body, status = 200) {
 }
 
 export async function onRequestGet({ request, env }) {
-  const email = emailFromRequest(request)
+  const email = await emailFromRequest(request, env)
   if (!email) return json({ success: false, error: 'Not authenticated.' }, 401)
 
   const row = await env.DB
@@ -44,7 +44,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPut({ request, env }) {
-  const email = emailFromRequest(request)
+  const email = await emailFromRequest(request, env)
   if (!email) return json({ success: false, error: 'Not authenticated.' }, 401)
 
   const text = await request.text()
