@@ -1,8 +1,13 @@
-// Post-processor: recompute each dish's macros from the Mercadona catalog.
+// Post-processor: recompute each dish's macros from a product catalog.
 // The LLM tends to hallucinate dish totals even when given exact per-100g
 // values in the prompt — this fixes the drift by treating the catalog as
 // ground truth. Each ingredient is matched to a product, multiplied by its
 // raw weight, and summed.
+//
+// The catalog-dependent logic lives in `createRecalculator(products)` so the
+// recalculator can be bound to any catalog (Mercadona today, e.g. an Andorra
+// catalog tomorrow) and so the matcher is unit-testable against a small
+// fixture. The default export is bound to the real Mercadona catalog.
 
 import { MERCADONA_DATA } from './_mercadona-data.js'
 import { OVERRIDES } from './_catalog-overrides.js'
@@ -33,7 +38,7 @@ function tokens(s) {
 // per-serving values, etc). Drop anything that fails basic physical limits
 // or whose macros don't add up — better to fall back to the LLM's number
 // than to "correct" a dish using a broken reference.
-function isPlausible(p) {
+export function isPlausible(p) {
   const { kcal, protein, carbs, fat } = p
   if (kcal == null || protein == null || carbs == null || fat == null) return false
   if (kcal < 0 || protein < 0 || carbs < 0 || fat < 0) return false
@@ -42,38 +47,6 @@ function isPlausible(p) {
   // Highest-calorie food in existence is pure oil at ~900 kcal/100g
   if (kcal > 920) return false
   return true
-}
-
-// Apply manual overrides for catalog entries with broken OCR macros.
-const PRODUCTS = MERCADONA_DATA.map((p) => {
-  const ov = OVERRIDES[p.id]
-  return ov ? { ...p, ...ov } : p
-})
-
-// Build the search index once at module load.
-const INDEX = PRODUCTS
-  .filter((p) => isPlausible(p))
-  .map((p) => ({ product: p, tokens: new Set(tokens(p.name)) }))
-
-function findProduct(name) {
-  const q = new Set(tokens(name))
-  if (q.size === 0) return null
-  let best = null
-  let bestScore = 0
-  for (const e of INDEX) {
-    let overlap = 0
-    for (const t of q) if (e.tokens.has(t)) overlap++
-    if (overlap === 0) continue
-    const union = q.size + e.tokens.size - overlap
-    const cov = overlap / q.size
-    const score = cov * (overlap / union)
-    if (score > bestScore) {
-      bestScore = score
-      best = e.product
-    }
-  }
-  const min = q.size <= 2 ? 0.25 : 0.15
-  return bestScore < min ? null : best
 }
 
 // Default raw weight per "unidad" for items the catalog gives by piece.
@@ -90,7 +63,7 @@ const UNIT_WEIGHTS = {
 //   "2 unidades"
 //   "250g (150g + 100g)"   ← total before parenthesis
 //   "1 unidad"
-function amountToGrams(amountStr, ingredientName) {
+export function amountToGrams(amountStr, ingredientName) {
   if (!amountStr) return 0
   const s = String(amountStr).toLowerCase().trim()
 
@@ -127,104 +100,11 @@ function amountToGrams(amountStr, ingredientName) {
   return 0
 }
 
-// Recompute a single dish from its ingredients. Returns the updated dish
-// plus a per-dish info block describing what was matched.
-function recalculateDish(dish) {
-  if (!dish || !Array.isArray(dish.ingredients)) return dish
-
-  let kcal = 0, protein = 0, carbs = 0, fat = 0
-  const matches = []
-  let unmatchedGrams = 0
-
-  for (const ing of dish.ingredients) {
-    const grams = amountToGrams(ing.amount, ing.name)
-    if (grams <= 0) continue
-
-    const product = findProduct(ing.name)
-    if (!product) {
-      unmatchedGrams += grams
-      matches.push({ name: ing.name, grams, matched: null })
-      continue
-    }
-
-    const factor = grams / 100
-    kcal += (product.kcal || 0) * factor
-    protein += (product.protein || 0) * factor
-    carbs += (product.carbs || 0) * factor
-    fat += (product.fat || 0) * factor
-    matches.push({
-      name: ing.name,
-      grams,
-      matched: { id: product.id, name: product.name },
-      contribution: {
-        kcal: Math.round((product.kcal || 0) * factor),
-        protein: Math.round((product.protein || 0) * factor * 10) / 10,
-        carbs: Math.round((product.carbs || 0) * factor * 10) / 10,
-        fat: Math.round((product.fat || 0) * factor * 10) / 10,
-      },
-    })
-  }
-
-  const original = {
-    calories: dish.calories,
-    protein: dish.protein,
-    carbs: dish.carbs,
-    fat: dish.fat,
-  }
-  const recalculated = {
-    calories: Math.round(kcal),
-    protein: Math.round(protein),
-    carbs: Math.round(carbs),
-    fat: Math.round(fat),
-  }
-
-  // Trust the recalculation when the matcher found a product for every
-  // ingredient. The catalog (with overrides applied) is the source of truth.
-  // Only fall back to the LLM when we missed enough weight in unmatched
-  // ingredients that the recalc would clearly undercount.
-  const totalGrams = matches.reduce((s, m) => s + (m.grams || 0), 0)
-  const matchedFraction = totalGrams > 0 ? (totalGrams - unmatchedGrams) / totalGrams : 0
-  const trustRecalc = recalculated.calories > 0 && matchedFraction >= 0.85
-  const final = trustRecalc ? recalculated : original
-
-  // Rebuild macroBreakdown from the matched contributions when we trust
-  // the catalog. This way the breakdown shown to the user always matches
-  // the displayed dish.calories.
-  const breakdown = trustRecalc
-    ? matches
-        .filter((m) => m.matched)
-        .map((m) => ({
-          ingredient: m.name,
-          grams: Math.round(m.grams),
-          kcal: m.contribution.kcal,
-          protein: m.contribution.protein,
-          carbs: m.contribution.carbs,
-          fat: m.contribution.fat,
-        }))
-    : (Array.isArray(dish.macroBreakdown) ? dish.macroBreakdown : [])
-
-  return {
-    ...dish,
-    calories: final.calories,
-    protein: final.protein,
-    carbs: final.carbs,
-    fat: final.fat,
-    macroBreakdown: breakdown,
-    _macroAudit: {
-      original,
-      recalculated,
-      used: trustRecalc ? 'catalog' : 'llm-fallback',
-      ingredients: matches,
-      unmatchedGrams,
-    },
-  }
-}
-
 // Scale every number found in an amount string by `factor`, preserving the
 // original units / structure (handles "250g", "30ml", "2 unidades",
 // "250g (150g + 100g)", etc). Numbers are rounded to sensible cooking
 // steps so weighing in real life isn't fiddly.
-function scaleAmount(amountStr, factor) {
+export function scaleAmount(amountStr, factor) {
   if (!amountStr || !Number.isFinite(factor) || factor <= 0) return amountStr
   return String(amountStr).replace(/(\d+(?:[.,]\d+)?)/g, (m) => {
     const n = parseFloat(m.replace(',', '.'))
@@ -246,7 +126,7 @@ function scaleAmount(amountStr, factor) {
 // profile. Each person's daily kcal target lands in the dishes they eat;
 // for shared meals the dish.calories is the total across people, so
 // summing dish.calories over all meals equals sum(target across all people).
-function computeDayTarget(profile, enabledMealTypes) {
+export function computeDayTarget(profile, enabledMealTypes) {
   if (!profile) return 0
   const primaryMeals = (profile.enabledMeals && profile.enabledMeals.length)
     ? profile.enabledMeals
@@ -258,116 +138,257 @@ function computeDayTarget(profile, enabledMealTypes) {
   return allPeople.reduce((s, p) => s + (Number(p.calorieTarget) || 0), 0)
 }
 
-// Scale a single dish's ingredient amounts by `factor`, then recompute its
-// macros. Used by the day-level scaling pass.
-function scaleDish(dish, factor) {
-  if (!dish || !Array.isArray(dish.ingredients) || !Number.isFinite(factor) || factor === 1) return dish
-  const scaledIngredients = dish.ingredients.map((ing) => ({
-    ...ing,
-    amount: scaleAmount(ing.amount, factor),
-  }))
-  const updated = recalculateDish({ ...dish, ingredients: scaledIngredients })
-  // Preserve the audit from the original recalc (just update used/recalculated)
-  if (updated._macroAudit) {
-    updated._macroAudit.scaledBy = Math.round(factor * 100) / 100
-  }
-  // Also scale the cookedWeight string if present
-  if (typeof dish.cookedWeight === 'string') {
-    updated.cookedWeight = scaleAmount(dish.cookedWeight, factor)
-  }
-  return updated
-}
+// Build a recalculator bound to a specific product catalog. `products` is the
+// slim catalog array; `overrides` is an id→partial map applied on top (for
+// catalog entries with broken OCR macros). Returns the catalog-dependent
+// functions, all closing over a search index built once here.
+export function createRecalculator(products, overrides = {}) {
+  // Apply manual overrides for catalog entries with broken OCR macros.
+  const PRODUCTS = (Array.isArray(products) ? products : []).map((p) => {
+    const ov = overrides[p.id]
+    return ov ? { ...p, ...ov } : p
+  })
 
-// Walk the whole plan and rewrite every dish. Returns the new plan plus
-// a summary the caller can include in the response.
-export function recalculatePlan(plan, options = {}) {
-  const { profile = null, enabledMealTypes = null, scaleToTarget = false } = options
-  if (!plan || !Array.isArray(plan.days)) return { plan, summary: null }
+  // Build the search index once per recalculator.
+  const INDEX = PRODUCTS
+    .filter((p) => isPlausible(p))
+    .map((p) => ({ product: p, tokens: new Set(tokens(p.name)) }))
 
-  let dishesTotal = 0
-  let dishesMatched = 0
-  const drifts = []
-
-  const processDish = (d) => {
-    dishesTotal++
-    const updated = recalculateDish(d)
-    const audit = updated._macroAudit
-    if (audit) {
-      if (audit.unmatchedGrams === 0) dishesMatched++
-      const drift = Math.abs(updated.calories - (audit.original.calories || 0))
-      if (drift > 50) {
-        drifts.push({
-          dish: updated.name,
-          original_kcal: audit.original.calories,
-          new_kcal: updated.calories,
-          delta: updated.calories - (audit.original.calories || 0),
-        })
+  function findProduct(name) {
+    const q = new Set(tokens(name))
+    if (q.size === 0) return null
+    let best = null
+    let bestScore = 0
+    for (const e of INDEX) {
+      let overlap = 0
+      for (const t of q) if (e.tokens.has(t)) overlap++
+      if (overlap === 0) continue
+      const union = q.size + e.tokens.size - overlap
+      const cov = overlap / q.size
+      const score = cov * (overlap / union)
+      if (score > bestScore) {
+        bestScore = score
+        best = e.product
       }
+    }
+    const min = q.size <= 2 ? 0.25 : 0.15
+    return bestScore < min ? null : best
+  }
+
+  // Recompute a single dish from its ingredients. Returns the updated dish
+  // plus a per-dish info block describing what was matched.
+  function recalculateDish(dish) {
+    if (!dish || !Array.isArray(dish.ingredients)) return dish
+
+    let kcal = 0, protein = 0, carbs = 0, fat = 0
+    const matches = []
+    let unmatchedGrams = 0
+
+    for (const ing of dish.ingredients) {
+      const grams = amountToGrams(ing.amount, ing.name)
+      if (grams <= 0) continue
+
+      const product = findProduct(ing.name)
+      if (!product) {
+        unmatchedGrams += grams
+        matches.push({ name: ing.name, grams, matched: null })
+        continue
+      }
+
+      const factor = grams / 100
+      kcal += (product.kcal || 0) * factor
+      protein += (product.protein || 0) * factor
+      carbs += (product.carbs || 0) * factor
+      fat += (product.fat || 0) * factor
+      matches.push({
+        name: ing.name,
+        grams,
+        matched: { id: product.id, name: product.name },
+        contribution: {
+          kcal: Math.round((product.kcal || 0) * factor),
+          protein: Math.round((product.protein || 0) * factor * 10) / 10,
+          carbs: Math.round((product.carbs || 0) * factor * 10) / 10,
+          fat: Math.round((product.fat || 0) * factor * 10) / 10,
+        },
+      })
+    }
+
+    const original = {
+      calories: dish.calories,
+      protein: dish.protein,
+      carbs: dish.carbs,
+      fat: dish.fat,
+    }
+    const recalculated = {
+      calories: Math.round(kcal),
+      protein: Math.round(protein),
+      carbs: Math.round(carbs),
+      fat: Math.round(fat),
+    }
+
+    // Trust the recalculation when the matcher found a product for every
+    // ingredient. The catalog (with overrides applied) is the source of truth.
+    // Only fall back to the LLM when we missed enough weight in unmatched
+    // ingredients that the recalc would clearly undercount.
+    const totalGrams = matches.reduce((s, m) => s + (m.grams || 0), 0)
+    const matchedFraction = totalGrams > 0 ? (totalGrams - unmatchedGrams) / totalGrams : 0
+    const trustRecalc = recalculated.calories > 0 && matchedFraction >= 0.85
+    const final = trustRecalc ? recalculated : original
+
+    // Rebuild macroBreakdown from the matched contributions when we trust
+    // the catalog. This way the breakdown shown to the user always matches
+    // the displayed dish.calories.
+    const breakdown = trustRecalc
+      ? matches
+          .filter((m) => m.matched)
+          .map((m) => ({
+            ingredient: m.name,
+            grams: Math.round(m.grams),
+            kcal: m.contribution.kcal,
+            protein: m.contribution.protein,
+            carbs: m.contribution.carbs,
+            fat: m.contribution.fat,
+          }))
+      : (Array.isArray(dish.macroBreakdown) ? dish.macroBreakdown : [])
+
+    return {
+      ...dish,
+      calories: final.calories,
+      protein: final.protein,
+      carbs: final.carbs,
+      fat: final.fat,
+      macroBreakdown: breakdown,
+      _macroAudit: {
+        original,
+        recalculated,
+        used: trustRecalc ? 'catalog' : 'llm-fallback',
+        ingredients: matches,
+        unmatchedGrams,
+      },
+    }
+  }
+
+  // Scale a single dish's ingredient amounts by `factor`, then recompute its
+  // macros. Used by the day-level scaling pass.
+  function scaleDish(dish, factor) {
+    if (!dish || !Array.isArray(dish.ingredients) || !Number.isFinite(factor) || factor === 1) return dish
+    const scaledIngredients = dish.ingredients.map((ing) => ({
+      ...ing,
+      amount: scaleAmount(ing.amount, factor),
+    }))
+    const updated = recalculateDish({ ...dish, ingredients: scaledIngredients })
+    // Preserve the audit from the original recalc (just update used/recalculated)
+    if (updated._macroAudit) {
+      updated._macroAudit.scaledBy = Math.round(factor * 100) / 100
+    }
+    // Also scale the cookedWeight string if present
+    if (typeof dish.cookedWeight === 'string') {
+      updated.cookedWeight = scaleAmount(dish.cookedWeight, factor)
     }
     return updated
   }
 
-  const dayTarget = scaleToTarget ? computeDayTarget(profile, enabledMealTypes) : 0
-  const scalings = []
+  // Walk the whole plan and rewrite every dish. Returns the new plan plus
+  // a summary the caller can include in the response.
+  function recalculatePlan(plan, options = {}) {
+    const { profile = null, enabledMealTypes = null, scaleToTarget = false } = options
+    if (!plan || !Array.isArray(plan.days)) return { plan, summary: null }
 
-  const days = plan.days.map((day) => {
-    let meals = (day.meals || []).map((meal) => {
-      // LLM responses use `meal.dish` (singular). The frontend later converts
-      // it to `meal.dishes` (plural array). Handle both shapes so recalculation
-      // works server-side (LLM raw) and on already-stored plans.
-      if (Array.isArray(meal.dishes)) {
-        return { ...meal, dishes: meal.dishes.map(processDish) }
-      }
-      if (meal.dish && typeof meal.dish === 'object') {
-        return { ...meal, dish: processDish(meal.dish) }
-      }
-      return meal
-    })
+    let dishesTotal = 0
+    let dishesMatched = 0
+    const drifts = []
 
-    // Day-level scaling pass: scale ingredient amounts so that the recalculated
-    // day total matches the user's combined target. Skip if recalc had to fall
-    // back to LLM values for any dish in the day (we don't have a reliable
-    // baseline to scale from).
-    if (scaleToTarget && dayTarget > 0) {
-      let dayKcal = 0
-      let allTrusted = true
-      for (const meal of meals) {
-        const list = Array.isArray(meal.dishes) ? meal.dishes : (meal.dish ? [meal.dish] : [])
-        for (const d of list) {
-          dayKcal += d?.calories || 0
-          if (d?._macroAudit?.used !== 'catalog') allTrusted = false
-        }
-      }
-      if (allTrusted && dayKcal > 0) {
-        const factor = dayTarget / dayKcal
-        // Only apply scaling when the drift is meaningful (>5%) to avoid
-        // pointless recipe perturbations.
-        if (Math.abs(1 - factor) > 0.05) {
-          scalings.push({ date: day.date, before: dayKcal, target: dayTarget, factor: Math.round(factor * 100) / 100 })
-          meals = meals.map((meal) => {
-            if (Array.isArray(meal.dishes)) {
-              return { ...meal, dishes: meal.dishes.map((d) => scaleDish(d, factor)) }
-            }
-            if (meal.dish && typeof meal.dish === 'object') {
-              return { ...meal, dish: scaleDish(meal.dish, factor) }
-            }
-            return meal
+    const processDish = (d) => {
+      dishesTotal++
+      const updated = recalculateDish(d)
+      const audit = updated._macroAudit
+      if (audit) {
+        if (audit.unmatchedGrams === 0) dishesMatched++
+        const drift = Math.abs(updated.calories - (audit.original.calories || 0))
+        if (drift > 50) {
+          drifts.push({
+            dish: updated.name,
+            original_kcal: audit.original.calories,
+            new_kcal: updated.calories,
+            delta: updated.calories - (audit.original.calories || 0),
           })
         }
       }
+      return updated
     }
 
-    return { ...day, meals }
-  })
+    const dayTarget = scaleToTarget ? computeDayTarget(profile, enabledMealTypes) : 0
+    const scalings = []
 
-  return {
-    plan: { ...plan, days },
-    summary: {
-      dishesTotal,
-      dishesFullyMatched: dishesMatched,
-      drifts: drifts.slice(0, 50),
-      scalings,
-      dayTarget,
-    },
+    const days = plan.days.map((day) => {
+      let meals = (day.meals || []).map((meal) => {
+        // LLM responses use `meal.dish` (singular). The frontend later converts
+        // it to `meal.dishes` (plural array). Handle both shapes so recalculation
+        // works server-side (LLM raw) and on already-stored plans.
+        if (Array.isArray(meal.dishes)) {
+          return { ...meal, dishes: meal.dishes.map(processDish) }
+        }
+        if (meal.dish && typeof meal.dish === 'object') {
+          return { ...meal, dish: processDish(meal.dish) }
+        }
+        return meal
+      })
+
+      // Day-level scaling pass: scale ingredient amounts so that the recalculated
+      // day total matches the user's combined target. Skip if recalc had to fall
+      // back to LLM values for any dish in the day (we don't have a reliable
+      // baseline to scale from).
+      if (scaleToTarget && dayTarget > 0) {
+        let dayKcal = 0
+        let allTrusted = true
+        for (const meal of meals) {
+          const list = Array.isArray(meal.dishes) ? meal.dishes : (meal.dish ? [meal.dish] : [])
+          for (const d of list) {
+            dayKcal += d?.calories || 0
+            if (d?._macroAudit?.used !== 'catalog') allTrusted = false
+          }
+        }
+        if (allTrusted && dayKcal > 0) {
+          const factor = dayTarget / dayKcal
+          // Only apply scaling when the drift is meaningful (>5%) to avoid
+          // pointless recipe perturbations.
+          if (Math.abs(1 - factor) > 0.05) {
+            scalings.push({ date: day.date, before: dayKcal, target: dayTarget, factor: Math.round(factor * 100) / 100 })
+            meals = meals.map((meal) => {
+              if (Array.isArray(meal.dishes)) {
+                return { ...meal, dishes: meal.dishes.map((d) => scaleDish(d, factor)) }
+              }
+              if (meal.dish && typeof meal.dish === 'object') {
+                return { ...meal, dish: scaleDish(meal.dish, factor) }
+              }
+              return meal
+            })
+          }
+        }
+      }
+
+      return { ...day, meals }
+    })
+
+    return {
+      plan: { ...plan, days },
+      summary: {
+        dishesTotal,
+        dishesFullyMatched: dishesMatched,
+        drifts: drifts.slice(0, 50),
+        scalings,
+        dayTarget,
+      },
+    }
   }
+
+  return { findProduct, recalculateDish, scaleDish, recalculatePlan, products: PRODUCTS }
 }
+
+// Default recalculator bound to the real Mercadona catalog + overrides.
+// Named exports preserve the existing import sites (e.g. generate-meal-plan.js).
+const _default = createRecalculator(MERCADONA_DATA, OVERRIDES)
+export const findProduct = _default.findProduct
+export const recalculateDish = _default.recalculateDish
+export const scaleDish = _default.scaleDish
+export const recalculatePlan = _default.recalculatePlan
