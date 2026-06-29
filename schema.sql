@@ -20,3 +20,13 @@ CREATE TABLE IF NOT EXISTS user_data_backups (
 
 CREATE INDEX IF NOT EXISTS idx_user_data_backups_email
   ON user_data_backups (email, backed_up_at DESC);
+
+-- Public read-only share links for a week plan (see functions/api/share.js).
+-- Created by an authenticated user; readable without auth until expiry.
+CREATE TABLE IF NOT EXISTS shared_plans (
+  id         TEXT PRIMARY KEY,
+  data       TEXT NOT NULL,
+  email      TEXT NOT NULL,    -- creator's email
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL  -- created_at + 30 days
+);

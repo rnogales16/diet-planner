@@ -17,12 +17,16 @@ export async function onRequestGet({ params, env }) {
 
   let row
   try {
-    row = await env.DB.prepare('SELECT data FROM shared_plans WHERE id = ?').bind(id).first()
+    row = await env.DB.prepare('SELECT data, expires_at FROM shared_plans WHERE id = ?').bind(id).first()
   } catch {
     return json({ success: false, error: 'Not found.' }, 404)
   }
 
   if (!row) return json({ success: false, error: 'Not found.' }, 404)
+
+  if (row.expires_at && row.expires_at < Date.now()) {
+    return json({ success: false, error: 'This share has expired.' }, 410)
+  }
 
   let parsed
   try { parsed = JSON.parse(row.data) } catch {
