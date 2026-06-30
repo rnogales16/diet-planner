@@ -46,3 +46,15 @@ CREATE TABLE IF NOT EXISTS generation_metrics (
   scalings_count       INTEGER,
   forbidden_hits       INTEGER
 );
+
+-- Per-user rate limiting for the paid generation endpoint. One row per
+-- (user, time-window bucket); counters are bumped atomically. See
+-- checkAndIncrement() in functions/api/generate-meal-plan.js. Old buckets are
+-- pruned best-effort.
+CREATE TABLE IF NOT EXISTS rate_limits (
+  email        TEXT NOT NULL,
+  bucket       TEXT NOT NULL,    -- '<windowId>:<windowStart>' e.g. 'h:1719750000000'
+  count        INTEGER NOT NULL,
+  window_start INTEGER NOT NULL,
+  PRIMARY KEY (email, bucket)
+);

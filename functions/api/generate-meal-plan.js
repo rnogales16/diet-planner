@@ -9,9 +9,18 @@ import { callGeminiWithFallback } from './_gemini.js'
 import { callPrimaryLLM } from './_llm.js'
 import { MERCADONA_MENU } from './_mercadona-menu.js'
 import { recalculatePlan } from './_recalculate.js'
+import { emailFromRequest } from './_auth.js'
 
 const PRIMARY_MODEL = 'claude-sonnet-4-6'
 const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro']
+
+// --- Per-user rate limiting --------------------------------------------------
+// Generation is the only paid operation, so cap it per authenticated user to
+// protect the LLM quota. Exceeding EITHER window returns 429. Tune here.
+const RATE_LIMIT_WINDOWS = [
+  { id: 'h', label: 'hora', max: 10, windowMs: 60 * 60 * 1000 },
+  { id: 'd', label: 'día',  max: 30, windowMs: 24 * 60 * 60 * 1000 },
+]
 
 const GOAL_LABELS = {
   lose_weight: 'lose weight',
@@ -688,6 +697,10 @@ function sanitizeProfile(raw) {
 }
 
 export async function onRequestPost({ request, env }) {
+  // Authenticate first — we need the verified email to rate-limit per user.
+  const email = await emailFromRequest(request, env)
+  if (!email) return json({ success: false, error: 'Not authenticated.' }, 401)
+
   let body
   try {
     body = await request.json()
@@ -716,6 +729,21 @@ export async function onRequestPost({ request, env }) {
   const forbiddenList = [...allergyList, ...(profile.dislikedIngredients || [])]
 
   const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes })
+
+  // Per-user rate limit. Bumped here, BEFORE any LLM call, so it counts paid
+  // attempts (cost is incurred on the call) — a run of LLM failures still
+  // consumes quota, which is intentional for a cost guard rail.
+  const rl = await checkAndIncrement(env, email)
+  if (!rl.ok) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: `Has alcanzado el límite de generaciones (${rl.max}/${rl.label}). Inténtalo de nuevo en ${formatRetryAfter(rl.retryAfter)}.`,
+      retryAfter: rl.retryAfter,
+    }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfter) },
+    })
+  }
 
   // --- SSE streaming response ---
   // Return headers immediately so Cloudflare's 100s proxy timeout never fires.
@@ -949,6 +977,67 @@ async function recordGenerationMetrics(env, payload) {
       .run()
   } catch {
     // Best-effort telemetry: swallow everything.
+  }
+}
+
+// Atomically bump this user's per-window counters and decide whether to allow
+// the generation. Returns { ok: true } to allow, or { ok: false, retryAfter,
+// label, max } describing the BINDING window — the one the user must wait
+// longest for (so the 429 message/Retry-After match the bucket that actually
+// tripped, not necessarily the hourly one). Fails OPEN: any D1 hiccup allows
+// the request rather than blocking a legitimate user.
+// Human-friendly wait string: minutes under an hour, whole hours above. The
+// Retry-After header still carries exact seconds.
+function formatRetryAfter(seconds) {
+  if (seconds < 3600) return `~${Math.ceil(seconds / 60)} min`
+  return `~${Math.ceil(seconds / 3600)} h`
+}
+
+async function checkAndIncrement(env, email) {
+  const now = Date.now()
+  try {
+    // One atomic upsert per window; RETURNING gives us the post-increment count
+    // without a separate read (no read-modify-write race).
+    const stmts = RATE_LIMIT_WINDOWS.map((w) => {
+      const windowStart = Math.floor(now / w.windowMs) * w.windowMs
+      const bucket = `${w.id}:${windowStart}`
+      return env.DB
+        .prepare(`
+          INSERT INTO rate_limits (email, bucket, count, window_start)
+          VALUES (?, ?, 1, ?)
+          ON CONFLICT(email, bucket) DO UPDATE SET count = count + 1
+          RETURNING count
+        `)
+        .bind(email, bucket, windowStart)
+    })
+    const results = await env.DB.batch(stmts)
+
+    // Pick the binding constraint among any exceeded windows = the one with the
+    // longest wait (you stay blocked until the slowest window resets).
+    let blocking = null
+    RATE_LIMIT_WINDOWS.forEach((w, i) => {
+      const count = results[i]?.results?.[0]?.count ?? 0
+      if (count > w.max) {
+        const windowStart = Math.floor(now / w.windowMs) * w.windowMs
+        const retryAfter = Math.ceil((windowStart + w.windowMs - now) / 1000)
+        if (!blocking || retryAfter > blocking.retryAfter) {
+          blocking = { retryAfter, label: w.label, max: w.max }
+        }
+      }
+    })
+
+    // Best-effort prune of buckets older than the largest window.
+    const maxWindowMs = Math.max(...RATE_LIMIT_WINDOWS.map((w) => w.windowMs))
+    env.DB
+      .prepare('DELETE FROM rate_limits WHERE window_start < ?')
+      .bind(now - maxWindowMs)
+      .run()
+      .catch(() => {})
+
+    return blocking ? { ok: false, ...blocking } : { ok: true }
+  } catch {
+    // Fail-open: a limiter failure must not block legitimate generations.
+    return { ok: true }
   }
 }
 
