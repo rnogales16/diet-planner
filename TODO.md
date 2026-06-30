@@ -20,6 +20,22 @@ Cosas a medias o que hay que revisar. Apuntadas para retomar más adelante.
   - **Validado en incógnito** (sin sesión): el link muestra la vista del plan, no el login.
   Desplegado: vista base `f45e089`, enriquecida `dce9158`. Compartir funciona para extraños. ✔
 
+## Mejoras opcionales (baja prioridad)
+
+- [ ] **Persistir `model`/`provider` en el blob del plan para un badge en planes recargados.**
+  **OPCIONAL y cosmético.** Hoy el badge "Generado con &lt;modelo&gt;" solo existe en el objeto
+  de preview (`GeneratePlanPreview.vue`); al aceptar el plan, `applyGeneratedPlan` no guarda
+  `model`/`provider` en el `week`, así que se pierde al recargar. La **trazabilidad real ya
+  existe** en la tabla `generation_metrics` (model, provider, outcome, drift… por generación);
+  el badge persistido sería **solo decorativo**.
+  Tres partes ya diagnosticadas:
+  1. **Persistir**: que `applyGeneratedPlan` (`src/stores/dietStore.js:388`) reciba y guarde
+     `model`/`provider` en el week (p.ej. `week.generatedWith = { model, provider, at }`) — al ir
+     dentro del `week` se serializa solo al blob de D1.
+  2. **Renderizar**: badge en `PlannerView` leyendo `week.generatedWith` (hoy no referencia `model`).
+  3. **Sin retrocompat**: los planes ya guardados no tienen el campo → el badge solo saldría en
+     planes nuevos; no hay migración posible (el dato nunca se guardó).
+
 ## Despliegue
 
 - [x] **Cambios de seguridad de `share.js` desplegados a producción** (deployment `b3f61d9`).
