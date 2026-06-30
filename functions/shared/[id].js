@@ -109,14 +109,21 @@ const STYLE = `
   }
   .day h2 .date { color: #9ca3af; font-weight: 500; font-size: 0.9rem; }
   .day-total { color: #4b5563; font-size: 0.85rem; margin-bottom: 10px; }
-  .meals { list-style: none; margin: 0; padding: 0; }
-  .meals li {
-    display: grid; grid-template-columns: 110px 1fr auto; gap: 8px;
-    padding: 6px 0; border-top: 1px solid #f0f1f3; align-items: baseline;
-  }
-  .meal { color: #6b7280; font-size: 0.85rem; }
-  .dishes { font-weight: 500; }
-  .kcal { color: #4b5563; font-size: 0.85rem; white-space: nowrap; }
+  .dish { padding: 12px 0; border-top: 1px solid #f0f1f3; }
+  .dish:first-of-type { border-top: none; }
+  .dish-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .meal { color: #6b7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .dish-name { font-size: 1rem; }
+  .dish-macros { color: #4b5563; font-size: 0.82rem; margin-left: auto; white-space: nowrap; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin: 4px 0 0; }
+  .ings { list-style: none; margin: 8px 0 0; padding: 0; font-size: 0.9rem; }
+  .ings li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; border-bottom: 1px dotted #eceef1; }
+  .ings li span { color: #6b7280; white-space: nowrap; }
+  .notes { font-size: 0.85rem; color: #4b5563; font-style: italic; margin: 8px 0 0; }
+  details.recipe { margin: 8px 0 0; }
+  details.recipe summary { cursor: pointer; color: #4338ca; font-size: 0.85rem; }
+  details.recipe ol { margin: 8px 0 0; padding-left: 20px; font-size: 0.9rem; }
+  details.recipe li { margin: 3px 0; }
   .empty { color: #9ca3af; font-style: italic; }
   footer.site { color: #9ca3af; font-size: 0.8rem; text-align: center; padding: 24px 0; }
   .msg { text-align: center; padding: 64px 16px; }
@@ -126,8 +133,11 @@ const STYLE = `
     body { background: #15161a; color: #e7e7ea; }
     .day { background: #1f2026; border-color: #2c2e36; }
     .week-total { background: #1e1b4b; color: #c7d2fe; }
-    .day h2 .date, .day-total, .meal, .kcal { color: #9ca3af; }
-    .meals li { border-color: #2c2e36; }
+    .day h2 .date, .day-total, .meal, .dish-macros, .meta, .notes { color: #9ca3af; }
+    .dish { border-color: #2c2e36; }
+    .ings li { border-color: #2c2e36; }
+    .ings li span { color: #9ca3af; }
+    details.recipe summary { color: #a5b4fc; }
   }
 `
 
@@ -160,6 +170,55 @@ function errorPage(status, title, message) {
   return htmlResponse(shell(`${title} · Nutriplania`, inner), status)
 }
 
+function dishMacroLine(d) {
+  return `${n(d.calories)} kcal · P${n(d.protein)} C${n(d.carbs)} F${n(d.fat)} V${n(d.vegetables)}`
+}
+
+// Render one dish block. Every plan-derived string (name, cookedWeight,
+// ingredient name/amount, notes, steps) goes through esc(); numbers via n().
+function renderDish(label, dish) {
+  const parts = [
+    `<div class="dish-head">` +
+    `<span class="meal">${esc(label)}</span>` +
+    `<strong class="dish-name">${esc(dish.name || '—')}</strong>` +
+    `<span class="dish-macros">${dishMacroLine(dish)}</span>` +
+    `</div>`,
+  ]
+
+  // Compact metadata — only fields that exist (cookedWeight pre-escaped here;
+  // the rest are numeric, so the joined string is NOT re-escaped).
+  const meta = []
+  if (dish.cookedWeight) meta.push(`Peso: ${esc(dish.cookedWeight)}`)
+  if (Number(dish.prepTime) > 0) meta.push(`Prep: ${n(dish.prepTime)} min`)
+  if (Number(dish.cookTime) > 0) meta.push(`Cocción: ${n(dish.cookTime)} min`)
+  if (Number(dish.servings) > 0) meta.push(`Raciones: ${n(dish.servings)}`)
+  if (meta.length) parts.push(`<p class="meta">${meta.join(' · ')}</p>`)
+
+  const ings = Array.isArray(dish.ingredients) ? dish.ingredients : []
+  if (ings.length) {
+    const items = ings
+      .map((ing) => `<li>${esc(ing?.name || '—')} <span>${esc(ing?.amount || '')}</span></li>`)
+      .join('')
+    parts.push(`<ul class="ings">${items}</ul>`)
+  }
+
+  const notes = typeof dish.notes === 'string' ? dish.notes.trim() : ''
+  if (notes) parts.push(`<p class="notes">${esc(notes)}</p>`)
+
+  const steps = Array.isArray(dish.instructions)
+    ? dish.instructions.filter((s) => s && String(s).trim())
+    : []
+  if (steps.length) {
+    const lis = steps.map((s) => `<li>${esc(s)}</li>`).join('')
+    parts.push(
+      `<details class="recipe"><summary>Preparación (${steps.length} pasos)</summary>` +
+      `<ol>${lis}</ol></details>`,
+    )
+  }
+
+  return `<article class="dish">${parts.join('')}</article>`
+}
+
 function renderPlan(payload) {
   const week = payload?.week || {}
   const days = Array.isArray(week.days) ? week.days : []
@@ -173,31 +232,25 @@ function renderPlan(payload) {
   for (const day of days) {
     const meals = Array.isArray(day?.meals) ? day.meals : []
     const dayTotals = emptyTotals()
-    const rows = []
+    const dishBlocks = []
 
     for (const meal of meals) {
       const dishes = dishesOf(meal).filter((d) => d && (d.name || n(d.calories) > 0))
       if (dishes.length === 0) continue
       addDishes(dayTotals, dishes)
       const label = MEAL_LABELS[meal.type] || meal.label || meal.type || ''
-      const names = dishes.map((d) => esc(d.name || '—')).join(', ')
-      const kcal = dishes.reduce((s, d) => s + (Number(d.calories) || 0), 0)
-      rows.push(
-        `<li><span class="meal">${esc(label)}</span>` +
-        `<span class="dishes">${names}</span>` +
-        `<span class="kcal">${n(kcal)} kcal</span></li>`,
-      )
+      for (const dish of dishes) dishBlocks.push(renderDish(label, dish))
     }
 
     for (const k of MACRO_KEYS) weekTotals[k] += dayTotals[k]
 
-    const body = rows.length
-      ? `<ul class="meals">${rows.join('')}</ul>`
+    const body = dishBlocks.length
+      ? dishBlocks.join('')
       : `<p class="empty">Sin comidas</p>`
     dayBlocks.push(
       `<section class="day">` +
       `<h2>${esc(weekday(day.date))} <span class="date">${esc(fmtDay(day.date))}</span></h2>` +
-      `<div class="day-total">${rows.length ? macroLine(dayTotals) : ''}</div>` +
+      `<div class="day-total">${dishBlocks.length ? macroLine(dayTotals) : ''}</div>` +
       `${body}</section>`,
     )
   }
