@@ -38,7 +38,7 @@ async function shareWeek() {
     })
     const data = await res.json()
     if (data.success && data.id) {
-      const link = `${location.origin}/api/shared/${data.id}`
+      const link = `${location.origin}/shared/${data.id}`
       await navigator.clipboard.writeText(link)
       shareMsg.value = t('summary.shareCopied')
     }
