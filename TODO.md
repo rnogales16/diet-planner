@@ -10,19 +10,15 @@ Cosas a medias o que hay que revisar. Apuntadas para retomar más adelante.
   `weekRange: body.weekRange || ''` para no romper la forma del payload. `weekRange` no se
   consume aguas abajo, así que no se cableó un valor real en el cliente.
 
-- [ ] 🚩 **Vista de compartir: CÓDIGO DESPLEGADO, PENDIENTE DE VALIDACIÓN (no cerrado).**
-  Construida y desplegada (commit `f45e089`): nueva Function `functions/shared/[id].js` que
-  sirve `/shared/<id>` como HTML de solo lectura (rejilla semanal, CSS inline, lee D1 directo,
-  404/410/500 legibles), y el link copiado ya apunta a `/shared/<id>`
-  (`src/components/summary/WeeklySummary.vue:41`).
-  **Faltan DOS pasos antes de darlo por cerrado:**
-  1. **Eximir `/shared/*` en Cloudflare Access con Bypass** (paso manual en el dashboard, lo hace
-     Raúl) — Zero Trust → Access → Applications, política/app *Bypass: Everyone* en `/shared/*`,
-     igual que el `/api/shared/*` ya exento.
-  2. **Validar en incógnito** (sin sesión) que un link `/shared/<id>` muestra la **rejilla** y
-     **no** el login de Access.
-  ⚠️ **BLOQUEANTE: hasta completar AMBOS pasos, compartir sigue sin funcionar para extraños**
-  (un visitante sin cuenta vería el login de Access, no el plan).
+- [x] ✅ **Vista de compartir: RESUELTA Y VALIDADA.**
+  `/shared/<id>` (Function `functions/shared/[id].js`) sirve el **plan completo** como HTML de
+  solo lectura: macros por plato (kcal + P/C/F/V), ingredientes con cantidades, recetas/pasos
+  en `<details>` plegable, metadatos compactos (cookedWeight/tiempos/raciones) y notas; totales
+  por día y de la semana; 404/410/500 legibles; `esc()` en todo string del plan. El link copiado
+  apunta a `/shared/<id>` (`src/components/summary/WeeklySummary.vue:41`).
+  - Bypass de `/shared/*` en Cloudflare Access **configurado**.
+  - **Validado en incógnito** (sin sesión): el link muestra la vista del plan, no el login.
+  Desplegado: vista base `f45e089`, enriquecida `dce9158`. Compartir funciona para extraños. ✔
 
 ## Despliegue
 
