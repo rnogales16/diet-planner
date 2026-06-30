@@ -867,6 +867,13 @@ export async function onRequestPost({ request, env }) {
       }
 
       await write(`data: ${JSON.stringify(payload)}\n\n`)
+
+      // Persist aggregate recalculation health metrics. Best-effort and only
+      // for successful generations (LLM/upstream failures are a different
+      // concern, handled elsewhere). Never blocks or breaks the response.
+      if (payload.success) {
+        await recordGenerationMetrics(env, payload)
+      }
     } catch (err) {
       const errPayload = { success: false, error: `Internal error: ${err.message}` }
       await write(`data: ${JSON.stringify(errPayload)}\n\n`).catch(() => {})
@@ -883,6 +890,66 @@ export async function onRequestPost({ request, env }) {
       Connection: 'keep-alive',
     },
   })
+}
+
+// Best-effort telemetry: record aggregate, numeric-only recalculation metrics
+// for a successful generation. Mirrors the maybeBackup pattern in data.js — a
+// failure here must never bubble up. Stores NO personal data and NO plan
+// content. Always inserts a row (gated on payload.success) so the recalc
+// failure rate is observable: a table of only successes always looks healthy.
+async function recordGenerationMetrics(env, payload) {
+  try {
+    const a = payload.macroAudit
+    let outcome
+    let dishesTotal = null
+    let dishesFullyMatched = null
+    let avgDriftKcal = null
+    let scalingsCount = null
+
+    if (a && typeof a.dishesTotal === 'number') {
+      // Real aggregate metrics from the recalculator.
+      outcome = 'ok'
+      const drifts = Array.isArray(a.drifts) ? a.drifts : []
+      dishesTotal = a.dishesTotal || 0
+      dishesFullyMatched = a.dishesFullyMatched || 0
+      avgDriftKcal = drifts.length
+        ? Math.round(drifts.reduce((s, d) => s + Math.abs(d.delta || 0), 0) / drifts.length)
+        : 0
+      scalingsCount = Array.isArray(a.scalings) ? a.scalings.length : 0
+    } else if (a && a.error != null) {
+      // Recalculation threw — counters to 0, but we still record the failure.
+      outcome = 'recalc_failed'
+      dishesTotal = 0
+      dishesFullyMatched = 0
+      avgDriftKcal = 0
+      scalingsCount = 0
+    } else {
+      // Plan never parsed (extractJsonLoose returned null) — counters null.
+      outcome = 'parse_failed'
+    }
+
+    await env.DB
+      .prepare(`
+        INSERT INTO generation_metrics
+          (created_at, model, provider, outcome, dishes_total,
+           dishes_fully_matched, avg_drift_kcal, scalings_count, forbidden_hits)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(
+        Date.now(),
+        payload.model || null,
+        payload.provider || null,
+        outcome,
+        dishesTotal,
+        dishesFullyMatched,
+        avgDriftKcal,
+        scalingsCount,
+        Array.isArray(payload.warnings) ? payload.warnings.length : 0,
+      )
+      .run()
+  } catch {
+    // Best-effort telemetry: swallow everything.
+  }
 }
 
 export function onRequest({ request }) {

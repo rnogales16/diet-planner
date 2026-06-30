@@ -30,3 +30,19 @@ CREATE TABLE IF NOT EXISTS shared_plans (
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL  -- created_at + 30 days
 );
+
+-- Aggregate, numeric-only health signal for meal-plan generation. No personal
+-- data and no plan content — just per-generation recalculation metrics
+-- (see functions/api/generate-meal-plan.js). Written best-effort.
+CREATE TABLE IF NOT EXISTS generation_metrics (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at           INTEGER NOT NULL,
+  model                TEXT,
+  provider             TEXT,
+  outcome              TEXT,     -- 'ok' | 'recalc_failed' | 'parse_failed'
+  dishes_total         INTEGER,
+  dishes_fully_matched INTEGER,
+  avg_drift_kcal       INTEGER,
+  scalings_count       INTEGER,
+  forbidden_hits       INTEGER
+);
