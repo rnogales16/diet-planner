@@ -4,20 +4,33 @@ Cosas a medias o que hay que revisar. Apuntadas para retomar más adelante.
 
 ## Compartir semana (share)
 
-- [ ] **`weekRange` vacío rompe el share (devuelve 400).**
-  El cliente envía `weekRange: ''` en `src/components/summary/WeeklySummary.vue:36`, pero
-  el servidor valida `if (!body.week || !body.weekRange)` en `functions/api/share.js` y
-  rechaza un `weekRange` vacío con 400. Resultado: compartir falla siempre hasta resolverlo.
-  Opciones: (a) que el cliente mande un `weekRange` real, o (b) hacer `weekRange` opcional
-  en el servidor. Se dejó la validación tal cual (fuera del alcance del cambio de seguridad).
+- [x] **`weekRange` vacío rompía el share (400).** ~~El cliente envía `weekRange: ''` en
+  `src/components/summary/WeeklySummary.vue:36` y el servidor lo rechazaba.~~ Resuelto
+  (Opción A): `functions/api/share.js` valida solo `if (!body.week)` y guarda
+  `weekRange: body.weekRange || ''` para no romper la forma del payload. `weekRange` no se
+  consume aguas abajo, así que no se cableó un valor real en el cliente.
+
+- [ ] 🚩 **La función de compartir NO cumple su propósito de cara al usuario.**
+  El link que se copia apunta a `/api/shared/<id>` (`src/components/summary/WeeklySummary.vue:41`),
+  que es el endpoint API `functions/api/shared/[id].js` y devuelve **JSON crudo**
+  (`{ success, weekRange, week, sharedAt }`). **No existe ninguna ruta ni vista de frontend
+  que renderice el plan compartido** (verificado: nada en `src/router/` ni `src/views/`
+  consume `/api/shared`). Resultado: hoy quien abre un link compartido ve un volcado de JSON,
+  no un plan legible. Pendiente: construir una vista pública (p.ej. ruta `/shared/:id` que
+  haga fetch a `/api/shared/:id` y pinte el plan), y que el link copiado apunte a esa vista
+  en lugar de al endpoint API. Mientras tanto, compartir "funciona" técnicamente (crea y sirve
+  el share) pero es inservible para un humano.
 
 ## Despliegue
 
-- [ ] **Cambios de seguridad de `share.js` sin desplegar.** Están en el working tree (sin commitear).
-  Se acumulan varios cambios para desplegar a **preview** manualmente. Recordatorio:
-  `npm run build && npx wrangler pages deploy dist --project-name=diet-planner --commit-dirty=true`.
+- [x] **Cambios de seguridad de `share.js` desplegados a producción** (deployment `b3f61d9`).
+  Incluye auth obligatoria, TTL, límite de tamaño, randomId sin sesgo, verificación JWT de
+  Access y métricas de generación. Despliegue por direct upload:
+  `npm run build && npx wrangler pages deploy dist --project-name=diet-planner --branch main`.
 - [x] Tabla `shared_plans` (id, data, email, created_at, expires_at) ya creada en la D1 remota
   (migración idempotente). El código nuevo ya **no** la auto-crea.
+- Recordatorio: los commits locales **no están en GitHub** (no se hace push; el deploy es direct
+  upload). Sincronizar `origin/main` solo si se pide explícitamente.
 
 ## Cloudflare Access (verificación JWT)
 

@@ -45,14 +45,17 @@ export async function onRequestPost({ request, env }) {
     return json({ success: false, error: 'Invalid JSON.' }, 400)
   }
 
-  if (!body.week || !body.weekRange) {
+  if (!body.week) {
     return json({ success: false, error: 'Missing week data.' }, 400)
   }
 
   const id = randomId()
   const now = Date.now()
   const payload = JSON.stringify({
-    weekRange: body.weekRange,
+    // weekRange is optional and currently unused downstream; keep it on the
+    // payload (defaulting to '') so the shape stays stable if a shared-plan
+    // view starts consuming it later.
+    weekRange: body.weekRange || '',
     week: body.week,
     sharedAt: now,
   })
