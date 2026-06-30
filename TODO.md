@@ -10,16 +10,19 @@ Cosas a medias o que hay que revisar. Apuntadas para retomar más adelante.
   `weekRange: body.weekRange || ''` para no romper la forma del payload. `weekRange` no se
   consume aguas abajo, así que no se cableó un valor real en el cliente.
 
-- [ ] 🚩 **La función de compartir NO cumple su propósito de cara al usuario.**
-  El link que se copia apunta a `/api/shared/<id>` (`src/components/summary/WeeklySummary.vue:41`),
-  que es el endpoint API `functions/api/shared/[id].js` y devuelve **JSON crudo**
-  (`{ success, weekRange, week, sharedAt }`). **No existe ninguna ruta ni vista de frontend
-  que renderice el plan compartido** (verificado: nada en `src/router/` ni `src/views/`
-  consume `/api/shared`). Resultado: hoy quien abre un link compartido ve un volcado de JSON,
-  no un plan legible. Pendiente: construir una vista pública (p.ej. ruta `/shared/:id` que
-  haga fetch a `/api/shared/:id` y pinte el plan), y que el link copiado apunte a esa vista
-  en lugar de al endpoint API. Mientras tanto, compartir "funciona" técnicamente (crea y sirve
-  el share) pero es inservible para un humano.
+- [ ] 🚩 **Vista de compartir: CÓDIGO DESPLEGADO, PENDIENTE DE VALIDACIÓN (no cerrado).**
+  Construida y desplegada (commit `f45e089`): nueva Function `functions/shared/[id].js` que
+  sirve `/shared/<id>` como HTML de solo lectura (rejilla semanal, CSS inline, lee D1 directo,
+  404/410/500 legibles), y el link copiado ya apunta a `/shared/<id>`
+  (`src/components/summary/WeeklySummary.vue:41`).
+  **Faltan DOS pasos antes de darlo por cerrado:**
+  1. **Eximir `/shared/*` en Cloudflare Access con Bypass** (paso manual en el dashboard, lo hace
+     Raúl) — Zero Trust → Access → Applications, política/app *Bypass: Everyone* en `/shared/*`,
+     igual que el `/api/shared/*` ya exento.
+  2. **Validar en incógnito** (sin sesión) que un link `/shared/<id>` muestra la **rejilla** y
+     **no** el login de Access.
+  ⚠️ **BLOQUEANTE: hasta completar AMBOS pasos, compartir sigue sin funcionar para extraños**
+  (un visitante sin cuenta vería el login de Access, no el plan).
 
 ## Despliegue
 
