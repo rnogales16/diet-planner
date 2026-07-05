@@ -35,3 +35,6 @@ scripts/my-state-full.json
 scripts/diet-*.json
 scripts/diet-*.txt
 scripts/prompt-*.txt
+
+# Benchmark output (generated reports, may embed generated plans)
+benchmark/out/
