@@ -65,7 +65,7 @@ function num(value) {
   return Math.min(n, 10000)
 }
 
-function buildSystemPrompt(language, enabledMealTypes) {
+export function buildSystemPrompt(language, enabledMealTypes) {
   const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en
   const typesJoined = enabledMealTypes.join(', ')
   return `You are a meticulous nutritionist and home cook. You design realistic, varied, healthy weekly meal plans for one person at a time. You respect every constraint the user gives you without exception. The user's profile is a hard contract, not a suggestion.
@@ -260,7 +260,7 @@ function computePerMealTargets(allPeople, enabledMealTypes) {
   return result
 }
 
-function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, correctiveNote }) {
+export function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, correctiveNote }) {
   const p = profile || {}
 
   const lines = [
@@ -535,7 +535,7 @@ function buildBreakdownCorrectiveNote(violations) {
   return lines.join('\n')
 }
 
-function extractJsonLoose(text) {
+export function extractJsonLoose(text) {
   try { return JSON.parse(text) } catch { /* */ }
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (fence) {
@@ -658,7 +658,7 @@ function scanForForbidden(plan, forbiddenList) {
   })
 }
 
-function sanitizeProfile(raw) {
+export function sanitizeProfile(raw) {
   if (!raw || typeof raw !== 'object') return {}
   // favourites: accept both string (legacy) and array
   let favourites = ''

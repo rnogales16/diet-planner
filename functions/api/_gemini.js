@@ -46,13 +46,26 @@ async function callOnce(model, key, payload, timeoutMs) {
 
   const result = await upstream.json()
   const content = result?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
+  // Token usage, same { input, output } shape as the Anthropic caller.
+  const um = result?.usageMetadata
+  const usage = um
+    ? { input: um.promptTokenCount || 0, output: um.candidatesTokenCount || 0 }
+    : null
   if (!content) {
     const reason = result?.candidates?.[0]?.finishReason || 'unknown'
     // Use a non-5xx custom status so the cascade does NOT misclassify this
     // as an upstream overload. Empty content is a model-side decision.
-    return { ok: false, status: 461, error: `Empty response (finish reason: ${reason})` }
+    return { ok: false, status: 461, error: `Empty response (finish reason: ${reason})`, usage }
   }
-  return { ok: true, content, model }
+  return { ok: true, content, model, usage }
+}
+
+// Single Gemini call against one model with one API key — no key/model cascade.
+// Useful for measuring a specific model cleanly (benchmarking, cost control).
+// Returns the same shape as callOnce, including `usage: { input, output }`.
+export async function callGeminiOnce({ apiKey, model, payload, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+  if (!apiKey) return { ok: false, status: 500, error: 'No Gemini API key provided.' }
+  return callOnce(model, apiKey, payload, timeoutMs)
 }
 
 // Try every (model, key) combo until one succeeds.

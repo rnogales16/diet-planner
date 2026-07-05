@@ -77,6 +77,11 @@ async function streamLLM(model, apiKey, { systemPrompt, messages, temperature, m
   let buffer = ''
   let fullText = ''
   let stopReason = null
+  // Token usage. Consistent shape across callers: { input, output } in tokens.
+  // `input` sums plain + cache-read + cache-creation prompt tokens (total billed
+  // input). Anthropic reports input on message_start and the final cumulative
+  // output on the last message_delta.
+  let usage = null
   let lastChunkAt = Date.now()
 
   try {
@@ -113,10 +118,21 @@ async function streamLLM(model, apiKey, { systemPrompt, messages, temperature, m
           continue
         }
 
-        if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+        if (parsed.type === 'message_start' && parsed.message?.usage) {
+          const u = parsed.message.usage
+          usage = {
+            input: (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0),
+            output: u.output_tokens || 0,
+          }
+        } else if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
           fullText += parsed.delta.text
-        } else if (parsed.type === 'message_delta' && parsed.delta?.stop_reason) {
-          stopReason = parsed.delta.stop_reason
+        } else if (parsed.type === 'message_delta') {
+          if (parsed.delta?.stop_reason) stopReason = parsed.delta.stop_reason
+          // message_delta carries the final cumulative output token count.
+          if (parsed.usage?.output_tokens != null) {
+            usage = usage || { input: 0, output: 0 }
+            usage.output = parsed.usage.output_tokens
+          }
         } else if (parsed.type === 'error') {
           // Provider signalled an error mid-stream.
           return {
@@ -138,7 +154,7 @@ async function streamLLM(model, apiKey, { systemPrompt, messages, temperature, m
     return { ok: false, status: 461, error: `Empty response (stop_reason: ${stopReason || 'unknown'})` }
   }
 
-  return { ok: true, content: fullText, model, stopReason }
+  return { ok: true, content: fullText, model, stopReason, usage }
 }
 
 export async function callPrimaryLLM({ env, model, systemPrompt, messages, temperature, maxTokens, cacheSystem }) {
