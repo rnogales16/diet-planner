@@ -9,7 +9,7 @@ import { callGeminiWithFallback } from './_gemini.js'
 import { callPrimaryLLM } from './_llm.js'
 import { MERCADONA_MENU } from './_mercadona-menu.js'
 import { recalculatePlan } from './_recalculate.js'
-import { emailFromRequest } from './_auth.js'
+import { resolveUser } from './_user.js'
 
 const PRIMARY_MODEL = 'claude-sonnet-4-6'
 const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro']
@@ -714,9 +714,20 @@ export function sanitizeProfile(raw) {
 }
 
 export async function onRequestPost({ request, env }) {
-  // Authenticate first — we need the verified email to rate-limit per user.
-  const email = await emailFromRequest(request, env)
-  if (!email) return json({ success: false, error: 'Not authenticated.' }, 401)
+  // Authenticate first — we need the email to rate-limit per user, and the
+  // verification status to cap generation.
+  const auth = await resolveUser(request, env)
+  if (!auth) return json({ success: false, error: 'Not authenticated.' }, 401)
+  // Cap the paid operation until the email is verified. Access users are treated
+  // as verified (see resolveUser). Returns a clear 403, never an LLM call.
+  if (!auth.emailVerified) {
+    return json({
+      success: false,
+      code: 'email_not_verified',
+      error: 'Verifica tu email para generar planes. Te enviamos un enlace al registrarte; revisa tu correo o pide reenviarlo.',
+    }, 403)
+  }
+  const email = auth.email
 
   let body
   try {

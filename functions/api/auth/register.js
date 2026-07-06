@@ -7,6 +7,28 @@ import { json, originAllowed } from '../_http.js'
 import { hashPassword } from '../_password.js'
 import { createSession, sessionCookie } from '../_session.js'
 import { rateLimit } from '../_ratelimit.js'
+import { newToken } from '../_token.js'
+import { sendEmail, verificationEmail } from '../_email.js'
+
+const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
+
+// Create a verification token and email the link. Best-effort: an email failure
+// must never fail registration (the user is already created with a session and
+// can request a resend).
+async function sendVerification(env, request, userId, email) {
+  try {
+    const { token, tokenHash } = await newToken()
+    const now = Date.now()
+    await env.DB
+      .prepare('INSERT INTO email_verification_tokens (id, user_id, token_hash, email, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(crypto.randomUUID(), userId, tokenHash, email, now, now + VERIFICATION_TTL_MS)
+      .run()
+    const link = `${new URL(request.url).origin}/api/auth/verify-email?token=${token}`
+    await sendEmail(env, { to: email, ...verificationEmail(link) })
+  } catch {
+    /* best-effort: ignore */
+  }
+}
 
 const MIN_PW = 8
 const MAX_PW = 1024
@@ -56,6 +78,8 @@ export async function onRequestPost({ request, env }) {
       .prepare('INSERT INTO identities (id, user_id, provider, provider_subject, email, email_verified, password_hash, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)')
       .bind(crypto.randomUUID(), userId, 'password', userId, email, passwordHash, now, now),
   ])
+
+  await sendVerification(env, request, userId, email)
 
   const { token, expiresAt } = await createSession(env, userId, {
     userAgent: request.headers.get('User-Agent'),
