@@ -46,10 +46,17 @@ async function callOnce(model, key, payload, timeoutMs) {
 
   const result = await upstream.json()
   const content = result?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
-  // Token usage, same { input, output } shape as the Anthropic caller.
+  // Token usage, same { input, output, cacheRead, cacheWrite } shape as the
+  // Anthropic caller. Gemini context caching isn't wired here yet, so the cache
+  // fields are 0 (cachedContentTokenCount would populate cacheRead if it were).
   const um = result?.usageMetadata
   const usage = um
-    ? { input: um.promptTokenCount || 0, output: um.candidatesTokenCount || 0 }
+    ? {
+        input: um.promptTokenCount || 0,
+        output: um.candidatesTokenCount || 0,
+        cacheRead: um.cachedContentTokenCount || 0,
+        cacheWrite: 0,
+      }
     : null
   if (!content) {
     const reason = result?.candidates?.[0]?.finishReason || 'unknown'
