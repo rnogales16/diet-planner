@@ -65,19 +65,17 @@ function num(value) {
   return Math.min(n, 10000)
 }
 
-export function buildSystemPrompt(language, enabledMealTypes) {
-  const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en
-  const typesJoined = enabledMealTypes.join(', ')
-  return `You are a meticulous nutritionist and home cook. You design realistic, varied, healthy weekly meal plans for one person at a time. You respect every constraint the user gives you without exception. The user's profile is a hard contract, not a suggestion.
-
-LANGUAGE: All human-readable strings in your response (dish names, notes, ingredient names and amounts, instructions, shopping list) MUST be written in ${langName}. Do not translate the JSON keys themselves — those must stay in English exactly as specified below. The "type" field of each meal must also stay in English.
+// Static, catalog-bearing system prompt. No per-request interpolation, so it is
+// byte-identical across every generation and forms a stable, cacheable prefix
+// for prompt caching. The variable bits (language, meal types) live in
+// buildSystemVariable and are appended AFTER this block (after the catalog).
+const SYSTEM_STATIC = `You are a meticulous nutritionist and home cook. You design realistic, varied, healthy weekly meal plans for one person at a time. You respect every constraint the user gives you without exception. The user's profile is a hard contract, not a suggestion.
 
 ## Hard rules
 
 Format:
 - Output ONLY a single valid JSON object — no markdown, no code fences, no commentary.
 - Exactly 7 days, dayIndex 0..6 (Monday..Sunday).
-- Exactly ${enabledMealTypes.length} meal(s) per day, with these exact types in this order: ${typesJoined}.
 - Do NOT include any other meal types. Do NOT skip any of the listed types.
 - Each meal has exactly 1 dish. Times in "HH:MM" 24h. All numeric fields are positive numbers.
 - Ingredients are { "name": "...", "amount": "..." } with realistic weighable quantities (grams, ml, units).
@@ -200,6 +198,23 @@ ${MERCADONA_MENU}
 ---
 
 REMINDER: every ingredient you use across all 7 days must come from the Mercadona catalog above. Use the per-100g macro values printed there to compute each dish's calories, protein, carbs and fat — do not estimate from memory. The shopping list at the end of your response must aggregate items using names that map back to catalog products.`
+
+// The small per-request variable part: language + enabled meal types. Kept out
+// of SYSTEM_STATIC so that prefix stays cacheable; appended after the catalog.
+export function buildSystemVariable(language, enabledMealTypes) {
+  const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en
+  const typesJoined = enabledMealTypes.join(', ')
+  return `LANGUAGE: All human-readable strings in your response (dish names, notes, ingredient names and amounts, instructions, shopping list) MUST be written in ${langName}. Do not translate the JSON keys themselves — those must stay in English exactly as specified below. The "type" field of each meal must also stay in English.
+
+- Exactly ${enabledMealTypes.length} meal(s) per day, with these exact types in this order: ${typesJoined}.`
+}
+
+// Full system prompt = stable prefix + variable suffix. Same content as before,
+// just reordered so the stable/catalog part comes first (cacheable).
+export function buildSystemPrompt(language, enabledMealTypes) {
+  return `${SYSTEM_STATIC}
+
+${buildSystemVariable(language, enabledMealTypes)}`
 }
 
 // Per-meal calorie share by training mode. Each table sums to 100 across
@@ -260,11 +275,13 @@ function computePerMealTargets(allPeople, enabledMealTypes) {
   return result
 }
 
-export function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, correctiveNote }) {
+export function buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, correctiveNote, language }) {
   const p = profile || {}
+  const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en
 
   const lines = [
     `Generate a 7-day meal plan tailored to this person. Each day must have exactly ${enabledMealTypes.length} meal(s): ${enabledMealTypes.join(', ')}.`,
+    `Write all human-readable text (dish names, ingredients, instructions, shopping list) in ${langName}.`,
     '',
     '**Treat every line of this profile as a HARD REQUIREMENT.** Do not second-guess the user. Do not soften their constraints toward "normal" values. Do not skip any of the listed targets.',
   ]
@@ -728,7 +745,7 @@ export async function onRequestPost({ request, env }) {
     .filter(Boolean)
   const forbiddenList = [...allergyList, ...(profile.dislikedIngredients || [])]
 
-  const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes })
+  const userPrompt = buildUserPrompt({ profile, fridgeContents, weeklyExtras, enabledMealTypes, language })
 
   // Per-user rate limit. Bumped here, BEFORE any LLM call, so it counts paid
   // attempts (cost is incurred on the call) — a run of LLM failures still

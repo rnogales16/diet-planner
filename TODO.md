@@ -36,6 +36,28 @@ Cosas a medias o que hay que revisar. Apuntadas para retomar más adelante.
   3. **Sin retrocompat**: los planes ya guardados no tienen el campo → el badge solo saldría en
      planes nuevos; no hay migración posible (el dato nunca se guardó).
 
+## Prompt caching (después del benchmark, se optimiza al modelo ganador)
+
+Ya hecho (independiente del modelo): el system prompt está reestructurado
+estable-primero (`SYSTEM_STATIC` = intro + instrucciones + catálogo + recordatorio,
+byte-idéntico) / variable-después (`buildSystemVariable` = idioma + tipos de comida),
+y los callers devuelven `usage: { input, output, cacheRead, cacheWrite }`.
+
+Pendiente, cuando decida Anthropic vs Gemini:
+- [ ] **Anthropic — `cache_control` en bloques (`systemBlocks`)**: enviar el system como
+  array `[{ text: SYSTEM_STATIC, cache_control: ephemeral }, { text: variable }]` para que
+  el prefijo estable (catálogo) se cachee. Hoy `_llm.js` cachea el system entero como un
+  bloque vía `cacheSystem`; falta el cableado fino por bloques.
+- [ ] **Gemini — context caching**: es OTRA implementación (crear recurso `cachedContents`
+  y referenciarlo por nombre en `generateContent`, con su propio TTL y mínimo de tokens).
+  Solo si Gemini gana el benchmark.
+- [ ] **Decisión de TTL**: ephemeral 5 min (refresca en cada lectura) vs 1 h (escritura 2×
+  en vez de 1.25×). Elegir según la frecuencia real de generación observada.
+- Nota de ahorro: la caché es por organización (API key), no por usuario → generaciones
+  con <TTL de diferencia comparten la lectura del catálogo. Con tráfico esporádico
+  (>TTL entre generaciones) cada una paga escritura fría (1.25×) y el caching puede subir
+  el coste; rinde con frecuencia/escala.
+
 ## Despliegue
 
 - [x] **Cambios de seguridad de `share.js` desplegados a producción** (deployment `b3f61d9`).

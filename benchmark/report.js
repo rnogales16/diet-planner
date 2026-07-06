@@ -40,7 +40,8 @@ function aggregate(results, meta) {
       total: cells.length,
       avgCost: avg(costs, (c) => c.costEur),
       avgLatency: avg(okCells, (c) => c.latencyMs),
-      avgIn: avg(okCells.filter((c) => c.usage), (c) => c.usage.input),
+      // raw input = uncached + cache read/write (apples-to-apples across models)
+      avgIn: avg(okCells.filter((c) => c.usage), (c) => (c.usage.input || 0) + (c.usage.cacheRead || 0) + (c.usage.cacheWrite || 0)),
       avgOut: avg(okCells.filter((c) => c.usage), (c) => c.usage.output),
       avgMatch: avg(okCells.filter((c) => c.quality?.matchPct != null), (c) => c.quality.matchPct),
       avgDrift: avg(okCells.filter((c) => c.quality?.avgDriftKcal != null), (c) => c.quality.avgDriftKcal),
@@ -128,7 +129,7 @@ function cellColumn(cell, meta) {
       <div class="col-head">
         <div class="cm">${esc(model.label)}</div>
         <div class="cost">${cell.costEur == null ? 'n/a' : `${cell.costEur.toFixed(4)}<span class="cur"> €</span>`}<span class="cost-sub"> / plan</span></div>
-        <div class="meta2">${(cell.latencyMs / 1000).toFixed(1)} s · ${cell.usage ? `${n(cell.usage.input)}/${n(cell.usage.output)} tok` : 'tok ?'}</div>
+        <div class="meta2">${(cell.latencyMs / 1000).toFixed(1)} s · ${cell.usage ? `${n((cell.usage.input || 0) + (cell.usage.cacheRead || 0) + (cell.usage.cacheWrite || 0))}/${n(cell.usage.output)} tok · cacheR/W ${n(cell.usage.cacheRead || 0)}/${n(cell.usage.cacheWrite || 0)}` : 'tok ?'}</div>
         <div class="qual">${qline}</div>
       </div>
       <div class="plan">${renderPlan(cell.plan)}</div>

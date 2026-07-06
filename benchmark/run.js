@@ -79,9 +79,13 @@ function enabledMealTypesFor(profile) {
   return ordered.length ? ordered : VALID_MEAL_TYPES
 }
 
+// Cost over RAW tokens (input + any cache read/write, all at base input price)
+// so the model comparison is apples-to-apples regardless of caching. The
+// benchmark runs uncached, so cacheRead/cacheWrite are 0 here anyway.
 function costEur(usage, pricing) {
   if (!usage) return null
-  return (usage.input / 1e6) * pricing.inputPerM + (usage.output / 1e6) * pricing.outputPerM
+  const rawInput = (usage.input || 0) + (usage.cacheRead || 0) + (usage.cacheWrite || 0)
+  return (rawInput / 1e6) * pricing.inputPerM + ((usage.output || 0) / 1e6) * pricing.outputPerM
 }
 
 // ---- provider dispatch --------------------------------------------------
@@ -123,7 +127,7 @@ async function runCell(model, profileEntry, env, repeats) {
   const sanitized = sanitizeProfile(profileEntry.profile)
   const enabledMealTypes = enabledMealTypesFor(sanitized)
   const systemPrompt = buildSystemPrompt(GEN.language, enabledMealTypes)
-  const userPrompt = buildUserPrompt({ profile: sanitized, fridgeContents: '', weeklyExtras: '', enabledMealTypes })
+  const userPrompt = buildUserPrompt({ profile: sanitized, fridgeContents: '', weeklyExtras: '', enabledMealTypes, language: GEN.language })
 
   const latencies = []
   let last = null
@@ -217,7 +221,9 @@ async function main() {
         cells.push(cell)
         if (cell.ok) {
           const c = cell.costEur == null ? 'n/a' : cell.costEur.toFixed(4)
-          console.log(`ok  ${cell.latencyMs}ms  in/out=${cell.usage?.input ?? '?'}/${cell.usage?.output ?? '?'}  cost=${c}€  match=${cell.quality?.matchPct ?? '?'}%`)
+          const u = cell.usage
+          const cache = u ? `  cacheR/W=${u.cacheRead ?? 0}/${u.cacheWrite ?? 0}` : ''
+          console.log(`ok  ${cell.latencyMs}ms  in/out=${u?.input ?? '?'}/${u?.output ?? '?'}${cache}  cost=${c}€  match=${cell.quality?.matchPct ?? '?'}%`)
         } else {
           console.log(`FAIL  ${cell.error}`)
         }
