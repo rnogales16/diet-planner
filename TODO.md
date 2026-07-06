@@ -67,6 +67,26 @@ Pendiente, cuando decida Anthropic vs Gemini:
   (>TTL entre generaciones) cada una paga escritura fría (1.25×) y el caching puede subir
   el coste; rinde con frecuencia/escala.
 
+## Autenticación propia (SaaS multi-tenant) — en progreso
+
+Pieza (a) hecha (backend, sin front): tablas `users`/`identities`/`sessions`; módulos
+`_password.js` (PBKDF2), `_session.js` (token opaco + hash + cookie + renovación deslizante),
+`_ratelimit.js`, `_user.js` (`resolveUser` = shim sesión-propia-O-Access); endpoints
+`/api/auth/{register,login,logout,me}` con rate-limit y anti-enumeración; `data.js` gateado
+por `resolveUser`. Usuarios se crean con `email_verified=0` (sin capar generación aún).
+
+- [ ] ⚠️ **Access — bypass de `/api/auth/*` (paso MANUAL en el dashboard, NO hacer aún).**
+  Solo cuando toque **probar en producción**: añadir Bypass para `/api/auth/*` (como el de
+  `/api/shared/*`), o los endpoints de login serán inalcanzables tras Access. En **local**
+  (`wrangler pages dev`, sin Access) NO hace falta. Access se retira de las rutas de usuario
+  **al final** de la migración, no ahora.
+- [ ] **Deuda técnica menor**: la columna `rate_limits.email` se usa como "subject" genérico
+  (`ip:`/`email:` para auth, email de usuario para generación). Generalizar el nombre a
+  `subject` en una migración futura (cosmético; no urge).
+- [ ] Pasos siguientes: (a-bis) front de login/registro · (b) verificación de email (Resend) +
+  capar generación hasta verificar + reset de contraseña · (c) login con Google · migración de
+  datos de email → `user_id` · retirar Access de rutas de usuario.
+
 ## Despliegue
 
 - [x] **Cambios de seguridad de `share.js` desplegados a producción** (deployment `b3f61d9`).

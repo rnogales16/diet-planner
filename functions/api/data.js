@@ -1,6 +1,6 @@
 // Reads/writes the per-user blob in D1.
 
-import { emailFromRequest } from './_auth.js'
+import { resolveUser } from './_user.js'
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024  // 2 MB — fits ~50+ weeks of plans with macroBreakdown
 
@@ -21,8 +21,9 @@ function json(body, status = 200) {
 }
 
 export async function onRequestGet({ request, env }) {
-  const email = await emailFromRequest(request, env)
-  if (!email) return json({ success: false, error: 'Not authenticated.' }, 401)
+  const auth = await resolveUser(request, env)
+  if (!auth) return json({ success: false, error: 'Not authenticated.' }, 401)
+  const email = auth.email
 
   const row = await env.DB
     .prepare('SELECT data, updated_at FROM user_data WHERE email = ?')
@@ -44,8 +45,9 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPut({ request, env }) {
-  const email = await emailFromRequest(request, env)
-  if (!email) return json({ success: false, error: 'Not authenticated.' }, 401)
+  const auth = await resolveUser(request, env)
+  if (!auth) return json({ success: false, error: 'Not authenticated.' }, 401)
+  const email = auth.email
 
   const text = await request.text()
   if (text.length > MAX_BODY_BYTES) {
