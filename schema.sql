@@ -107,3 +107,26 @@ CREATE TABLE IF NOT EXISTS sessions (
   revoked      INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions (user_id);
+
+-- Single-use, short-TTL tokens for email verification (~24h) and password reset
+-- (~1h). Only SHA-256(token) is stored; used_at marks consumption. Piece (b).
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,   -- hex SHA-256 of the opaque token
+  email      TEXT NOT NULL,          -- email being verified
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,       -- created_at + 24h
+  used_at    INTEGER                 -- NULL until consumed (single use)
+);
+CREATE INDEX IF NOT EXISTS idx_email_verif_user ON email_verification_tokens (user_id);
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,       -- created_at + 1h
+  used_at    INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_pw_reset_user ON password_reset_tokens (user_id);
