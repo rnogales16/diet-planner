@@ -12,13 +12,15 @@ export async function resolveUser(request, env) {
   // 1) Own session.
   const s = await getSession(env, request)
   if (s) {
-    const row = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(s.userId).first()
-    if (row) return { userId: s.userId, email: row.email, via: 'session' }
+    const row = await env.DB.prepare('SELECT email, email_verified FROM users WHERE id = ?').bind(s.userId).first()
+    if (row) return { userId: s.userId, email: row.email, emailVerified: !!row.email_verified, via: 'session' }
   }
 
   // 2) Cloudflare Access fallback (shim; removed from user routes at the end).
+  // Access users are treated as verified: Access already validated their identity
+  // against a real IdP, and they have no row of ours to carry email_verified.
   const email = await emailFromRequest(request, env)
-  if (email) return { userId: null, email, via: 'access' }
+  if (email) return { userId: null, email, emailVerified: true, via: 'access' }
 
   return null
 }
