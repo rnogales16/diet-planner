@@ -2,6 +2,15 @@
 
 Cosas a medias o que hay que revisar. Apuntadas para retomar más adelante.
 
+## Fase 3 (futuro — leer el doc de referencia ANTES de construir)
+
+- [ ] **Recomendaciones de súper por categoría** (lista de compra, tier premium) y
+  **límites de presupuesto** para la generación (rechazar peticiones inviables sin llamar
+  al LLM). Datos curados + reglas en [`docs/ESTUDIOS_MERCADO.md`](docs/ESTUDIOS_MERCADO.md).
+  Al implementar: usar esos datos (no inventar cifras), **citar siempre OCU** en las
+  recomendaciones de marca, y tener en cuenta que los datos son España nacional (Andorra
+  sin ajuste) y **caducan** (revisar anualmente por inflación).
+
 ## Compartir semana (share)
 
 - [x] **`weekRange` vacío rompía el share (400).** ~~El cliente envía `weekRange: ''` en
