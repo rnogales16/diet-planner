@@ -1,4 +1,5 @@
 <script setup>
+import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppLogo from './AppLogo.vue'
@@ -6,9 +7,18 @@ import ThemeToggle from './ThemeToggle.vue'
 import SyncIndicator from './SyncIndicator.vue'
 import LanguageToggle from './LanguageToggle.vue'
 import { useLanguage } from '@/composables/useLanguage'
+import { useLogout } from '@/composables/useLogout'
 
 useLanguage() // bootstrap locale <-> store sync
 const { t } = useI18n()
+const { auth, doLogout } = useLogout()
+const menuOpen = ref(false)
+const initial = computed(() => (auth.user?.email || 'U').charAt(0).toUpperCase())
+
+function logout() {
+  menuOpen.value = false
+  doLogout()
+}
 </script>
 
 <template>
@@ -32,7 +42,14 @@ const { t } = useI18n()
         <SyncIndicator />
         <LanguageToggle />
         <ThemeToggle />
-        <div class="avatar">R</div>
+        <div class="account">
+          <button class="avatar" type="button" :aria-label="t('auth.account')" @click="menuOpen = !menuOpen">{{ initial }}</button>
+          <div v-if="menuOpen" class="account-menu">
+            <div class="account-menu__email">{{ auth.user?.email }}</div>
+            <button v-if="auth.canLogout" type="button" class="account-menu__logout" @click="logout">{{ t('auth.logout') }}</button>
+            <div v-else class="account-menu__note">{{ t('auth.accessManaged') }}</div>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -111,6 +128,10 @@ const { t } = useI18n()
   justify-self: end;
 }
 
+.account {
+  position: relative;
+}
+
 .avatar {
   width: 30px;
   height: 30px;
@@ -123,6 +144,52 @@ const { t } = useI18n()
   font-size: 12px;
   font-weight: 700;
   border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 10px;
+  min-width: 200px;
+  z-index: 40;
+}
+
+.account-menu__email {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 4px 6px 8px;
+  border-bottom: 1px solid var(--border);
+  word-break: break-all;
+}
+
+.account-menu__logout {
+  width: 100%;
+  text-align: left;
+  margin-top: 6px;
+  padding: 8px 6px;
+  border: none;
+  background: none;
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.account-menu__logout:hover {
+  background-color: var(--danger-tint);
+}
+
+.account-menu__note {
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 8px 6px 4px;
 }
 
 @media (max-width: 768px) {

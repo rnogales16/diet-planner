@@ -5,6 +5,7 @@ import router from './router'
 import { i18n } from './i18n'
 import './assets/main.css'
 import { useDietStore } from './stores/dietStore'
+import { useAuthStore } from './stores/authStore'
 import {
   loadFromServer,
   scheduleSave,
@@ -21,8 +22,11 @@ app.use(router)
 app.use(i18n)
 
 const store = useDietStore()
+const authStore = useAuthStore()
 
-async function bootstrap() {
+// Load the user's diet data from the server and wire autosave. Only runs once we
+// know the request is authenticated (own session or Access).
+async function initDietStore() {
   let serverData = null
   let loadOk = false
   try {
@@ -37,7 +41,6 @@ async function bootstrap() {
 
   if (!loadOk) {
     store.hydrate(null)
-    app.mount('#app')
     return
   }
 
@@ -70,7 +73,19 @@ async function bootstrap() {
     if (syncStatus.value === 'loading') return
     scheduleSave(() => store.serialize())
   })
+}
 
+async function bootstrap() {
+  // Resolve auth first (own session or Access). Only load the diet data when
+  // authenticated; anonymous users are routed to /login by the router guard.
+  try {
+    await authStore.ensureLoaded()
+  } catch {
+    authStore.setAnonymous()
+  }
+  if (authStore.isAuthenticated) {
+    await initDietStore()
+  }
   app.mount('#app')
 }
 

@@ -1,12 +1,17 @@
 <script setup>
 import { reactive, ref, toRaw, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { User, Download, Upload, Trash2, Check, Languages, X, Plus } from 'lucide-vue-next'
+import { User, Download, Upload, Trash2, Check, Languages, X, Plus, LogOut } from 'lucide-vue-next'
 import { useDietStore } from '@/stores/dietStore'
 import { translateDishes } from '@/services/translate'
 import { localizedMealLabel } from '@/utils/mealLocale'
+import { useLogout } from '@/composables/useLogout'
 
 const { t, locale } = useI18n()
+
+// Account session (own-auth). Reuses the shared logout logic; only shown for
+// own sessions (via='session'), never for Access users.
+const { auth, doLogout } = useLogout()
 
 const clone = (obj) => JSON.parse(JSON.stringify(obj))
 
@@ -515,6 +520,17 @@ async function handleTranslateAll() {
         <button type="button" class="app-btn app-btn--danger" @click="clearAllData">
           <Trash2 :size="14" />
           {{ t('settings.data.clearBtn') }}
+        </button>
+      </div>
+
+      <div v-if="auth.canLogout" class="data-row">
+        <div class="data-row__copy">
+          <p class="data-row__title">{{ t('auth.account') }}</p>
+          <p class="data-row__desc">{{ t('auth.loggedInAs', { email: auth.user?.email }) }}</p>
+        </div>
+        <button type="button" class="app-btn app-btn--secondary" @click="doLogout">
+          <LogOut :size="14" />
+          {{ t('auth.logout') }}
         </button>
       </div>
     </section>
