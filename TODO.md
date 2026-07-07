@@ -87,6 +87,14 @@ hasta email verificado**. Rate-limit por email (primario) + IP (secundario) en r
   **local** se dejan sin poner a propósito (fallback que loguea el enlace). Sin ellas en prod,
   no se envían emails de verificación/reset (el registro no falla; el link no llega).
 
+- [ ] ⚠️ **Prod: configurar Google OAuth** — `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` (secret)
+  en Pages → Environment variables (Production/Preview). Crear el OAuth client ID (Web application)
+  en Google Cloud Console → Credentials, con estas **Authorized redirect URIs**:
+  `http://localhost:8788/api/auth/google/callback` (local) y
+  `https://nutriplania.com/api/auth/google/callback` (prod; +www si aplica). Scopes: `openid email
+  profile`. En **local** van en `.dev.vars`. El bypass de Access para `/api/auth/*` (abajo) cubre
+  también `/api/auth/google/*`.
+
 - [ ] ⚠️ **Access — bypass de `/api/auth/*` (paso MANUAL en el dashboard, NO hacer aún).**
   Solo cuando toque **probar en producción**: añadir Bypass para `/api/auth/*` (como el de
   `/api/shared/*`), o los endpoints de login serán inalcanzables tras Access. En **local**
