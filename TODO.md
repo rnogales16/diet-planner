@@ -113,6 +113,15 @@ hasta email verificado**. Rate-limit por email (primario) + IP (secundario) en r
 - [ ] **Deuda técnica menor**: la columna `rate_limits.email` se usa como "subject" genérico
   (`ip:`/`email:` para auth, email de usuario para generación). Generalizar el nombre a
   `subject` en una migración futura (cosmético; no urge).
+
+- [ ] **[FUTURO — baja prioridad, NO urgente, NO bloquea nada. NO es del corte de Access ni
+  pre-lanzamiento.] Clave interna de `user_data`: email → user_id.** Hoy `user_data` está
+  claveada por `email` (PK) y `data.js` resuelve por email; `resolveUser` devuelve el mismo email
+  vía sesión o Access, así que los datos **se reconectan solos, sin migración** — **email-como-clave
+  funciona perfectamente hoy**. Es frágil solo el día que se quiera **permitir cambio de email** o
+  **fusión de cuentas** (el email deja de ser identidad estable). En ese momento: migrar a `user_id`
+  como clave interna (añadir columna, backfill por email→users.id, cambiar `data.js`/`user_data_backups`
+  a `user_id`). Mejora de robustez para cuando el producto madure; no antes.
 - [ ] Pasos siguientes: (a-bis) front de login/registro · (b) verificación de email (Resend) +
   capar generación hasta verificar + reset de contraseña · (c) login con Google · migración de
   datos de email → `user_id` · retirar Access de rutas de usuario.
