@@ -400,5 +400,67 @@
     "invalidResponse": "Respuesta inválida del servidor.",
     "parseFailed": "No se pudo parsear el plan como JSON.",
     "serverError": "Error del servidor ({code})."
+  },
+  "auth": {
+    "email": "Email",
+    "emailPlaceholder": "tu{'@'}email.com",
+    "password": "Contraseña",
+    "account": "Cuenta",
+    "logout": "Cerrar sesión",
+    "accessManaged": "Sesión gestionada por Cloudflare Access",
+    "login": {
+      "title": "Iniciar sesión",
+      "submit": "Entrar",
+      "submitting": "Entrando…",
+      "error": "No se pudo iniciar sesión.",
+      "forgot": "¿Olvidaste tu contraseña?",
+      "noAccount": "¿No tienes cuenta?",
+      "register": "Crea una"
+    },
+    "register": {
+      "title": "Crear cuenta",
+      "submit": "Crear cuenta",
+      "submitting": "Creando…",
+      "error": "No se pudo crear la cuenta.",
+      "generic": "Si el email está disponible, la cuenta se ha creado. Prueba a iniciar sesión.",
+      "haveAccount": "¿Ya tienes cuenta?",
+      "login": "Inicia sesión",
+      "pwHint": "Mínimo 8 caracteres",
+      "pwTooShort": "La contraseña debe tener al menos 8 caracteres."
+    },
+    "forgot": {
+      "title": "Recuperar contraseña",
+      "desc": "Te enviaremos un enlace para restablecerla.",
+      "submit": "Enviar enlace",
+      "submitting": "Enviando…",
+      "sent": "Si el email existe, te hemos enviado un enlace para restablecer la contraseña.",
+      "backToLogin": "Volver a iniciar sesión"
+    },
+    "reset": {
+      "title": "Nueva contraseña",
+      "newPassword": "Nueva contraseña",
+      "confirm": "Repite la contraseña",
+      "submit": "Cambiar contraseña",
+      "submitting": "Guardando…",
+      "done": "Contraseña actualizada. Ya puedes iniciar sesión.",
+      "toLogin": "Ir a iniciar sesión",
+      "mismatch": "Las contraseñas no coinciden.",
+      "invalid": "Enlace no válido o caducado.",
+      "pwTooShort": "La contraseña debe tener al menos 8 caracteres.",
+      "noToken": "Falta el token del enlace.",
+      "requestNew": "Pedir un nuevo enlace"
+    },
+    "verify": {
+      "banner": "Verifica tu email para generar planes.",
+      "resend": "Reenviar",
+      "resent": "Email enviado."
+    },
+    "emailNotVerified": {
+      "title": "Verifica tu email",
+      "desc": "Necesitas verificar tu email para generar planes. Revisa tu correo o pide reenviar el enlace.",
+      "resend": "Reenviar verificación",
+      "resent": "Email enviado."
+    },
+    "loggedInAs": "Sesión iniciada como {email}"
   }
 }

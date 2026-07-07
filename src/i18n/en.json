@@ -400,5 +400,67 @@
     "invalidResponse": "Invalid response from server.",
     "parseFailed": "Failed to parse meal plan as JSON.",
     "serverError": "Server error ({code})."
+  },
+  "auth": {
+    "email": "Email",
+    "emailPlaceholder": "you{'@'}email.com",
+    "password": "Password",
+    "account": "Account",
+    "logout": "Log out",
+    "accessManaged": "Session managed by Cloudflare Access",
+    "login": {
+      "title": "Log in",
+      "submit": "Log in",
+      "submitting": "Logging in…",
+      "error": "Could not log in.",
+      "forgot": "Forgot your password?",
+      "noAccount": "No account?",
+      "register": "Create one"
+    },
+    "register": {
+      "title": "Create account",
+      "submit": "Create account",
+      "submitting": "Creating…",
+      "error": "Could not create the account.",
+      "generic": "If the email is available, the account was created. Try logging in.",
+      "haveAccount": "Already have an account?",
+      "login": "Log in",
+      "pwHint": "At least 8 characters",
+      "pwTooShort": "Password must be at least 8 characters."
+    },
+    "forgot": {
+      "title": "Reset password",
+      "desc": "We'll send you a link to reset it.",
+      "submit": "Send link",
+      "submitting": "Sending…",
+      "sent": "If the email exists, we've sent a link to reset the password.",
+      "backToLogin": "Back to log in"
+    },
+    "reset": {
+      "title": "New password",
+      "newPassword": "New password",
+      "confirm": "Repeat password",
+      "submit": "Change password",
+      "submitting": "Saving…",
+      "done": "Password updated. You can log in now.",
+      "toLogin": "Go to log in",
+      "mismatch": "Passwords don't match.",
+      "invalid": "Invalid or expired link.",
+      "pwTooShort": "Password must be at least 8 characters.",
+      "noToken": "The link is missing its token.",
+      "requestNew": "Request a new link"
+    },
+    "verify": {
+      "banner": "Verify your email to generate plans.",
+      "resend": "Resend",
+      "resent": "Email sent."
+    },
+    "emailNotVerified": {
+      "title": "Verify your email",
+      "desc": "You need to verify your email to generate plans. Check your inbox or resend the link.",
+      "resend": "Resend verification",
+      "resent": "Email sent."
+    },
+    "loggedInAs": "Logged in as {email}"
   }
 }

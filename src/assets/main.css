@@ -297,3 +297,13 @@ textarea.app-input {
 [data-theme='dark'] ::-webkit-scrollbar-track {
   background-color: #0a0a0a;
 }
+
+/* Auth screens (login / register / forgot / reset) — reuse the design tokens. */
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-error { color: var(--danger); font-size: 13px; margin: 0; }
+.auth-note { color: var(--text-muted); font-size: 14px; margin: 0; }
+.auth-note--center { text-align: center; }
+.auth-submit { width: 100%; margin-top: 4px; }
+.auth-links { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; text-align: center; font-size: 14px; color: var(--text-muted); }
+.auth-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.auth-links a:hover { text-decoration: underline; }
