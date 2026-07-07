@@ -130,3 +130,16 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   used_at    INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_pw_reset_user ON password_reset_tokens (user_id);
+
+-- Short-lived (~10 min), single-use OAuth flow state for Google sign-in. The
+-- browser holds an opaque flow token in an HttpOnly cookie; `flow` is its
+-- SHA-256. `state_hash` is SHA-256 of the OAuth state param (compared in the
+-- callback). `code_verifier` is the PKCE verifier, stored as-is because it must
+-- be sent to Google's token endpoint (ephemeral, single-use). Piece (c).
+CREATE TABLE IF NOT EXISTS oauth_states (
+  flow          TEXT PRIMARY KEY,   -- SHA-256 of the flow-cookie token
+  state_hash    TEXT NOT NULL,      -- SHA-256 of the OAuth state param
+  code_verifier TEXT NOT NULL,      -- PKCE verifier (sent to Google)
+  created_at    INTEGER NOT NULL,
+  expires_at    INTEGER NOT NULL
+);
