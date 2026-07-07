@@ -461,6 +461,11 @@
       "resend": "Reenviar verificación",
       "resent": "Email enviado."
     },
-    "loggedInAs": "Sesión iniciada como {email}"
+    "loggedInAs": "Sesión iniciada como {email}",
+    "google": "Continuar con Google",
+    "or": "o",
+    "oauthError": "No se pudo entrar con Google. Inténtalo de nuevo.",
+    "accountExistsUnverified": "Ya existe una cuenta con este email sin verificar. Verifícala o entra con tu contraseña y vincula Google desde Ajustes.",
+    "emailUnverifiedError": "Tu cuenta de Google no tiene el email verificado, así que no podemos crear la cuenta. Usa un email verificado."
   }
 }

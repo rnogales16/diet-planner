@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/authStore'
 import AuthCard from '@/components/auth/AuthCard.vue'
+import AuthGoogleButton from '@/components/auth/AuthGoogleButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 
@@ -48,6 +49,8 @@ async function onSubmit() {
         {{ loading ? t('auth.register.submitting') : t('auth.register.submit') }}
       </BaseButton>
     </form>
+    <div class="auth-divider"><span>{{ t('auth.or') }}</span></div>
+    <AuthGoogleButton />
     <div class="auth-links">
       <span>{{ t('auth.register.haveAccount') }} <RouterLink to="/login">{{ t('auth.register.login') }}</RouterLink></span>
     </div>

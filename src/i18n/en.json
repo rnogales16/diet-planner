@@ -461,6 +461,11 @@
       "resend": "Resend verification",
       "resent": "Email sent."
     },
-    "loggedInAs": "Logged in as {email}"
+    "loggedInAs": "Logged in as {email}",
+    "google": "Continue with Google",
+    "or": "or",
+    "oauthError": "Couldn't sign in with Google. Please try again.",
+    "accountExistsUnverified": "An account with this email exists but is unverified. Verify it or log in with your password and link Google from Settings.",
+    "emailUnverifiedError": "Your Google account's email isn't verified, so we can't create the account. Use a verified email."
   }
 }
