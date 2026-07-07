@@ -5,7 +5,7 @@
 
 import { json, originAllowed } from '../_http.js'
 import { hashPassword } from '../_password.js'
-import { createSession, sessionCookie } from '../_session.js'
+import { createSession, sessionCookie, isSecureRequest } from '../_session.js'
 import { rateLimit } from '../_ratelimit.js'
 import { newToken } from '../_token.js'
 import { sendEmail, verificationEmail } from '../_email.js'
@@ -88,6 +88,6 @@ export async function onRequestPost({ request, env }) {
   return json(
     { success: true, user: { id: userId, email, emailVerified: false } },
     200,
-    { 'Set-Cookie': sessionCookie(token, expiresAt) },
+    { 'Set-Cookie': sessionCookie(token, expiresAt, { secure: isSecureRequest(request) }) },
   )
 }

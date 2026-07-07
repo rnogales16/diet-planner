@@ -80,11 +80,22 @@ export async function revokeAllSessions(env, userId) {
   await env.DB.prepare('UPDATE sessions SET revoked = 1 WHERE user_id = ?').bind(userId).run()
 }
 
-export function sessionCookie(token, expiresAt) {
+// `secure` must be false over plain HTTP (local dev), because browsers refuse to
+// store Secure cookies on http://localhost. In production (HTTPS) it's true.
+export function sessionCookie(token, expiresAt, { secure = true } = {}) {
   const maxAge = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
-  return `${COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
+  return `${COOKIE_NAME}=${token}; HttpOnly;${secure ? ' Secure;' : ''} SameSite=Lax; Path=/; Max-Age=${maxAge}`
 }
 
-export function clearSessionCookie() {
-  return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
+export function clearSessionCookie({ secure = true } = {}) {
+  return `${COOKIE_NAME}=; HttpOnly;${secure ? ' Secure;' : ''} SameSite=Lax; Path=/; Max-Age=0`
+}
+
+// Whether the request came over HTTPS (so the cookie should be Secure).
+export function isSecureRequest(request) {
+  try {
+    return new URL(request.url).protocol === 'https:'
+  } catch {
+    return true // fail safe to Secure
+  }
 }

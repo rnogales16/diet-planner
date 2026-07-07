@@ -4,7 +4,7 @@
 
 import { json, originAllowed } from '../_http.js'
 import { verifyPassword } from '../_password.js'
-import { createSession, sessionCookie } from '../_session.js'
+import { createSession, sessionCookie, isSecureRequest } from '../_session.js'
 import { rateLimit } from '../_ratelimit.js'
 
 // A valid-format hash to verify against when the user/identity doesn't exist, so
@@ -76,6 +76,6 @@ export async function onRequestPost({ request, env }) {
   return json(
     { success: true, user: { id: user.id, email: user.email, emailVerified: !!user.email_verified } },
     200,
-    { 'Set-Cookie': sessionCookie(token, expiresAt) },
+    { 'Set-Cookie': sessionCookie(token, expiresAt, { secure: isSecureRequest(request) }) },
   )
 }
