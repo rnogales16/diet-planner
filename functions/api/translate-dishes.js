@@ -7,6 +7,7 @@
 // Keep this on Flash so we don't burn Pro quota on translations.
 
 import { callGeminiWithFallback } from './_gemini.js'
+import { resolveUser } from './_user.js'
 
 // Flash-Lite is the cheapest model available. Translation is a simple
 // mechanical task — quality is fine and cost is ~10x lower than Flash.
@@ -80,6 +81,9 @@ function extractJson(text) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const auth = await resolveUser(request, env)
+  if (!auth) return json({ success: false, error: 'Not authenticated.' }, 401)
+
   if (!env.GEMINI_API_KEY) {
     return json({ success: false, error: 'Server is not configured (missing GEMINI_API_KEY).' }, 500)
   }

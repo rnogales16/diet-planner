@@ -6,6 +6,7 @@
 // Cloudflare Access protects this endpoint. API keys live as Pages secrets.
 
 import { callGeminiWithFallback } from './_gemini.js'
+import { resolveUser } from './_user.js'
 
 // Pro by default for quality. Flash and Flash-Lite sit behind it as safety
 // nets — separate serving pools inside Google, so when Pro is congested
@@ -174,6 +175,9 @@ function sanitizeUpdatedDish(raw) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const auth = await resolveUser(request, env)
+  if (!auth) return json({ success: false, error: 'Not authenticated.' }, 401)
+
   let body
   try {
     body = await request.json()

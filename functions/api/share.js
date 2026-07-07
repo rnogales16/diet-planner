@@ -2,7 +2,7 @@
 // with a random key. The shared link bypasses Access because it hits
 // a separate path (/api/shared/:id) that returns the plan as JSON.
 
-import { emailFromRequest } from './_auth.js'
+import { resolveUser } from './_user.js'
 
 const MAX_SHARE_BYTES = 256 * 1024            // 256 KB — a single week plan is small
 const SHARE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -32,8 +32,9 @@ function randomId(len = 10) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const email = await emailFromRequest(request, env)
-  if (!email) return json({ success: false, error: 'Not authenticated.' }, 401)
+  const auth = await resolveUser(request, env)
+  if (!auth) return json({ success: false, error: 'Not authenticated.' }, 401)
+  const email = auth.email
 
   const text = await request.text()
   if (text.length > MAX_SHARE_BYTES) {

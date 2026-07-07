@@ -100,6 +100,16 @@ hasta email verificado**. Rate-limit por email (primario) + IP (secundario) en r
   `/api/shared/*`), o los endpoints de login serán inalcanzables tras Access. En **local**
   (`wrangler pages dev`, sin Access) NO hace falta. Access se retira de las rutas de usuario
   **al final** de la migración, no ahora.
+- [ ] **[PRIORIDAD MEDIA — post-corte, pre-lanzamiento de pago] Cap + rate-limit en los 5
+  endpoints LLM secundarios.** `dish-chat`, `nutrition-chat`, `import-recipe`, `batch-cooking`,
+  `regenerate-meal` **llaman al modelo (cuestan dinero)** pero **NO** tienen capado de email
+  verificado ni rate-limit por usuario — **solo `generate-meal-plan` los tiene**. Son **puertas
+  laterales**: un usuario registrado **sin verificar** podría gastar LLM sin límite. El gate de
+  sesión (Fase C) ya cierra el abuso **anónimo**; esto es la **segunda capa** contra usuarios
+  registrados. **Priorizar `regenerate-meal`** (coste equiparable a generar un plan). Solución:
+  **extraer el patrón capado+rate-limit de `generate-meal-plan` a un helper reutilizable** y
+  aplicarlo a los 5. (`translate-dishes` queda fuera: mecánico y barato, Flash-Lite.)
+
 - [ ] **Deuda técnica menor**: la columna `rate_limits.email` se usa como "subject" genérico
   (`ip:`/`email:` para auth, email de usuario para generación). Generalizar el nombre a
   `subject` en una migración futura (cosmético; no urge).

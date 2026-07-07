@@ -4,6 +4,7 @@
 // directly to the user's profile.
 
 import { callGeminiWithFallback } from './_gemini.js'
+import { resolveUser } from './_user.js'
 
 const MODEL_CASCADE = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
 
@@ -82,6 +83,9 @@ function extractJson(text) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const auth = await resolveUser(request, env)
+  if (!auth) return json({ success: false, error: 'Not authenticated.' }, 401)
+
   let body
   try { body = await request.json() } catch {
     return json({ success: false, error: 'Invalid JSON body.' }, 400)

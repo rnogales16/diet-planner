@@ -2,6 +2,7 @@
 // full profile. Much faster and cheaper than regenerating the whole week.
 
 import { callPrimaryLLM } from './_llm.js'
+import { resolveUser } from './_user.js'
 import { callGeminiWithFallback } from './_gemini.js'
 
 const PRIMARY_MODEL = 'claude-sonnet-4-6'
@@ -22,6 +23,9 @@ function trim(v, max = 500) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const auth = await resolveUser(request, env)
+  if (!auth) return json({ success: false, error: 'Not authenticated.' }, 401)
+
   let body
   try { body = await request.json() } catch {
     return json({ success: false, error: 'Invalid JSON body.' }, 400)
