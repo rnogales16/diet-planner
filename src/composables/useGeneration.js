@@ -10,6 +10,7 @@ import { generateMealPlan } from '@/services/openai'
 const phase = ref('idle') // idle | loading | preview | error
 const plan = ref(null)
 const error = ref('')
+const errorCode = ref(null) // e.g. 'email_not_verified'
 const targetWeekKey = ref('')
 const lastFormData = ref(null)
 let abortController = null
@@ -22,6 +23,7 @@ export function useGeneration() {
     phase.value = 'loading'
     plan.value = null
     error.value = ''
+    errorCode.value = null
     targetWeekKey.value = weekKey
     lastFormData.value = formData
 
@@ -47,6 +49,7 @@ export function useGeneration() {
       phase.value = 'preview'
     } else {
       error.value = result.error
+      errorCode.value = result.code || null
       phase.value = 'error'
     }
   }
@@ -82,6 +85,7 @@ export function useGeneration() {
     phase,
     plan,
     error,
+    errorCode,
     targetWeekKey,
     lastFormData,
     start,

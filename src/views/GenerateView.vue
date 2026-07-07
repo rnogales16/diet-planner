@@ -6,6 +6,7 @@ import { Sparkles, AlertCircle, CalendarClock, RefreshCw, Plus } from 'lucide-vu
 import { translateDishes } from '@/services/translate'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { useDietStore } from '@/stores/dietStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
 import { useGeneration } from '@/composables/useGeneration'
 import GenerateForm from '@/components/generate/GenerateForm.vue'
@@ -17,8 +18,20 @@ import BaseModal from '@/components/ui/BaseModal.vue'
 const { t } = useI18n()
 const router = useRouter()
 const store = useDietStore()
+const authStore = useAuthStore()
 const { weekKey, weekRange, init, goToPrevWeek, goToNextWeek, goToToday } = useWeekNavigation()
-const { phase, plan, error, lastFormData, start, cancel, clear, dismissError } = useGeneration()
+const { phase, plan, error, errorCode, lastFormData, start, cancel, clear, dismissError } = useGeneration()
+
+const resending = ref(false)
+const resentMsg = ref('')
+async function resendVerification() {
+  if (resending.value) return
+  resending.value = true
+  resentMsg.value = ''
+  await authStore.resendVerification()
+  resentMsg.value = t('auth.emailNotVerified.resent')
+  resending.value = false
+}
 
 init()
 
@@ -124,7 +137,17 @@ async function handleRegenerate() {
       />
     </div>
 
-    <div v-if="error && uiPhase !== 'preview'" class="generate-error">
+    <div v-if="errorCode === 'email_not_verified' && uiPhase !== 'preview'" class="generate-error generate-error--verify">
+      <AlertCircle :size="16" />
+      <div class="generate-error__body">
+        <p class="generate-error__title">{{ t('auth.emailNotVerified.title') }}</p>
+        <p class="generate-error__msg">{{ t('auth.emailNotVerified.desc') }}</p>
+        <button type="button" class="generate-error__resend" :disabled="resending" @click="resendVerification">
+          {{ resentMsg || t('auth.emailNotVerified.resend') }}
+        </button>
+      </div>
+    </div>
+    <div v-else-if="error && uiPhase !== 'preview'" class="generate-error">
       <AlertCircle :size="16" />
       <div>
         <p class="generate-error__title">{{ t('generate.errorTitle') }}</p>
@@ -262,6 +285,23 @@ async function handleRegenerate() {
   font-size: 12px;
   margin-top: 2px;
   opacity: 0.85;
+}
+
+.generate-error__resend {
+  margin-top: 8px;
+  border: 1px solid var(--border-strong);
+  background-color: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.generate-error__resend:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 @media (max-width: 768px) {

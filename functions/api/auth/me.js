@@ -10,6 +10,6 @@ export async function onRequestGet({ request, env }) {
   return json({
     success: true,
     authenticated: true,
-    user: { id: u.userId, email: u.email, via: u.via },
+    user: { id: u.userId, email: u.email, via: u.via, emailVerified: !!u.emailVerified },
   })
 }

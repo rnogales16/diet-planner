@@ -181,7 +181,9 @@ export async function generateMealPlan(formData, signal) {
   }
 
   if (!payload.success) {
-    return { success: false, error: payload.error || `Server error (${response.status}).` }
+    // Propagate a machine-readable code (e.g. 'email_not_verified') so the UI
+    // can react specifically instead of showing a generic error.
+    return { success: false, code: payload.code || null, error: payload.error || `Server error (${response.status}).` }
   }
 
   const parsed = extractJson(payload.content)
